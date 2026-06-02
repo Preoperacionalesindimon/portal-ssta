@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal SSTA – INDIMON S.A.S.</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F2C200">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Portal SSTA">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
 
@@ -20,6 +26,7 @@
     padding:1.5rem 1rem 3rem;
   }
 
+  /* ── Header ── */
   .header{
     background:#fff;
     border-radius:14px;
@@ -39,65 +46,16 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    font-weight:600;
+    font-weight:700;
     font-size:13px;
     color:#1a1a1a;
     flex-shrink:0;
   }
 
-  .header h1{
-    font-size:19px;
-    font-weight:600;
-    margin-bottom:2px;
-  }
+  .header h1{font-size:19px;font-weight:600;margin-bottom:2px;}
+  .header p{font-size:13px;color:#666;}
 
-  .header p{
-    font-size:13px;
-    color:#666;
-  }
-
-  .notice{
-    background:#fff8db;
-    border:1px solid #f1df8b;
-    color:#5f4d00;
-    font-size:12px;
-    border-radius:12px;
-    padding:.9rem 1rem;
-    margin-bottom:1rem;
-    line-height:1.45;
-  }
-
-  .search-box{
-    background:#fff;
-    border:1px solid #d9d9d9;
-    border-radius:14px;
-    padding:.9rem 1rem;
-    margin-bottom:1rem;
-  }
-
-  .search-box label{
-    display:block;
-    font-size:12px;
-    font-weight:600;
-    color:#666;
-    margin-bottom:8px;
-  }
-
-  .search-box input{
-    width:100%;
-    border:1px solid #ddd;
-    border-radius:10px;
-    padding:.8rem .9rem;
-    font-size:14px;
-    outline:none;
-    transition:border-color .15s, box-shadow .15s;
-  }
-
-  .search-box input:focus{
-    border-color:#bdbdbd;
-    box-shadow:0 0 0 3px rgba(245,196,0,.18);
-  }
-
+  /* ── Instructivo ── */
   .helper-card{
     background:#fff;
     border:1px solid #d9d9d9;
@@ -105,36 +63,63 @@
     padding:1rem 1.05rem;
     margin-bottom:1rem;
   }
+  .helper-title{font-size:14px;font-weight:600;margin-bottom:6px;}
+  .helper-text{font-size:12px;color:#666;line-height:1.5;}
 
-  .helper-title{
+  /* ── Buscador ── */
+  .search-box{
+    background:#fff;
+    border:1px solid #d9d9d9;
+    border-radius:14px;
+    padding:.9rem 1rem;
+    margin-bottom:1rem;
+  }
+  .search-box label{display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:8px;}
+  .search-box input{
+    width:100%;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:.8rem .9rem;
     font-size:14px;
-    font-weight:600;
-    margin-bottom:6px;
+    outline:none;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .search-box input:focus{
+    border-color:#bdbdbd;
+    box-shadow:0 0 0 3px rgba(245,196,0,.18);
   }
 
-  .helper-text{
-    font-size:12px;
-    color:#666;
-    line-height:1.5;
+  /* Contador de resultados */
+  .search-count{
+    font-size:11px;
+    color:#888;
+    margin-top:6px;
+    min-height:16px;
   }
 
-  .accordion{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
+  /* ── Acordeón ── */
+  .accordion{display:flex;flex-direction:column;gap:12px;}
 
   .accordion-item{
     background:#fff;
     border:1px solid #d9d9d9;
     border-radius:14px;
     overflow:hidden;
-    transition:border-color .2s ease, box-shadow .2s ease;
+    transition:border-color .2s,box-shadow .2s;
+    /* Borde izquierdo de color por sección */
+    border-left-width:4px;
   }
 
+  /* Colores por sección */
+  .accordion-item.sec-preop   { border-left-color:#F2C200; }
+  .accordion-item.sec-reportes{ border-left-color:#e05c5c; }
+  .accordion-item.sec-humana  { border-left-color:#4caf7d; }
+  .accordion-item.sec-docs    { border-left-color:#5b8dee; }
+
   .accordion-item[open]{
-    border-color:#d7d7d7;
-    box-shadow:0 4px 14px rgba(0,0,0,.05);
+    border-color:#c8c8c8;
+    border-left-width:4px;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
   }
 
   .accordion-item summary{
@@ -147,115 +132,97 @@
     align-items:center;
     justify-content:space-between;
     gap:12px;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
   }
+  .accordion-item summary::-webkit-details-marker{display:none;}
 
-  .accordion-item summary::-webkit-details-marker{
-    display:none;
-  }
-
-  .summary-left{
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-
-  .summary-icon{
-    font-size:18px;
-  }
+  .summary-left{display:flex;align-items:center;gap:10px;}
+  .summary-icon{font-size:18px;}
 
   .accordion-item summary::after{
     content:"▾";
     font-size:16px;
     color:#777;
-    transition:transform .2s ease;
+    transition:transform .2s;
   }
-
-  .accordion-item[open] summary::after{
-    transform:rotate(180deg);
-  }
+  .accordion-item[open] summary::after{transform:rotate(180deg);}
 
   .accordion-content{
     padding:0 1rem 1rem;
     border-top:1px solid #eee;
   }
 
+  /* ── Grid de tarjetas ── */
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
     gap:10px;
     margin-top:1rem;
   }
+  .grid.single{grid-template-columns:1fr;}
 
-  .grid.single{
-    grid-template-columns:1fr;
-  }
-
+  /* ── Tarjeta ── */
   .card{
-    background:#fff;
-    border:1px solid #d9d9d9;
-    border-radius:14px;
-    padding:.95rem 1rem;
+    background:#fafafa;
+    border:1px solid #e2e2e2;
+    border-radius:12px;
+    padding:.9rem 1rem;
     cursor:pointer;
     text-decoration:none;
-    display:block;
-    transition:box-shadow .15s,border-color .15s,transform .15s;
+    display:flex;
+    flex-direction:column;
+    transition:box-shadow .15s,border-color .15s,transform .15s,background .1s;
+    -webkit-tap-highlight-color:transparent;
+    position:relative;
+    overflow:hidden;
   }
-
   .card:hover{
-    border-color:#ccc;
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
+    border-color:#bbb;
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
     transform:translateY(-1px);
+    background:#fff;
   }
-
-  .card.hidden{
-    display:none;
+  /* Feedback táctil al presionar */
+  .card:active{
+    transform:scale(.97);
+    background:#f0f0f0;
+    box-shadow:none;
   }
+  .card.hidden{display:none;}
 
-  .card-icon{
-    font-size:22px;
-    margin-bottom:8px;
-  }
+  .card-icon{font-size:22px;margin-bottom:8px;}
+  .card-title{font-size:13px;font-weight:600;color:#1a1a1a;line-height:1.35;margin-bottom:3px;}
+  .card-sub{font-size:11px;color:#888;line-height:1.4;}
 
-  .card-title{
-    font-size:13px;
-    font-weight:600;
-    color:#1a1a1a;
-    line-height:1.35;
-    margin-bottom:3px;
-  }
-
-  .card-sub{
-    font-size:11px;
-    color:#888;
-    line-height:1.4;
-  }
-
+  /* Badge externo más visible */
   .ext-badge{
     display:inline-flex;
     align-items:center;
-    gap:3px;
+    gap:4px;
     font-size:10px;
-    color:#aaa;
-    margin-top:6px;
+    font-weight:600;
+    color:#fff;
+    background:#888;
+    border-radius:6px;
+    padding:2px 7px;
+    margin-top:8px;
+    align-self:flex-start;
   }
+  .ext-badge.forms { background:#1a73e8; }
+  .ext-badge.drive { background:#0f9d58; }
 
+  /* Card horizontal (full) */
   .card-full{
-    display:flex;
+    flex-direction:row;
     align-items:center;
     gap:14px;
   }
+  .card-full .card-icon{margin:0;font-size:24px;flex-shrink:0;}
+  .card-full .card-text{flex:1;min-width:0;}
+  .card-full .ext-badge{margin-top:0;margin-left:auto;white-space:nowrap;}
 
-  .card-full .card-icon{
-    margin:0;
-    font-size:24px;
-  }
-
-  .card-full .ext-badge{
-    margin-left:auto;
-    margin-top:0;
-    white-space:nowrap;
-  }
-
+  /* Mensaje vacío */
   .empty-message{
     display:none;
     margin-top:1rem;
@@ -267,23 +234,67 @@
     padding:.9rem 1rem;
   }
 
+  /* ── Botón ir arriba ── */
+  .back-to-top{
+    position:fixed;
+    bottom:1.2rem;
+    right:1.1rem;
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    background:#F2C200;
+    border:none;
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 3px 10px rgba(0,0,0,.2);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:99;
+    transition:opacity .2s,transform .15s;
+    color:#1a1a1a;
+  }
+  .back-to-top.visible{display:flex;}
+  .back-to-top:active{transform:scale(.92);}
+
+  /* ── Footer ── */
   footer{
     text-align:center;
     font-size:11px;
     color:#bbb;
     margin-top:2rem;
+    line-height:1.8;
   }
 
-  @media (max-width:520px){
-    .card-full{
-      align-items:flex-start;
-      flex-direction:column;
-    }
+  /* ══════════════════════════════
+     MÓVIL  ≤ 600 px
+  ══════════════════════════════ */
+  @media (max-width:600px){
+    .wrapper{padding:1rem .75rem 3.5rem;}
 
-    .card-full .ext-badge{
-      margin-left:0;
-      margin-top:8px;
+    /* Una columna en móvil */
+    .grid{grid-template-columns:1fr !important;}
+
+    /* Tarjeta horizontal en móvil */
+    .card{
+      flex-direction:row;
+      align-items:center;
+      gap:12px;
+      padding:.85rem .9rem;
     }
+    .card-icon{font-size:24px;margin-bottom:0;flex-shrink:0;}
+    .card-text{flex:1;min-width:0;}
+    .card-title{font-size:14px;}
+    .card-sub{font-size:12px;}
+    .ext-badge{margin-top:5px;}
+
+    /* Card-full en móvil */
+    .card-full{align-items:center;flex-direction:row;}
+    .card-full .ext-badge{margin-left:auto;margin-top:0;}
+
+    .accordion-item summary{font-size:14px;padding:.9rem 1rem;}
+    .header h1{font-size:17px;}
   }
 </style>
 </head>
@@ -298,20 +309,23 @@
     </div>
   </div>
 
-   <div class="helper-card">
+  <div class="helper-card">
     <div class="helper-title">📌 Instructivo</div>
     <div class="helper-text">
-      Seleccione una de las tres secciones para desplegar sus opciones. Puede usar el buscador para encontrar formularios o documentos más rápido.
+      Seleccione una sección para desplegar sus opciones. Puede usar el buscador para encontrar formularios o documentos más rápido.
     </div>
   </div>
 
   <div class="search-box">
     <label for="searchInput">Buscar formulario, reporte o documento</label>
     <input type="text" id="searchInput" placeholder="Ejemplo: PQRS, mototool, convivencia, documentos">
+    <div class="search-count" id="searchCount"></div>
   </div>
 
   <div class="accordion">
-    <details class="accordion-item">
+
+    <!-- ── PREOPERACIONALES ── -->
+    <details class="accordion-item sec-preop">
       <summary>
         <span class="summary-left">
           <span class="summary-icon">🔧</span>
@@ -320,69 +334,95 @@
       </summary>
       <div class="accordion-content">
         <div class="grid">
- <a class="card searchable-card" data-search="condiciones salud alto riesgo formulario google forms" href="https://forms.gle/cqyEWkMgjBxSZmPP8" target="_blank" rel="noopener">
+
+          <a class="card searchable-card" data-search="condiciones salud alto riesgo formulario google forms" href="https://forms.gle/cqyEWkMgjBxSZmPP8" target="_blank" rel="noopener">
             <div class="card-icon">🫀</div>
-            <div class="card-title">Condiciones de salud</div>
-            <div class="card-sub">Alto riesgo</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Condiciones de salud</div>
+              <div class="card-sub">Alto riesgo</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
+
           <a class="card searchable-card" data-search="inspección mototool general preoperacional herramientas formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSdO6-E_F2UNLcjAfK9g0rwFO67i-6l_wubje_rE8OflMlSVYg/viewform" target="_blank" rel="noopener">
             <div class="card-icon">🔧</div>
-            <div class="card-title">Motortool</div>
-            <div class="card-sub">General</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Motortool</div>
+              <div class="card-sub">General</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="preoperacional equipo soldar inspección formulario google forms" href="https://forms.gle/KaJBDcimBKnEJA8D6" target="_blank" rel="noopener">
             <div class="card-icon">⚡</div>
-            <div class="card-title">Equipo de soldar</div>
-            <div class="card-sub">Inspección</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Equipo de soldar</div>
+              <div class="card-sub">Inspección</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="inspección pulidoras general formulario google forms" href="https://forms.gle/gFKTP5ZCNbi8pakc8" target="_blank" rel="noopener">
             <div class="card-icon">🔩</div>
-            <div class="card-title">Pulidora</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Pulidora</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="herramientas menores preoperacional formulario google forms" href="https://forms.gle/i2ijZhkhN2C1EhTP7" target="_blank" rel="noopener">
             <div class="card-icon">🛠️</div>
-            <div class="card-title">Herramientas menores</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Herramientas menores</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
+
           <a class="card searchable-card" data-search="Inspección General De Roladora formulario google forms" href="https://forms.gle/he7SPUTDsNDDfjiW8" target="_blank" rel="noopener">
             <div class="card-icon">⚙️</div>
-            <div class="card-title"> Roladora</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Roladora</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
- <a class="card searchable-card" data-search="Inspección Preoperacional Taladro De Árbol Fresador formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScYVKO9-CHIu3wr3XN73M1kLvc_k9W_IIyfmhuFYcfeQMGvpw/viewform" target="_blank" rel="noopener">
+
+          <a class="card searchable-card" data-search="Inspección Preoperacional Taladro De Árbol Fresador formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScYVKO9-CHIu3wr3XN73M1kLvc_k9W_IIyfmhuFYcfeQMGvpw/viewform" target="_blank" rel="noopener">
             <div class="card-icon">🗜️</div>
-            <div class="card-title">Taladro De Árbol</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Taladro de Árbol</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
- <a class="card searchable-card" data-search="Inspección General Polipasto formulario google forms" href="https://forms.gle/cqyEWkMgjBxSZmPP8" target="_blank" rel="noopener">
+
+          <a class="card searchable-card" data-search="Inspección General Polipasto formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScEXjpocpoo-J7d0PmaAjyUyJyijIlvg2-2jk9AJQA5ae0ShQ/viewform?usp=publish-editor" target="_blank" rel="noopener">
             <div class="card-icon">🪝</div>
-            <div class="card-title">Polipasto</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Polipasto</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
- <a class="card searchable-card" data-search="Inspección Preoperacional General De Taladros formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSckteKJ-xujUTJAi4XgaPlW60Td9uzl4S2FqRsrsFcX8kwI_Q/viewform?usp=sharing&ouid=116389296710509681828" target="_blank" rel="noopener">
+
+          <a class="card searchable-card" data-search="Inspección Preoperacional General De Taladros formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSckteKJ-xujUTJAi4XgaPlW60Td9uzl4S2FqRsrsFcX8kwI_Q/viewform?usp=sharing&ouid=116389296710509681828" target="_blank" rel="noopener">
             <div class="card-icon">⛏️</div>
-            <div class="card-title">Taladro</div>
-            <div class="card-sub">Preoperacional</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Taladro</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
+
         </div>
         <div class="empty-message">No hay resultados en esta sección.</div>
       </div>
     </details>
 
-    <details class="accordion-item">
+    <!-- ── REPORTES Y GESTIÓN ── -->
+    <details class="accordion-item sec-reportes">
       <summary>
         <span class="summary-left">
           <span class="summary-icon">⚠️</span>
@@ -391,39 +431,84 @@
       </summary>
       <div class="accordion-content">
         <div class="grid">
+
           <a class="card searchable-card" data-search="actos condiciones seguras inseguras reporte formulario google forms" href="https://forms.gle/yNRW4FaWt43TGodw7" target="_blank" rel="noopener">
             <div class="card-icon">⚠️</div>
-            <div class="card-title">Actos y condiciones</div>
-            <div class="card-sub">Seguras e inseguras</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Actos y condiciones</div>
+              <div class="card-sub">Seguras e inseguras</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="pqrs peticiones quejas reclamos sugerencias formulario google forms" href="https://forms.gle/kJRgogph9pqMiui98" target="_blank" rel="noopener">
             <div class="card-icon">🗣️</div>
-            <div class="card-title">PQRS</div>
-            <div class="card-sub">Peticiones, quejas, reclamos</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">PQRS</div>
+              <div class="card-sub">Peticiones, quejas, reclamos</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="comité convivencia reporte quejas laboral formulario google forms" href="https://forms.gle/cJZpNibe8jq9LYi56" target="_blank" rel="noopener">
             <div class="card-icon">🧏</div>
-            <div class="card-title">Comité de convivencia</div>
-            <div class="card-sub">Reporte de quejas</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Comité de convivencia</div>
+              <div class="card-sub">Reporte de quejas</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
 
           <a class="card searchable-card" data-search="acoso sexual laboral reporte confidencial formulario google forms" href="https://forms.gle/2CAs4zFnRyHycj9D8" target="_blank" rel="noopener">
             <div class="card-icon">👁️</div>
-            <div class="card-title">Acoso sexual laboral</div>
-            <div class="card-sub">Reporte confidencial</div>
-            <div class="ext-badge">↗ Google Forms</div>
+            <div class="card-text">
+              <div class="card-title">Acoso sexual laboral</div>
+              <div class="card-sub">Reporte confidencial</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
           </a>
+
         </div>
         <div class="empty-message">No hay resultados en esta sección.</div>
       </div>
     </details>
 
-    <details class="accordion-item">
+    <!-- ── GESTIÓN HUMANA ── -->
+    <details class="accordion-item sec-humana">
+      <summary>
+        <span class="summary-left">
+          <span class="summary-icon">👥</span>
+          <span>Gestión Humana</span>
+        </span>
+      </summary>
+      <div class="accordion-content">
+        <div class="grid">
+
+          <a class="card searchable-card" data-search="encuesta perfil sociodemografico indimon gestión humana formulario google forms" href="https://forms.gle/eaAiSjYk49ReDBBR9" target="_blank" rel="noopener">
+            <div class="card-icon">📋</div>
+            <div class="card-text">
+              <div class="card-title">Perfil Sociodemográfico</div>
+              <div class="card-sub">Encuesta INDIMON S.A.S.</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
+          </a>
+
+          <a class="card searchable-card" data-search="inducción reinducción personal gestión humana formulario google forms" href="https://forms.gle/tj7C2Ft3pFERXuBT8" target="_blank" rel="noopener">
+            <div class="card-icon">🎓</div>
+            <div class="card-text">
+              <div class="card-title">Inducción y Reinducción</div>
+              <div class="card-sub">Gestión Humana</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
+          </a>
+
+        </div>
+        <div class="empty-message">No hay resultados en esta sección.</div>
+      </div>
+    </details>
+
+    <!-- ── DOCUMENTOS ── -->
+    <details class="accordion-item sec-docs">
       <summary>
         <span class="summary-left">
           <span class="summary-icon">📁</span>
@@ -432,86 +517,95 @@
       </summary>
       <div class="accordion-content">
         <div class="grid single">
-          <a class="card card-full searchable-card" data-search="documentos ssta formatos procedimientos registros carpeta sistema gestión" href="https://goo.su/uukuuU" target="_blank" rel="noopener">
+          <a class="card card-full searchable-card" data-search="documentos ssta formatos procedimientos registros carpeta sistema gestión drive" href="https://drive.google.com/drive/folders/1CyFvMhVAOWfKoPwgU220T_1J80J4eJCC" target="_blank" rel="noopener">
             <div class="card-icon">📁</div>
-            <div>
+            <div class="card-text">
               <div class="card-title">Documentos SSTA</div>
               <div class="card-sub">Formatos, procedimientos y registros del sistema de gestión</div>
+              <div class="ext-badge drive">↗ Google Drive</div>
             </div>
-            <div class="ext-badge">↗ Ver carpeta</div>
           </a>
         </div>
         <div class="empty-message">No hay resultados en esta sección.</div>
       </div>
     </details>
-  </div>
 
-  <footer>INDIMON S.A.S. &mdash; SG-SSTA &mdash; Uso interno</footer>
-</div>
+  </div><!-- /accordion -->
+
+  <footer>
+    INDIMON S.A.S. &mdash; SG-SSTA &mdash; Uso interno<br>
+    <span id="footerDate"></span>
+  </footer>
+
+</div><!-- /wrapper -->
+
+<button class="back-to-top" id="backToTop" title="Ir arriba">↑</button>
 
 <script>
-  const items = document.querySelectorAll('.accordion-item');
-  const searchInput = document.getElementById('searchInput');
-  const cards = document.querySelectorAll('.searchable-card');
+  // ── Fecha en footer ──
+  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const now = new Date();
+  document.getElementById('footerDate').textContent =
+    'Actualizado: ' + now.getDate() + ' de ' + months[now.getMonth()] + ' de ' + now.getFullYear();
 
+  // ── Acordeón: solo uno abierto ──
+  const items = document.querySelectorAll('.accordion-item');
   items.forEach((item) => {
     item.addEventListener('toggle', () => {
       if (item.open) {
         items.forEach((other) => {
-          if (other !== item) {
-            other.removeAttribute('open');
-          }
+          if (other !== item) other.removeAttribute('open');
         });
       }
     });
   });
 
+  // ── Buscador ──
+  const searchInput = document.getElementById('searchInput');
+  const searchCount = document.getElementById('searchCount');
+  const cards       = document.querySelectorAll('.searchable-card');
+
   function updateEmptyMessages() {
     document.querySelectorAll('.accordion-content').forEach((section) => {
-      const sectionCards = section.querySelectorAll('.searchable-card');
-      const visibleCards = [...sectionCards].filter(card => !card.classList.contains('hidden'));
-      const emptyMessage = section.querySelector('.empty-message');
-
-      if (visibleCards.length === 0) {
-        emptyMessage.style.display = 'block';
-      } else {
-        emptyMessage.style.display = 'none';
-      }
+      const visible = [...section.querySelectorAll('.searchable-card')].filter(c => !c.classList.contains('hidden'));
+      section.querySelector('.empty-message').style.display = visible.length === 0 ? 'block' : 'none';
     });
   }
 
   searchInput.addEventListener('input', function () {
     const term = this.value.toLowerCase().trim();
+    let count = 0;
 
     cards.forEach((card) => {
-      const text = card.dataset.search.toLowerCase();
-      const match = text.includes(term);
+      const match = card.dataset.search.toLowerCase().includes(term);
       card.classList.toggle('hidden', !match);
+      if (match) count++;
     });
 
+    // Contador
     if (term !== '') {
+      searchCount.textContent = count + ' resultado' + (count !== 1 ? 's' : '') + ' encontrado' + (count !== 1 ? 's' : '');
       items.forEach((item) => {
-        const hasVisible = item.querySelector('.searchable-card:not(.hidden)');
-        if (hasVisible) {
-          item.setAttribute('open', '');
-        } else {
-          item.removeAttribute('open');
-        }
+        item.open = !!item.querySelector('.searchable-card:not(.hidden)');
       });
     } else {
-      items.forEach((item, index) => {
-        if (index === 0) {
-          item.setAttribute('open', '');
-        } else {
-          item.removeAttribute('open');
-        }
-      });
+      searchCount.textContent = '';
+      items.forEach((item, i) => { item.open = i === 0; });
     }
 
     updateEmptyMessages();
   });
 
   updateEmptyMessages();
+
+  // ── Botón ir arriba ──
+  const btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 220);
+  });
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 </script>
 
 </body>
