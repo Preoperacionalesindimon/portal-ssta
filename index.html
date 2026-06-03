@@ -295,7 +295,94 @@
 
     .accordion-item summary{font-size:14px;padding:.9rem 1rem;}
     .header h1{font-size:17px;}
+
+    /* Modal en móvil */
+    .modal-box{width:100%;height:100%;border-radius:0;top:0;left:0;transform:none;max-height:100%;}
+    .modal-overlay{align-items:flex-end;}
   }
+
+  /* ── Modal ── */
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:200;
+    align-items:center;
+    justify-content:center;
+    padding:1rem;
+    animation:fadeIn .18s ease;
+  }
+  .modal-overlay.active{display:flex;}
+
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  .modal-box{
+    background:#fff;
+    border-radius:16px;
+    width:min(740px,100%);
+    height:90vh;
+    max-height:820px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+    animation:slideUp .2s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  .modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:.85rem 1.1rem;
+    border-bottom:1px solid #eee;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .modal-title{font-size:14px;font-weight:600;color:#1a1a1a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .modal-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+  .modal-open-btn{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:12px;font-weight:600;
+    color:#1a73e8;background:#e8f0fe;
+    border:none;border-radius:8px;padding:5px 10px;
+    cursor:pointer;text-decoration:none;
+    transition:background .15s;
+  }
+  .modal-open-btn:hover{background:#d2e3fc;}
+
+  .modal-close{
+    width:32px;height:32px;border-radius:50%;
+    border:none;background:#f2f2f2;
+    font-size:18px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color:#555;transition:background .15s;
+  }
+  .modal-close:hover{background:#e0e0e0;}
+
+  .modal-iframe{
+    flex:1;width:100%;border:none;
+    background:#fafafa;
+  }
+
+  .modal-loading{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;color:#888;font-size:13px;
+    background:#fafafa;
+    pointer-events:none;
+    transition:opacity .3s;
+  }
+  .modal-loading.hidden{opacity:0;}
+  .spinner{
+    width:30px;height:30px;border:3px solid #eee;
+    border-top-color:#F2C200;border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .modal-iframe-wrap{position:relative;flex:1;display:flex;flex-direction:column;}
 </style>
 </head>
 <body>
@@ -406,7 +493,6 @@
               <div class="ext-badge forms">↗ Google Forms</div>
             </div>
           </a>
-
           <a class="card searchable-card" data-search="Inspección Preoperacional General De Taladros formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSckteKJ-xujUTJAi4XgaPlW60Td9uzl4S2FqRsrsFcX8kwI_Q/viewform?usp=sharing&ouid=116389296710509681828" target="_blank" rel="noopener">
             <div class="card-icon">⛏️</div>
             <div class="card-text">
@@ -415,7 +501,14 @@
               <div class="ext-badge forms">↗ Google Forms</div>
             </div>
           </a>
-
+     <a class="card searchable-card" data-search="Inspección Preoperacional Equipo de Oxicorte formulario google forms" href="https://forms.gle/67fxgkYPNo2s6SKHA" target="_blank" rel="noopener">
+            <div class="card-icon">💥</div>
+            <div class="card-text">
+              <div class="card-title">Oxicorte</div>
+              <div class="card-sub">Preoperacional</div>
+              <div class="ext-badge forms">↗ Google Forms</div>
+            </div>
+          </a>
         </div>
         <div class="empty-message">No hay resultados en esta sección.</div>
       </div>
@@ -541,6 +634,26 @@
 
 <button class="back-to-top" id="backToTop" title="Ir arriba">↑</button>
 
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="formModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Formulario</span>
+      <div class="modal-actions">
+        <a class="modal-open-btn" id="modalOpenLink" href="#" target="_blank" rel="noopener">↗ Abrir en Forms</a>
+        <button class="modal-close" id="modalClose" aria-label="Cerrar">✕</button>
+      </div>
+    </div>
+    <div class="modal-iframe-wrap">
+      <div class="modal-loading" id="modalLoading">
+        <div class="spinner"></div>
+        <span>Cargando formulario…</span>
+      </div>
+      <iframe class="modal-iframe" id="modalFrame" title="Formulario" allow="camera;microphone"></iframe>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── Fecha en footer ──
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -582,7 +695,6 @@
       if (match) count++;
     });
 
-    // Contador
     if (term !== '') {
       searchCount.textContent = count + ' resultado' + (count !== 1 ? 's' : '') + ' encontrado' + (count !== 1 ? 's' : '');
       items.forEach((item) => {
@@ -605,6 +717,64 @@
   });
   btn.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ── Modal para Google Forms ──
+  const modal        = document.getElementById('formModal');
+  const modalFrame   = document.getElementById('modalFrame');
+  const modalTitle   = document.getElementById('modalTitle');
+  const modalOpenLink= document.getElementById('modalOpenLink');
+  const modalLoading = document.getElementById('modalLoading');
+  const modalClose   = document.getElementById('modalClose');
+
+  function openModal(url, title) {
+    modalTitle.textContent = title;
+    modalOpenLink.href = url;
+    modalLoading.classList.remove('hidden');
+    modalFrame.src = '';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // Pequeño delay para que la animación del modal sea visible antes de cargar
+    setTimeout(() => { modalFrame.src = url; }, 80);
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    modalFrame.src = '';
+  }
+
+  // Ocultar spinner cuando carga el iframe
+  modalFrame.addEventListener('load', () => {
+    modalLoading.classList.add('hidden');
+  });
+
+  modalClose.addEventListener('click', closeModal);
+
+  // Cerrar al hacer clic en el fondo oscuro
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Interceptar clics en tarjetas de Google Forms (no Drive)
+  document.querySelectorAll('.searchable-card').forEach((card) => {
+    const href = card.getAttribute('href') || '';
+    const isForm = href.includes('forms.gle') || href.includes('docs.google.com/forms');
+    const isDrive = href.includes('drive.google.com');
+
+    if (isForm && !isDrive) {
+      card.removeAttribute('target');
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        const title = card.querySelector('.card-title')?.textContent || 'Formulario';
+        openModal(href, title);
+      });
+    }
   });
 </script>
 
