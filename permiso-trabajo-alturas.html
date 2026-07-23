@@ -192,6 +192,20 @@
     .head{grid-template-columns:1fr;}
     .head .logo,.head .title{border-right:none;border-bottom:1px solid var(--line);}
   }
+  @media (max-width:600px){
+    body{padding:12px 6px 90px;}
+    .grid{padding:10px;}
+    .section-title{padding:8px 10px;font-size:11.5px;}
+    .section-note{padding:6px 10px;}
+    .row{gap:10px;}
+    .field{min-width:130px;}
+    .yn-row{gap:6px;padding:5px 0;}
+    .yn-label{min-width:100%;font-size:12px;}
+    .yn-opts{width:100%;}
+
+    /* Tabla EPCC: permitir scroll interno propio en vez de apretar columnas */
+    #table-epcc{min-width:520px;}
+  }
 
   /* ── Gate screen ── */
   .gate-screen{
@@ -414,10 +428,12 @@
   <div class="section">
     <div class="section-title">8. Elementos de protección contra caídas a utilizar</div>
     <div class="section-note">Todos los equipos referenciados deben estar certificados según Resolución 4272/2021 e inspeccionados antes de su uso.</div>
-    <table class="mini" id="table-epcc">
-      <thead><tr><th style="width:38%">Elemento</th><th>Usa (SI/N/A)</th><th>¿Inspeccionado antes de uso?</th><th>¿Certificado Res. 4272/2021?</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div style="overflow-x:auto;">
+      <table class="mini" id="table-epcc">
+        <thead><tr><th style="width:38%">Elemento</th><th>Usa (SI/N/A)</th><th>¿Inspeccionado antes de uso?</th><th>¿Certificado Res. 4272/2021?</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- 9. PREGUNTAS OBLIGATORIAS -->

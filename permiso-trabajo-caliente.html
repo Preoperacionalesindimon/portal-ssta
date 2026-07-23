@@ -30,6 +30,38 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
 @media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+@media(max-width:600px){
+  body{padding:14px 8px 90px;}
+  .hdr{padding:16px 16px;flex-direction:column;align-items:flex-start;gap:8px;}
+  .hdr .meta{text-align:left;}
+  .hdr h1{font-size:18px;}
+  .section-body{padding:14px 12px;}
+  .section-title{padding:9px 12px;font-size:12px;}
+  .check-item{flex-direction:column;align-items:stretch;gap:8px;}
+  .toggle{align-self:flex-start;}
+  .close-q{flex-direction:column;align-items:flex-start;gap:6px;}
+
+  /* Tabla de ejecutantes: de tabla ancha a tarjetas apiladas */
+  .exec-table thead{display:none;}
+  .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
+  .exec-table{border:none;}
+  .exec-table tr{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;background:#fcfbf8;}
+  .exec-table td{border:none;padding:6px 0;}
+  .exec-table td[data-label]::before{
+    content: attr(data-label);
+    display:block;
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    color:var(--muted);
+    letter-spacing:.03em;
+    margin-bottom:3px;
+  }
+  .exec-table td.idx{display:none;}
+  .exec-table td.helper{display:flex;align-items:center;gap:8px;}
+  .exec-table td.helper::before{margin-bottom:0;}
+}
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
 .field textarea{min-height:64px;resize:vertical;}
@@ -423,15 +455,15 @@ const execBody=document.getElementById('execBody');
 function addExecRow(prefill){
   execCounter++; const n=execCounter;
   const tr=document.createElement('tr');
-  tr.innerHTML=`<td class="idx">${n}</td>
-    <td><input type="text" placeholder="Nombre completo" id="execNombre${n}"></td>
-    <td><input type="text" placeholder="C.C." id="execCC${n}"></td>
-    <td>
+  tr.innerHTML=`<td class="idx" data-label="#">${n}</td>
+    <td data-label="Nombre completo"><input type="text" placeholder="Nombre completo" id="execNombre${n}"></td>
+    <td data-label="Documento"><input type="text" placeholder="C.C." id="execCC${n}"></td>
+    <td data-label="Firma">
       <canvas class="mini-pad" id="execPad${n}"></canvas>
       <button type="button" class="mini-clear-btn" data-clear="execPad${n}">Borrar firma</button>
     </td>
-    <td><input type="time" id="execHora${n}"></td>
-    <td class="helper"><input type="checkbox" id="execAyudante${n}"></td>`;
+    <td data-label="Hora vinculación"><input type="time" id="execHora${n}"></td>
+    <td class="helper" data-label="Ayudante de seguridad"><input type="checkbox" id="execAyudante${n}"></td>`;
   execBody.appendChild(tr);
   const c=document.getElementById('execPad'+n); setupPad(c);
   if(prefill){
