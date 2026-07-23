@@ -250,6 +250,8 @@
       <input type="text" id="closeCodeInput" placeholder="Ej: ALT-20260715-001">
       <button type="button" class="btn btn-primary" style="width:100%;" id="btnFetchPermit">Buscar permiso</button>
       <div id="closeCodeMsg"></div>
+      <button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;" id="btnListOpen">Ver permisos abiertos</button>
+      <div id="openPermitsList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
     </div>
     <a href="index.html" style="display:block;margin-top:16px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
   </div>
@@ -357,7 +359,7 @@
       <div class="yn-row"><div class="yn-label">Superficie de apoyo adecuada en espacio, resistencia, inclinación y antideslizante</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Trabajadores capacitados sobre uso y cuidado de los sistemas de acceso</div><div class="yn-opts" data-yn></div></div>
       <div class="row">
-        <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text"></div>
+        <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text" id="inspectorNombreInput"></div>
         <div class="field"><label>Cédula</label><input type="text"></div>
       </div>
       <div class="sig-pad-wrap">
@@ -785,13 +787,15 @@ function applyWorkers(list){
 function collectOpenData(){
   const openPhase = document.getElementById('openPhase');
   const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
+  const inspectorNombreEl = document.getElementById('inspectorNombreInput');
   return {
     yn: collectYN(openPhase),
     text: collectTextFields(openPhase),
     epcc: collectEpcc(),
     roles: collectRoles(),
     workers: collectWorkers(),
-    accessInspectorSig: accessSigCanvas ? collectSig(accessSigCanvas) : null
+    accessInspectorSig: accessSigCanvas ? collectSig(accessSigCanvas) : null,
+    responsable: inspectorNombreEl ? inspectorNombreEl.value : ''
   };
 }
 function applyOpenData(data){
@@ -890,6 +894,32 @@ document.getElementById('btnNewPermit').addEventListener('click', ()=>{
 
 document.getElementById('btnClosePermit').addEventListener('click', ()=>{
   document.getElementById('closeCodeBox').style.display='block';
+});
+
+document.getElementById('btnListOpen').addEventListener('click', async ()=>{
+  const listEl = document.getElementById('openPermitsList');
+  listEl.innerHTML = 'Buscando…';
+  try{
+    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=list`);
+    const json = await res.json();
+    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
+    const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
+    if(abiertos.length===0){ listEl.innerHTML = '<em>No hay permisos abiertos.</em>'; return; }
+    listEl.innerHTML = '';
+    abiertos.forEach(r=>{
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
+      div.innerHTML = `<b>${r.code}</b> <span style="color:#888;float:right;">${r.status}</span>
+        <div style="margin-top:3px;">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>`;
+      div.addEventListener('click', ()=>{
+        document.getElementById('closeCodeInput').value = r.code;
+        document.getElementById('btnFetchPermit').click();
+      });
+      listEl.appendChild(div);
+    });
+  }catch(err){
+    listEl.innerHTML = '<em>Error de conexión con el backend.</em>';
+  }
 });
 
 document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
