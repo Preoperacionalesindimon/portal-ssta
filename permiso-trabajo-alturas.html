@@ -24,7 +24,7 @@
     font-family:'Segoe UI',Arial,sans-serif;
     background:var(--bg);
     color:var(--text);
-    padding:24px 12px 80px;
+    padding:24px 16px 80px;
   }
   .sheet{
     max-width:980px;
@@ -175,13 +175,13 @@
     max-width:980px;margin:0 auto;box-shadow:0 -2px 10px rgba(0,0,0,.06);
   }
   .btn{
-    padding:9px 18px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+    padding:8px 15px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);
   }
   .btn-primary{background:var(--navy);color:#fff;border-color:var(--navy);}
   .btn-primary:hover{background:var(--navy-dark);}
   .btn-secondary{background:#fff;color:var(--navy);}
   .btn-secondary:hover{background:#f4f6f8;}
-  #status-msg{font-size:11.5px;color:var(--muted);align-self:center;margin-right:auto;}
+  #status-msg{font-size:10.5px;color:var(--muted);align-self:center;margin-right:auto;line-height:1.3;}
 
   @media print{
     body{background:#fff;padding:0;}
@@ -193,38 +193,41 @@
     .head .logo,.head .title{border-right:none;border-bottom:1px solid var(--line);}
   }
   @media (max-width:600px){
-    body{padding:12px 6px 90px;}
-    .grid{padding:10px;}
-    .section-title{padding:8px 10px;font-size:11.5px;}
-    .section-note{padding:6px 10px;}
-    .row{gap:10px;}
-    .field{min-width:130px;}
-    .yn-row{gap:6px;padding:5px 0;}
-    .yn-label{min-width:100%;font-size:12px;}
+    body{padding:20px 14px 100px;}
+    .grid{padding:16px;gap:14px;}
+    .section-title{padding:11px 14px;font-size:12px;}
+    .section-note{padding:8px 14px;}
+    .row{gap:14px;row-gap:16px;}
+    .field{min-width:140px;}
+    .yn-row{gap:8px;padding:9px 0;}
+    .yn-label{min-width:100%;font-size:12.5px;line-height:1.4;}
     .yn-opts{width:100%;}
 
     /* Tabla EPCC: permitir scroll interno propio en vez de apretar columnas */
     #table-epcc{min-width:520px;}
+    .footer-actions{padding:10px 12px;}
+    #status-msg{font-size:10px;}
   }
 
   /* ── Gate screen ── */
-  .gate-screen{
-    min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px;
-  }
-  .gate-card{
-    background:var(--paper);border:1px solid var(--line);border-radius:10px;
-    padding:32px 28px;max-width:420px;width:100%;text-align:center;
-    box-shadow:0 4px 18px rgba(0,0,0,.08);
-  }
-  .gate-card h2{color:var(--navy-dark);font-size:18px;margin-bottom:6px;}
-  .gate-card p{color:var(--muted);font-size:13px;margin-bottom:22px;}
-  .gate-btn{width:100%;padding:14px;font-size:14px;margin-bottom:10px;}
-  #closeCodeBox{margin-top:16px;text-align:left;border-top:1px solid var(--line-soft);padding-top:16px;}
-  #closeCodeBox label{font-size:11.5px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;}
-  #closeCodeBox input{
-    width:100%;border:1px solid var(--line);border-radius:5px;padding:10px;font-size:14px;
-    margin-bottom:10px;text-transform:uppercase;font-family:monospace;letter-spacing:.5px;
-  }
+  .gate-top{background:var(--navy-dark);color:#fff;border-radius:10px;padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);margin-bottom:26px;}
+  .gate-top .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c9d6e6;margin-bottom:4px;}
+  .gate-top h1{margin:0;font-size:22px;font-weight:700;}
+  .gate-top .meta{font-size:11.5px;color:#c9d6e6;text-align:right;}
+  .gate-wrap{max-width:980px;margin:0 auto;}
+  .gate-wrap h2{font-size:17px;color:var(--navy-dark);margin:0 0 6px;}
+  .gate-wrap>p{color:var(--muted);font-size:13px;margin:0 0 20px;}
+  .landing-choices{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:560px){.landing-choices{grid-template-columns:1fr;}}
+  .choice-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 18px;cursor:pointer;transition:.15s;}
+  .choice-card:hover{border-color:var(--navy);box-shadow:0 4px 14px rgba(15,42,74,.15);}
+  .choice-card .icon{font-size:30px;margin-bottom:10px;}
+  .choice-card h3{margin:0 0 6px;font-size:14.5px;color:var(--navy-dark);}
+  .choice-card p{margin:0;font-size:12.5px;color:var(--muted);}
+  .gate-btn-secondary{background:transparent;border:1px solid #4a5762;padding:11px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
+  .gate-btn-secondary:hover{background:#f4f6f8;}
+  .file-input-wrap{margin-top:10px;}
+  .file-input-wrap input{font-size:12px;}
   #closeCodeMsg{font-size:12px;margin-top:8px;min-height:16px;}
   #closeCodeMsg.err{color:var(--warn);}
   #closeCodeMsg.ok{color:var(--ok);}
@@ -253,22 +256,34 @@
 <body>
 
 <!-- ══════════ GATE SCREEN ══════════ -->
-<div class="gate-screen" id="gateScreen">
-  <div class="gate-card">
-    <h2>🧗 Permiso de Trabajo en Alturas</h2>
-    <p>SSTA-F-116 · Seleccione una opción para continuar</p>
-    <button type="button" class="btn btn-primary gate-btn" id="btnNewPermit">🔓 Abrir nuevo permiso</button>
-    <button type="button" class="btn btn-secondary gate-btn" id="btnClosePermit">🔒 Cerrar permiso existente</button>
-    <div id="closeCodeBox" style="display:none;">
-      <label>Código del permiso (se entregó al abrirlo)</label>
-      <input type="text" id="closeCodeInput" placeholder="Ej: ALT-20260715-001">
-      <button type="button" class="btn btn-primary" style="width:100%;" id="btnFetchPermit">Buscar permiso</button>
-      <div id="closeCodeMsg"></div>
-      <button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;" id="btnListOpen">Ver permisos abiertos</button>
-      <div id="openPermitsList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
-    </div>
-    <a href="index.html" style="display:block;margin-top:16px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
+<div class="gate-wrap" id="gateScreen">
+  <div class="gate-top">
+    <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Alturas</h1></div>
+    <div class="meta">Código: <b>SSTA-F-116</b> · V1</div>
   </div>
+  <h2>¿Qué deseas hacer?</h2>
+  <p>Este permiso se guarda en una Google Sheet compartida: se abre desde un dispositivo y se cierra desde otro, buscando el permiso por su código.</p>
+
+  <div class="landing-choices">
+    <div class="choice-card" id="btnNewPermit">
+      <div class="icon">🧗</div>
+      <h3>Abrir nuevo permiso</h3>
+      <p>Diligenciar la inspección, autorización, riesgos, EPCC y firmas de apertura. Se guarda directo en la hoja de cálculo.</p>
+    </div>
+    <div class="choice-card" id="cardCloseAlturas">
+      <div class="icon">✅</div>
+      <h3>Cerrar un permiso existente</h3>
+      <p>Escribe el código del permiso (o elígelo de la lista de abiertos) para revisar los datos y diligenciar el cierre.</p>
+      <div class="file-input-wrap" onclick="event.stopPropagation()">
+        <input type="text" id="closeCodeInput" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+        <button class="gate-btn-secondary" id="btnFetchPermit" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Buscar permiso</button>
+        <button class="gate-btn-secondary" id="btnListOpen" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver permisos abiertos</button>
+        <div id="closeCodeMsg"></div>
+        <div id="openPermitsList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
+      </div>
+    </div>
+  </div>
+  <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
 </div>
 
 <div class="sheet" id="permitForm" style="display:none;">
@@ -535,6 +550,7 @@
 
 <div class="footer-actions">
   <span id="status-msg">Complete la sección 1 a 9 y guarde para generar el código del permiso.</span>
+  <button class="btn btn-secondary" id="printBtn">Imprimir / PDF</button>
   <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
   <button class="btn btn-primary" id="btnSaveOpen">Guardar y generar código</button>
   <button class="btn btn-primary" id="btnSaveClose" style="display:none;">Guardar cierre del permiso</button>
@@ -908,9 +924,7 @@ document.getElementById('btnNewPermit').addEventListener('click', ()=>{
   resizeAllSigPads();
 });
 
-document.getElementById('btnClosePermit').addEventListener('click', ()=>{
-  document.getElementById('closeCodeBox').style.display='block';
-});
+document.getElementById('printBtn').addEventListener('click', ()=> window.print());
 
 document.getElementById('btnListOpen').addEventListener('click', async ()=>{
   const listEl = document.getElementById('openPermitsList');
