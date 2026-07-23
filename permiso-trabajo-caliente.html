@@ -62,6 +62,8 @@ canvas.pad.locked{cursor:default;}
 .exec-table td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle;}
 .exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:13px;}
 .exec-table canvas.mini-pad{width:100%;height:90px;border:1px dashed #b9b2a2;border-radius:5px;background:#fff;touch-action:none;cursor:crosshair;}
+.mini-clear-btn{margin-top:4px;background:none;border:none;color:var(--ember-dark);font-size:10.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;}
+.mini-clear-btn:disabled{color:#b9b2a2;cursor:default;text-decoration:none;}
 .exec-table .idx{text-align:center;color:var(--muted);font-weight:700;width:26px;}
 .exec-table .helper{text-align:center;width:60px;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
@@ -424,7 +426,10 @@ function addExecRow(prefill){
   tr.innerHTML=`<td class="idx">${n}</td>
     <td><input type="text" placeholder="Nombre completo" id="execNombre${n}"></td>
     <td><input type="text" placeholder="C.C." id="execCC${n}"></td>
-    <td><canvas class="mini-pad" id="execPad${n}"></canvas></td>
+    <td>
+      <canvas class="mini-pad" id="execPad${n}"></canvas>
+      <button type="button" class="mini-clear-btn" data-clear="execPad${n}">Borrar firma</button>
+    </td>
     <td><input type="time" id="execHora${n}"></td>
     <td class="helper"><input type="checkbox" id="execAyudante${n}"></td>`;
   execBody.appendChild(tr);
@@ -477,6 +482,7 @@ function lockOpenSections(){
     .forEach(el=>{ if(!el.closest('#closeFields')) el.disabled=true; });
   document.querySelectorAll('#app button[data-key]').forEach(b=> b.disabled=true);
   document.querySelectorAll('#app canvas.pad, #app canvas.mini-pad').forEach(c=>{ if(!c.closest('#closeFields')) lockPad(c); });
+  document.querySelectorAll('#app .mini-clear-btn').forEach(b=> b.disabled=true);
   document.getElementById('addRowBtn').style.display='none';
   ['titleSec1','titleSec2','titleSec3','titleSec4','titleSec5','titleSec6','titleSecExec'].forEach(id=> document.getElementById(id).classList.add('locked'));
 }
