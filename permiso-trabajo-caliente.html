@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSTA-F-119 · Permiso de Trabajo en Caliente</title>
+<style>
+:root{
+  --ember:#c8461a;--ember-dark:#9c3413;--steel:#1f2a33;--steel-mid:#3a4753;
+  --paper:#f6f3ec;--paper-panel:#ffffff;--line:#d8d2c4;--ok:#2f6b45;--warn:#b8860b;
+  --ink:#20242a;--muted:#6b6459;font-family:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035) 0 2px, transparent 2px 14px),var(--paper);color:var(--ink);padding:24px 16px 80px;}
+.wrap{max-width:980px;margin:0 auto;}
+.hdr{background:var(--steel);color:#f4f0e6;border-radius:10px;padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+.hdr::before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle, rgba(200,70,26,.55), transparent 70%);}
+.hdr .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e2b79c;margin-bottom:4px;}
+.hdr h1{margin:0;font-size:22px;font-weight:700;}
+.hdr .meta{font-size:11.5px;color:#c7cdd2;text-align:right;line-height:1.5;}
+.hdr .meta b{color:#f4f0e6;}
+.status-banner{margin-top:14px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.status-banner.open{background:#fff2e5;color:var(--ember-dark);border:1px solid #f0c19c;}
+.status-banner.closed{background:#e9f5ec;color:var(--ok);border:1px solid #b9dcc2;}
+.status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
+.section{background:var(--paper-panel);border:1px solid var(--line);border-radius:10px;margin-top:18px;overflow:hidden;}
+.section-title{background:linear-gradient(90deg, var(--ember), var(--ember-dark));color:#fff;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.section-title.locked{background:linear-gradient(90deg, var(--steel-mid), var(--steel));}
+.section-body{padding:18px 20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
+.field textarea{min-height:64px;resize:vertical;}
+.field input:disabled,.field textarea:disabled,.field select:disabled{background:#f0ede4;color:#7a7466;}
+.radio-row{display:flex;gap:18px;align-items:center;margin-top:4px;flex-wrap:wrap;}
+.radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;}
+.check-cat{margin-bottom:16px;}
+.check-cat h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--steel);border-bottom:2px solid var(--line);padding-bottom:6px;text-transform:uppercase;}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:9px 4px;border-bottom:1px dashed var(--line);}
+.check-item:last-child{border-bottom:none;}
+.check-item p{margin:0;font-size:13.5px;line-height:1.4;flex:1;padding-top:2px;}
+.toggle{display:flex;gap:4px;flex-shrink:0;}
+.toggle button{border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:11.5px;font-weight:700;border-radius:5px;cursor:pointer;color:var(--muted);min-width:44px;}
+.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;}
+.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;}
+.toggle button:disabled{opacity:.8;cursor:default;}
+.progress-pill{font-size:11px;font-weight:700;color:#fff;background:var(--steel-mid);padding:4px 10px;border-radius:20px;}
+.sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
+.sig-block h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:var(--steel);}
+.sig-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.sig-fields input{width:100%;border:1px solid var(--line);border-radius:5px;padding:7px 9px;font-size:13px;}
+canvas.pad{width:100%;height:130px;border:1.5px dashed #b9b2a2;border-radius:6px;background:#fff;touch-action:none;cursor:crosshair;}
+canvas.pad.locked{cursor:default;}
+.sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+.sig-actions button{background:none;border:none;color:var(--ember-dark);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;}
+.sig-status{font-size:11px;color:var(--muted);}
+.sig-status.done{color:var(--ok);font-weight:700;}
+.exec-table{width:100%;border-collapse:collapse;margin-top:10px;}
+.exec-table th{background:var(--steel);color:#fff;font-size:10.5px;text-transform:uppercase;padding:8px 6px;text-align:left;}
+.exec-table td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle;}
+.exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:13px;}
+.exec-table canvas.mini-pad{width:100%;height:90px;border:1px dashed #b9b2a2;border-radius:5px;background:#fff;touch-action:none;cursor:crosshair;}
+.exec-table .idx{text-align:center;color:var(--muted);font-weight:700;width:26px;}
+.exec-table .helper{text-align:center;width:60px;}
+.add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
+.close-q p{margin:0;font-size:13.5px;flex:1;}
+.footer-actions{position:sticky;bottom:0;margin-top:24px;background:var(--steel);border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);}
+.footer-actions .status{color:#e2b79c;font-size:12px;font-weight:600;}
+.btn-main{background:var(--ember);color:#fff;border:none;padding:11px 22px;border-radius:7px;font-size:13.5px;font-weight:700;cursor:pointer;}
+.btn-main:hover{background:var(--ember-dark);}
+.btn-secondary{background:transparent;color:#c7cdd2;border:1px solid #4a5762;padding:11px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-secondary:hover{border-color:#c7cdd2;color:#fff;}
+/* LANDING */
+#landing{max-width:640px;margin:60px auto;text-align:center;}
+#landing h2{font-size:19px;margin-bottom:6px;}
+#landing p{color:var(--muted);font-size:13.5px;margin-bottom:26px;}
+.landing-choices{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:560px){.landing-choices{grid-template-columns:1fr;}}
+.choice-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 18px;cursor:pointer;transition:.15s;}
+.choice-card:hover{border-color:var(--ember);box-shadow:0 4px 14px rgba(200,70,26,.15);}
+.choice-card .icon{font-size:30px;margin-bottom:10px;}
+.choice-card h3{margin:0 0 6px;font-size:14.5px;color:var(--steel);}
+.choice-card p{margin:0;font-size:12.5px;color:var(--muted);}
+.file-input-wrap{margin-top:10px;}
+.file-input-wrap input{font-size:12px;}
+#app{display:none;}
+.hidden{display:none !important;}
+@media print{.footer-actions,.add-row-btn,.sig-actions,#landing{display:none !important;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LANDING -->
+  <div id="landing">
+    <div class="hdr" style="margin-bottom:26px;">
+      <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Caliente</h1></div>
+      <div class="meta">Código: <b>SSTA-F-119</b> · V2</div>
+    </div>
+    <h2>¿Qué deseas hacer?</h2>
+    <p>Este permiso se guarda en una Google Sheet compartida: se abre desde un dispositivo y se cierra desde otro, buscando el permiso por su código.</p>
+
+    <div class="landing-choices">
+      <div class="choice-card" id="cardNew">
+        <div class="icon">🔥</div>
+        <h3>Abrir nuevo permiso</h3>
+        <p>Diligenciar la descripción, checklist, equipos y firmas de apertura. Se guarda directo en la hoja de cálculo.</p>
+      </div>
+      <div class="choice-card" id="cardClose">
+        <div class="icon">✅</div>
+        <h3>Cerrar un permiso existente</h3>
+        <p>Escribe el código del permiso (o elígelo de la lista de abiertos) para revisar los datos y diligenciar el cierre.</p>
+        <div class="file-input-wrap">
+          <input type="text" id="codeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+          <button class="btn-secondary" id="loadCodeBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Buscar permiso</button>
+          <button class="btn-secondary" id="listOpenBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <div id="openList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
+        </div>
+      </div>
+    </div>
+    <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+    <div class="hdr">
+      <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Seguridad para Trabajo en Caliente</h1></div>
+      <div class="meta">Código: <b>SSTA-F-119</b> · Versión: <b>2</b><br>Fecha doc: 15/05/2017 · Act.: 25/01/2023</div>
+    </div>
+    <div class="status-banner open" id="statusBanner">
+      <span id="statusBannerText">Permiso nuevo — aún no guardado</span>
+      <span>Código: <code id="permitCodeDisplay">—</code></span>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec1">1. Descripción específica del trabajo a realizar</div>
+      <div class="section-body">
+        <div class="field"><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
+        <div style="margin-top:14px;">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">¿Requiere un permiso adicional?</label>
+          <div class="radio-row">
+            <label><input type="radio" name="permAdicional" value="No" checked> No</label>
+            <label><input type="radio" name="permAdicional" value="Si"> Sí</label>
+            <input type="text" id="cualPermiso" placeholder="¿Cuál?" style="flex:1;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec2">2. Duración del permiso y área de trabajo</div>
+      <div class="section-body">
+        <div class="grid2">
+          <div class="field"><label>Desde — Fecha</label><input type="date" id="desdeFecha"></div>
+          <div class="field"><label>Desde — Hora</label><input type="time" id="desdeHora"></div>
+          <div class="field"><label>Hasta — Fecha</label><input type="date" id="hastaFecha"></div>
+          <div class="field"><label>Hasta — Hora</label><input type="time" id="hastaHora"></div>
+          <div class="field"><label>Sitio exacto del trabajo</label><input type="text" id="sitio"></div>
+          <div class="field"><label>Responsable del trabajo</label><input type="text" id="responsable"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec3">3. Lista de verificación <span class="progress-pill" id="checklistProgress" style="margin-left:auto;">0/0</span></div>
+      <div class="section-body" id="checklistContainer"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec4">4. Verificación de equipos <span class="progress-pill" id="equiposProgress" style="margin-left:auto;">0/0</span></div>
+      <div class="section-body">
+        <div id="equiposContainer"></div>
+        <div class="grid3" style="margin-top:16px;">
+          <div class="field"><label>Mant. soldadura — Día</label><input type="text" maxlength="2" id="mantDia"></div>
+          <div class="field"><label>Mes</label><input type="text" maxlength="2" id="mantMes"></div>
+          <div class="field"><label>Año</label><input type="text" maxlength="4" id="mantAnio"></div>
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <div class="field"><label>Extintor carreta — Día</label><input type="text" maxlength="2" id="extDia"></div>
+          <div class="field"><label>Mes</label><input type="text" maxlength="2" id="extMes"></div>
+          <div class="field"><label>Año</label><input type="text" maxlength="4" id="extAnio"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec5">5. Observaciones y recomendaciones</div>
+      <div class="section-body"><div class="field"><textarea id="observaciones"></textarea></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec6">6. Término de responsabilidades y autorización (apertura)</div>
+      <div class="section-body">
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:0;">Declaro que me encuentro en buen estado de salud (físico y mental), libre de efectos de alcohol, medicamentos o SPA, consciente de mi responsabilidad, y me comprometo a cumplir las recomendaciones acordadas en este permiso.</p>
+        <div class="grid2" id="responsablesSigs" style="gap:16px;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSecExec">Ejecutante de la actividad</div>
+      <div class="section-body">
+        <div style="overflow-x:auto;">
+          <table class="exec-table" id="execTable">
+            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Hora vinc.</th><th class="helper">Ayudante seg.</th></tr></thead>
+            <tbody id="execBody"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" id="addRowBtn" type="button">+ Agregar ejecutante</button>
+      </div>
+    </div>
+
+    <!-- SECTION 7: CLOSE -->
+    <div class="section">
+      <div class="section-title locked" id="titleSec7">7. Cierre del permiso</div>
+      <div class="section-body" id="closeSectionBody">
+        <p id="closeLockedMsg" style="font-size:13px;color:var(--muted);">Esta sección se habilita al importar el permiso desde el archivo generado en la apertura.</p>
+        <div id="closeFields" class="hidden">
+          <div class="grid3">
+            <div class="field"><label>Fecha real del cierre</label><input type="date" id="cierreFecha"></div>
+            <div class="field"><label>Hora de cierre</label><input type="time" id="cierreHora"></div>
+            <div class="field"><label>Motivo del cierre</label>
+              <select id="motivoCierre"><option value="">Seleccione…</option><option>Actividad Finalizada</option><option>Actividad Cancelada</option><option>Evento no deseado</option><option>Lluvia / Tormenta</option><option>Condiciones y/o actos inseguros</option></select>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <div class="close-q"><p>¿Se aplicaron las tres primeras "S" en el área antes de entregar el equipo?</p><div class="radio-row"><label><input type="radio" name="q1" value="Si"> Sí</label><label><input type="radio" name="q1" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿El personal que se encontraba interviniendo el equipo fue retirado?</p><div class="radio-row"><label><input type="radio" name="q2" value="Si"> Sí</label><label><input type="radio" name="q2" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿Se han inspeccionado y almacenado correctamente los EPP utilizados?</p><div class="radio-row"><label><input type="radio" name="q3" value="Si"> Sí</label><label><input type="radio" name="q3" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿Se han recogido y almacenado correctamente las herramientas usadas?</p><div class="radio-row"><label><input type="radio" name="q4" value="Si"> Sí</label><label><input type="radio" name="q4" value="No"> No</label></div></div>
+          </div>
+          <div class="grid2" style="margin-top:16px;">
+            <div class="sig-block">
+              <h5>Trabajador autorizado responsable del trabajo</h5>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
+              <canvas class="pad" id="padCierre1"></canvas>
+              <div class="sig-actions"><button type="button" data-clear="padCierre1">Borrar firma</button><span class="sig-status" id="statusCierre1">Sin firmar</span></div>
+            </div>
+            <div class="sig-block">
+              <h5>Supervisor SSTA</h5>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
+              <canvas class="pad" id="padCierre2"></canvas>
+              <div class="sig-actions"><button type="button" data-clear="padCierre2">Borrar firma</button><span class="sig-status" id="statusCierre2">Sin firmar</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <span class="status" id="footerStatus">—</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+        <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= STATE ================= */
+let MODE = null; // 'open' | 'close'
+let permitCode = null;
+let locked = false; // sections 1-6/exec locked (close mode)
+
+/* ================= DATA DEFINITIONS ================= */
+const checklistData = [
+  {cat:"Personas ejecutantes de la tarea", items:[
+    "Están capacitados, entrenados y certificados por competencia laboral o por una entidad autorizada.",
+    "Se ha verificado que el personal está con afiliación activa en el sistema de seguridad social integral (ARL-EPS-AFP).",
+    "Tienen exámenes de pre ingreso o periódicos practicados por médico especialista en Seguridad y Salud en el Trabajo, conforme a la Resolución 2346 de 2007."
+  ]},
+  {cat:"Elementos de protección personal", items:[
+    "Casco de seguridad certificado.","Protección auditiva.","Protección visual en buenas condiciones.",
+    "Protección respiratoria con filtros para humos metálicos.","Guantes antideslizantes y resistentes a la abrasión.",
+    "Peto de carnaza y/o vaqueta.","Mangas de carnaza y/o vaqueta.","Botas de seguridad con suela antideslizante.",
+    "Careta para soldar en buenas condiciones.","Careta para pulir en buenas condiciones.","Indumentaria de trabajo acorde a las condiciones de seguridad."
+  ]},
+  {cat:"Equipos", items:[
+    "Cables y conexiones libres de desgastes, roturas, cortes o deterioro.","Clavijas con polo a tierra en buenas condiciones.",
+    "Herramientas con guarda de seguridad.","Pinza porta electrodos y masa en buen estado.",
+    "Antorcha, mezclador, soplete, reguladores libres de grasa o sustancias inflamables.","Mangueras libres de porosidades o fugas; manómetros calibrados.",
+    "Cilindros debidamente rotulados y demarcados.","Cilindros en posición vertical, con carretillas, cadenas y válvulas en buen estado.",
+    "Cilindros libres de golpes, abolladuras o deterioro.","Equipos alejados de llamas abiertas, chispas u otros focos de calor.",
+    "Cilindros sin uso desconectados y almacenados en zona designada."
+  ]},
+  {cat:"Área de trabajo", items:[
+    "Sitio libre de sustancias peligrosas, combustibles o inflamables.","Mamparas instaladas para aislar personas y equipos.",
+    "Área debidamente delimitada y señalizada.","Distancia de seguridad mínima de 3 metros de cables eléctricos.",
+    "Equipos y materiales cubiertos con lonas resistentes al fuego.","Extintores de la clase adecuada ubicados en el sitio.",
+    "Ubicación verificada de sistemas de atención y puntos de alarma.","Zona mojada o cubierta si el suelo es combustible.",
+    "Ventilación suficiente natural o artificial.","Iluminación suficiente."
+  ]},
+  {cat:"Información al personal", items:[
+    "Instrucciones y recomendaciones comunicadas a los ejecutantes.","Ejecutantes conocen equipos, herramientas y tareas.",
+    "Ejecutantes conocen el manejo de sistemas contra incendios.","Personal recordado de peligros y protocolo de emergencia.",
+    "Prohibido fumar / portar cigarrillos, encendedores o fósforos."
+  ]},
+  {cat:"Aspectos especiales", items:[
+    "Verificado el cumplimiento en relación con otros permisos de trabajo.","EPP acordes al tipo de riesgo (ej. dieléctricos si hay riesgo eléctrico)."
+  ]}
+];
+const equiposData = [
+  {cat:"Equipo de soldadura por arco eléctrico", items:[
+    "Clavija del cable alimentador libre de emendaduras.","Cable alimentador maleable, sin porosidades ni desgastes.",
+    "Terminales de pinzas porta electrodos y masa protegidas.","Controles de encendido y amperaje visibles, perilla sin rupturas.",
+    "Pinza porta electrodos recubierta con material aislante.","Ruedas de la base niveladas y en buen estado.","Estado general del equipo de soldadura."
+  ]},
+  {cat:"Equipo de corte por gas combustible (acetileno-propano)", items:[
+    "Buen estado de galleta/pomo de válvulas de cilindros.","Carretilla en buen estado con cadenas para amarrar cilindros.",
+    "Extintor de la carreta en buen estado (vencimiento, cilindro, válvula).","Regulador de oxígeno en buen estado, color verde.",
+    "Regulador de acetileno/propano en buen estado, color rojo.","Manómetros con información veraz y carátula legible.",
+    "Mangueras libres de fisuras o fugas.","Válvulas del mezclador correctamente ajustadas.","Mezclador sin coloración de humo en las uniones.",
+    "Boquillas limpias y sin obstrucciones."
+  ]},
+  {cat:"Herramienta de corte por fricción (pulidora)", items:[
+    "Clavija libre de emendaduras, terminales bien sujetos.","Cableado sin emendaduras ni empalmes.",
+    "Mango de sujeción y guarda de seguridad instalados.","Disco de pulir sin fracturas ni rajaduras.","Compatibilidad del disco con la pulidora verificada."
+  ]}
+];
+
+let checklistState = {};
+let equiposState = {};
+let execRowsData = []; // {nombre,cc,hora,ayudante,sigData}
+let execCounter = 0;
+const pads = {}; // id -> {ctx,canvas,clear,setDataUrl,getDataUrl}
+
+/* ================= RENDER TOGGLE GROUPS ================= */
+function renderToggleGroup(container, data, statePrefix, stateObj, progressElId){
+  let idCounter=0;
+  data.forEach(cat=>{
+    const catDiv=document.createElement('div'); catDiv.className='check-cat';
+    const h4=document.createElement('h4'); h4.textContent=cat.cat; catDiv.appendChild(h4);
+    cat.items.forEach(text=>{
+      const key=statePrefix+'_'+(idCounter++);
+      if(!(key in stateObj)) stateObj[key]=null;
+      const row=document.createElement('div'); row.className='check-item';
+      row.innerHTML=`<p>${text}</p><div class="toggle">
+        <button type="button" data-key="${key}" data-val="C">C</button>
+        <button type="button" data-key="${key}" data-val="NA">NA</button></div>`;
+      catDiv.appendChild(row);
+    });
+    container.appendChild(catDiv);
+  });
+  container.addEventListener('click', e=>{
+    if(locked) return;
+    const btn=e.target.closest('button[data-key]'); if(!btn) return;
+    const key=btn.dataset.key, val=btn.dataset.val;
+    stateObj[key]=val;
+    btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active-c','active-na'));
+    btn.classList.add(val==='C'?'active-c':'active-na');
+    updateProgress(stateObj, progressElId);
+  });
+}
+function updateProgress(stateObj, elId){
+  const total=Object.keys(stateObj).length, done=Object.values(stateObj).filter(v=>v!==null).length;
+  document.getElementById(elId).textContent=`${done}/${total}`;
+}
+function applyToggleState(stateObj){
+  document.querySelectorAll('button[data-key]').forEach(btn=>{
+    const key=btn.dataset.key, val=stateObj[key];
+    if(val){ btn.classList.toggle('active-c', val==='C'); btn.classList.toggle('active-na', val==='NA'); }
+  });
+}
+
+/* ================= SIGNATURE PAD ================= */
+function setupPad(canvas){
+  const ctx=canvas.getContext('2d');
+  function resize(){
+    const rect=canvas.getBoundingClientRect(); const ratio=window.devicePixelRatio||1;
+    canvas.width=rect.width*ratio; canvas.height=rect.height*ratio;
+    ctx.scale(ratio,ratio); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.strokeStyle='#1f2a33';
+  }
+  resize();
+  let drawing=false,hasInk=false,lastX=0,lastY=0;
+  function pos(e){ const r=canvas.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return [cx,cy]; }
+  function start(e){ if(canvas.dataset.locked==='1') return; e.preventDefault(); drawing=true; [lastX,lastY]=pos(e); }
+  function move(e){ if(!drawing||canvas.dataset.locked==='1') return; e.preventDefault();
+    const [x,y]=pos(e); ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(x,y); ctx.stroke(); [lastX,lastY]=[x,y]; hasInk=true; markSigned(canvas.id); }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
+  pads[canvas.id]={
+    clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; markUnsigned(canvas.id); },
+    getDataUrl:()=> hasInk? canvas.toDataURL('image/png') : null,
+    setDataUrl:(url)=>{ if(!url) return; const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); hasInk=true; markSigned(canvas.id); }; img.src=url; },
+    hasInk:()=>hasInk
+  };
+}
+function findStatusFor(id){
+  if(id.startsWith('padCierre')) return document.getElementById('status'+id.replace('pad',''));
+  if(id.startsWith('pad_resp')) return document.getElementById('status_'+id);
+  return null;
+}
+function markSigned(id){ const el=findStatusFor(id); if(el){el.textContent='Firmado ✓'; el.classList.add('done');} }
+function markUnsigned(id){ const el=findStatusFor(id); if(el){el.textContent='Sin firmar'; el.classList.remove('done');} }
+function lockPad(canvas){ canvas.dataset.locked='1'; canvas.classList.add('locked'); }
+
+/* ================= RESPONSABLES (SECTION 6) ================= */
+const responsables=["Encargado del área turno 1","Encargado del área turno 2","Supervisor SSTA","Supervisor de obra"];
+function buildResponsablesUI(){
+  const cont=document.getElementById('responsablesSigs'); cont.innerHTML='';
+  responsables.forEach((label,i)=>{
+    const id='resp'+i;
+    const div=document.createElement('div'); div.className='sig-block';
+    div.innerHTML=`<h5>${label}</h5>
+      <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc"></div>
+      <canvas class="pad" id="pad_${id}"></canvas>
+      <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
+    cont.appendChild(div);
+  });
+}
+
+/* ================= EJECUTANTES TABLE ================= */
+const execBody=document.getElementById('execBody');
+function addExecRow(prefill){
+  execCounter++; const n=execCounter;
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td class="idx">${n}</td>
+    <td><input type="text" placeholder="Nombre completo" id="execNombre${n}"></td>
+    <td><input type="text" placeholder="C.C." id="execCC${n}"></td>
+    <td><canvas class="mini-pad" id="execPad${n}"></canvas></td>
+    <td><input type="time" id="execHora${n}"></td>
+    <td class="helper"><input type="checkbox" id="execAyudante${n}"></td>`;
+  execBody.appendChild(tr);
+  const c=document.getElementById('execPad'+n); setupPad(c);
+  if(prefill){
+    document.getElementById('execNombre'+n).value=prefill.nombre||'';
+    document.getElementById('execCC'+n).value=prefill.cc||'';
+    document.getElementById('execHora'+n).value=prefill.hora||'';
+    document.getElementById('execAyudante'+n).checked=!!prefill.ayudante;
+    if(prefill.sig) pads[c.id].setDataUrl(prefill.sig);
+  }
+  return n;
+}
+document.getElementById('addRowBtn').addEventListener('click', ()=>{ if(!locked) addExecRow(); });
+
+/* ================= INIT RENDER ================= */
+function initRender(){
+  renderToggleGroup(document.getElementById('checklistContainer'), checklistData, 'chk', checklistState, 'checklistProgress');
+  renderToggleGroup(document.getElementById('equiposContainer'), equiposData, 'eq', equiposState, 'equiposProgress');
+  updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
+  buildResponsablesUI();
+  document.querySelectorAll('canvas.pad').forEach(c=> setupPad(c));
+  for(let i=0;i<3;i++) addExecRow();
+}
+
+document.addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-clear]'); if(!btn) return;
+  if(locked && !btn.closest('#closeFields')) return;
+  const id=btn.dataset.clear; if(pads[id]) pads[id].clear();
+});
+
+/* ================= LOCK / UNLOCK OPEN SECTIONS ================= */
+function setFieldValues(vals){
+  document.getElementById('descripcion').value=vals.descripcion||'';
+  document.getElementById('cualPermiso').value=vals.cualPermiso||'';
+  document.querySelectorAll('input[name=permAdicional]').forEach(r=>{ r.checked = (r.value===vals.permAdicional); });
+  document.getElementById('desdeFecha').value=vals.desdeFecha||'';
+  document.getElementById('desdeHora').value=vals.desdeHora||'';
+  document.getElementById('hastaFecha').value=vals.hastaFecha||'';
+  document.getElementById('hastaHora').value=vals.hastaHora||'';
+  document.getElementById('sitio').value=vals.sitio||'';
+  document.getElementById('responsable').value=vals.responsable||'';
+  document.getElementById('observaciones').value=vals.observaciones||'';
+  document.getElementById('mantDia').value=vals.mantDia||''; document.getElementById('mantMes').value=vals.mantMes||''; document.getElementById('mantAnio').value=vals.mantAnio||'';
+  document.getElementById('extDia').value=vals.extDia||''; document.getElementById('extMes').value=vals.extMes||''; document.getElementById('extAnio').value=vals.extAnio||'';
+}
+function lockOpenSections(){
+  locked=true;
+  document.querySelectorAll('#app .section-body input, #app .section-body textarea, #app .section-body select')
+    .forEach(el=>{ if(!el.closest('#closeFields')) el.disabled=true; });
+  document.querySelectorAll('#app button[data-key]').forEach(b=> b.disabled=true);
+  document.querySelectorAll('#app canvas.pad, #app canvas.mini-pad').forEach(c=>{ if(!c.closest('#closeFields')) lockPad(c); });
+  document.getElementById('addRowBtn').style.display='none';
+  ['titleSec1','titleSec2','titleSec3','titleSec4','titleSec5','titleSec6','titleSecExec'].forEach(id=> document.getElementById(id).classList.add('locked'));
+}
+
+/* ================= EXPORT / COLLECT ================= */
+function genCode(){
+  const d=new Date();
+  return 'PT-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(Math.floor(Math.random()*9000)+1000);
+}
+function collectExecRows(){
+  const rows=[];
+  for(let i=1;i<=execCounter;i++){
+    const nombreEl=document.getElementById('execNombre'+i); if(!nombreEl) continue;
+    rows.push({
+      nombre:nombreEl.value, cc:document.getElementById('execCC'+i).value,
+      hora:document.getElementById('execHora'+i).value, ayudante:document.getElementById('execAyudante'+i).checked,
+      sig: pads['execPad'+i] ? pads['execPad'+i].getDataUrl() : null
+    });
+  }
+  return rows;
+}
+function collectResponsables(){
+  const arr=[];
+  responsables.forEach((label,i)=>{
+    const id='resp'+i;
+    arr.push({ label, nombre:document.getElementById(id+'nombre').value, cc:document.getElementById(id+'cc').value, sig: pads['pad_'+id]?pads['pad_'+id].getDataUrl():null });
+  });
+  return arr;
+}
+function collectOpenData(){
+  return {
+    permitCode, status:'ABIERTO', createdAt:new Date().toISOString(),
+    descripcion:document.getElementById('descripcion').value,
+    cualPermiso:document.getElementById('cualPermiso').value,
+    permAdicional:(document.querySelector('input[name=permAdicional]:checked')||{}).value||'No',
+    desdeFecha:document.getElementById('desdeFecha').value, desdeHora:document.getElementById('desdeHora').value,
+    hastaFecha:document.getElementById('hastaFecha').value, hastaHora:document.getElementById('hastaHora').value,
+    sitio:document.getElementById('sitio').value, responsable:document.getElementById('responsable').value,
+    checklist:checklistState, equipos:equiposState,
+    mantDia:document.getElementById('mantDia').value, mantMes:document.getElementById('mantMes').value, mantAnio:document.getElementById('mantAnio').value,
+    extDia:document.getElementById('extDia').value, extMes:document.getElementById('extMes').value, extAnio:document.getElementById('extAnio').value,
+    observaciones:document.getElementById('observaciones').value,
+    responsablesSigs: collectResponsables(),
+    ejecutantes: collectExecRows()
+  };
+}
+function collectCloseData(){
+  return {
+    cierreFecha:document.getElementById('cierreFecha').value, cierreHora:document.getElementById('cierreHora').value,
+    motivoCierre:document.getElementById('motivoCierre').value,
+    q1:(document.querySelector('input[name=q1]:checked')||{}).value||'', q2:(document.querySelector('input[name=q2]:checked')||{}).value||'',
+    q3:(document.querySelector('input[name=q3]:checked')||{}).value||'', q4:(document.querySelector('input[name=q4]:checked')||{}).value||'',
+    cierre1:{nombre:document.getElementById('cierre1nombre').value, cc:document.getElementById('cierre1cc').value, cargo:document.getElementById('cierre1cargo').value, sig:pads['padCierre1']?pads['padCierre1'].getDataUrl():null},
+    cierre2:{nombre:document.getElementById('cierre2nombre').value, cc:document.getElementById('cierre2cc').value, cargo:document.getElementById('cierre2cargo').value, sig:pads['padCierre2']?pads['padCierre2'].getDataUrl():null},
+    closedAt:new Date().toISOString()
+  };
+}
+function downloadJson(obj, filename){
+  const blob=new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ================= LOAD FOR CLOSE MODE ================= */
+function loadOpenDataIntoForm(data){
+  permitCode=data.permitCode;
+  Object.assign(checklistState, data.checklist||{});
+  Object.assign(equiposState, data.equipos||{});
+  setFieldValues(data);
+  applyToggleState(checklistState); applyToggleState(equiposState);
+  updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
+  (data.responsablesSigs||[]).forEach((r,i)=>{
+    const id='resp'+i;
+    const nEl=document.getElementById(id+'nombre'), cEl=document.getElementById(id+'cc');
+    if(nEl) nEl.value=r.nombre||''; if(cEl) cEl.value=r.cc||'';
+    if(pads['pad_'+id] && r.sig) pads['pad_'+id].setDataUrl(r.sig);
+  });
+  execBody.innerHTML=''; execCounter=0;
+  (data.ejecutantes||[]).forEach(row=> addExecRow(row));
+  if((data.ejecutantes||[]).length===0){ for(let i=0;i<3;i++) addExecRow(); }
+}
+
+/* ================= WEB APP URL (Google Apps Script) ================= */
+// URL fija del backend en Google Apps Script (Permisos SSTA-F-119)
+const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec';
+function getWebAppUrl(){
+  return FIXED_WEBAPP_URL;
+}
+async function sendToSheet(payload){
+  const url = getWebAppUrl(); if(!url) return {ok:false};
+  try{
+    const res = await fetch(url, { method:'POST', body: JSON.stringify(payload), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+    return await res.json();
+  }catch(err){ alert('Error guardando en la hoja: '+err.message); return {ok:false, error:err.message}; }
+}
+async function fetchFromSheet(code){
+  const url = getWebAppUrl(); if(!url) return null;
+  try{
+    const res = await fetch(url + '?code=' + encodeURIComponent(code));
+    const data = await res.json();
+    if(data.ok===false){ alert(data.error || 'Permiso no encontrado'); return null; }
+    return data;
+  }catch(err){ alert('Error consultando la hoja: '+err.message); return null; }
+}
+async function fetchOpenList(){
+  const url = getWebAppUrl(); if(!url) return [];
+  try{
+    const res = await fetch(url + '?list=1');
+    const data = await res.json();
+    return (data.rows||[]).filter(r=> r.status==='ABIERTO');
+  }catch(err){ alert('Error listando permisos: '+err.message); return []; }
+}
+
+/* ================= VALIDATION ================= */
+function scrollToEl(el){ if(el) el.scrollIntoView({behavior:'smooth', block:'center'}); }
+
+function validateOpenData(){
+  const missing=[];
+  const descripcion=document.getElementById('descripcion');
+  if(!descripcion.value.trim()) missing.push({msg:'Descripción del trabajo (sección 1)', el:descripcion});
+  const permAdicional=(document.querySelector('input[name=permAdicional]:checked')||{}).value;
+  if(permAdicional==='Si' && !document.getElementById('cualPermiso').value.trim()) missing.push({msg:'¿Cuál permiso adicional? (sección 1)', el:document.getElementById('cualPermiso')});
+
+  const desdeFecha=document.getElementById('desdeFecha'), desdeHora=document.getElementById('desdeHora');
+  const hastaFecha=document.getElementById('hastaFecha'), hastaHora=document.getElementById('hastaHora');
+  const sitio=document.getElementById('sitio'), responsable=document.getElementById('responsable');
+  if(!desdeFecha.value) missing.push({msg:'Fecha "Desde" (sección 2)', el:desdeFecha});
+  if(!desdeHora.value) missing.push({msg:'Hora "Desde" (sección 2)', el:desdeHora});
+  if(!hastaFecha.value) missing.push({msg:'Fecha "Hasta" (sección 2)', el:hastaFecha});
+  if(!hastaHora.value) missing.push({msg:'Hora "Hasta" (sección 2)', el:hastaHora});
+  if(!sitio.value.trim()) missing.push({msg:'Sitio exacto del trabajo (sección 2)', el:sitio});
+  if(!responsable.value.trim()) missing.push({msg:'Responsable del trabajo (sección 2)', el:responsable});
+
+  const chkPending=Object.values(checklistState).filter(v=>v===null).length;
+  if(chkPending>0) missing.push({msg:`${chkPending} ítem(s) sin marcar en la Lista de verificación (sección 3)`, el:document.getElementById('checklistContainer')});
+  const eqPending=Object.values(equiposState).filter(v=>v===null).length;
+  if(eqPending>0) missing.push({msg:`${eqPending} ítem(s) sin marcar en Verificación de equipos (sección 4)`, el:document.getElementById('equiposContainer')});
+
+  responsables.forEach((label,i)=>{
+    const id='resp'+i;
+    const nombreEl=document.getElementById(id+'nombre'), ccEl=document.getElementById(id+'cc');
+    const sig = pads['pad_'+id] ? pads['pad_'+id].getDataUrl() : null;
+    if(!nombreEl.value.trim() || !ccEl.value.trim() || !sig){
+      missing.push({msg:`Datos y/o firma de "${label}" (sección 6)`, el:nombreEl});
+    }
+  });
+
+  let execValid=0;
+  for(let i=1;i<=execCounter;i++){
+    const nombreEl=document.getElementById('execNombre'+i); if(!nombreEl) continue;
+    const ccEl=document.getElementById('execCC'+i);
+    const sig=pads['execPad'+i] ? pads['execPad'+i].getDataUrl() : null;
+    const tieneAlgo = nombreEl.value.trim() || ccEl.value.trim() || sig;
+    if(tieneAlgo){
+      if(!nombreEl.value.trim() || !ccEl.value.trim() || !sig){
+        missing.push({msg:`Fila ${i} de ejecutantes incompleta (falta nombre, documento o firma)`, el:nombreEl});
+      } else { execValid++; }
+    }
+  }
+  if(execValid===0) missing.push({msg:'Debe registrarse al menos un ejecutante completo (nombre, documento y firma)', el:document.getElementById('execTable')});
+
+  return missing;
+}
+
+function validateCloseData(){
+  const missing=[];
+  const cierreFecha=document.getElementById('cierreFecha'), cierreHora=document.getElementById('cierreHora');
+  const motivo=document.getElementById('motivoCierre');
+  if(!cierreFecha.value) missing.push({msg:'Fecha real del cierre', el:cierreFecha});
+  if(!cierreHora.value) missing.push({msg:'Hora de cierre', el:cierreHora});
+  if(!motivo.value) missing.push({msg:'Motivo del cierre', el:motivo});
+  ['q1','q2','q3','q4'].forEach((q,i)=>{
+    if(!document.querySelector(`input[name=${q}]:checked`)) missing.push({msg:`Respuesta a la pregunta ${i+1} de cierre`, el:document.querySelector(`input[name=${q}]`)});
+  });
+  const s1=pads['padCierre1']?pads['padCierre1'].getDataUrl():null;
+  const s2=pads['padCierre2']?pads['padCierre2'].getDataUrl():null;
+  if(!document.getElementById('cierre1nombre').value.trim() || !document.getElementById('cierre1cc').value.trim() || !s1) missing.push({msg:'Datos y/o firma del Trabajador autorizado', el:document.getElementById('cierre1nombre')});
+  if(!document.getElementById('cierre2nombre').value.trim() || !document.getElementById('cierre2cc').value.trim() || !s2) missing.push({msg:'Datos y/o firma del Supervisor SSTA', el:document.getElementById('cierre2nombre')});
+  return missing;
+}
+
+function showMissing(missing){
+  const list = missing.map(m=>'• '+m.msg).join('\n');
+  alert('Faltan los siguientes campos por diligenciar:\n\n'+list);
+  scrollToEl(missing[0].el);
+}
+
+/* ================= UI FLOW ================= */
+document.getElementById('cardNew').addEventListener('click', ()=>{
+  MODE='open'; permitCode=genCode();
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app').style.display='block';
+  initRender();
+  document.getElementById('statusBanner').className='status-banner open';
+  document.getElementById('statusBannerText').textContent='Apertura de permiso en curso';
+  document.getElementById('permitCodeDisplay').textContent=permitCode;
+  document.getElementById('footerStatus').textContent='Diligencia toda la información y firma. Anota el código para el cierre.';
+  document.getElementById('mainActionBtn').textContent='Guardar apertura en la hoja';
+  document.getElementById('closeLockedMsg').classList.remove('hidden');
+  document.getElementById('closeFields').classList.add('hidden');
+});
+
+async function openCloseModeWithCode(code){
+  if(!code) return;
+  const data = await fetchFromSheet(code);
+  if(!data) return;
+  MODE='close';
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app').style.display='block';
+  initRender();
+  loadOpenDataIntoForm(data);
+  lockOpenSections();
+  document.getElementById('statusBanner').className = data.status==='CERRADO' ? 'status-banner closed' : 'status-banner open';
+  document.getElementById('statusBannerText').textContent = data.status==='CERRADO' ? 'Permiso ya cerrado (modo consulta)' : 'Permiso abierto — completa el cierre';
+  document.getElementById('permitCodeDisplay').textContent=permitCode;
+  document.getElementById('closeLockedMsg').classList.add('hidden');
+  document.getElementById('closeFields').classList.remove('hidden');
+  document.getElementById('titleSec7').classList.remove('locked');
+  document.getElementById('footerStatus').textContent='Revisa los datos de apertura (bloqueados) y diligencia la sección 7 de cierre.';
+  document.getElementById('mainActionBtn').textContent='Guardar cierre en la hoja';
+  if(data.status==='CERRADO'){
+    document.getElementById('cierreFecha').value=data.cierreFecha||'';
+    document.getElementById('cierreHora').value=data.cierreHora||'';
+    document.getElementById('motivoCierre').value=data.motivoCierre||'';
+    document.getElementById('mainActionBtn').disabled=true;
+  }
+}
+document.getElementById('loadCodeBtn').addEventListener('click', ()=>{
+  const code=document.getElementById('codeInput').value.trim();
+  if(!code){ alert('Escribe el código del permiso.'); return; }
+  openCloseModeWithCode(code);
+});
+document.getElementById('listOpenBtn').addEventListener('click', async ()=>{
+  const listEl=document.getElementById('openList');
+  listEl.innerHTML='Buscando…';
+  const rows=await fetchOpenList();
+  if(rows.length===0){ listEl.innerHTML='<em>No hay permisos abiertos.</em>'; return; }
+  listEl.innerHTML='';
+  rows.forEach(r=>{
+    const div=document.createElement('div');
+    div.style.cssText='padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
+    div.innerHTML=`<b>${r.permitCode}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
+      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}`;
+    div.addEventListener('click', ()=> openCloseModeWithCode(r.permitCode));
+    listEl.appendChild(div);
+  });
+});
+
+document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('mainActionBtn');
+  if(MODE==='open'){
+    const missing=validateOpenData();
+    if(missing.length>0){ showMissing(missing); return; }
+  } else if(MODE==='close'){
+    const missing=validateCloseData();
+    if(missing.length>0){ showMissing(missing); return; }
+  }
+  btn.disabled=true; const originalText=btn.textContent; btn.textContent='Guardando…';
+  if(MODE==='open'){
+    const data=collectOpenData();
+    const res=await sendToSheet(data);
+    if(res.ok){
+      lockOpenSections();
+      document.getElementById('statusBanner').className='status-banner open';
+      document.getElementById('statusBannerText').textContent='Permiso guardado en la hoja ✓ — comparte el código con quien hará el cierre';
+      document.getElementById('footerStatus').textContent='Código del permiso: '+permitCode;
+    } else { btn.disabled=false; }
+  } else if(MODE==='close'){
+    const openData=collectOpenData();
+    const closeData=collectCloseData();
+    const full=Object.assign({}, openData, {status:'CERRADO'}, closeData);
+    const res=await sendToSheet(full);
+    if(res.ok){
+      document.getElementById('statusBanner').className='status-banner closed';
+      document.getElementById('statusBannerText').textContent='Permiso cerrado y guardado en la hoja ✓';
+      document.getElementById('footerStatus').textContent='El registro quedó actualizado en Google Sheets.';
+    } else { btn.disabled=false; }
+  }
+  btn.textContent=originalText;
+});
+
+document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+</script>
+</body>
+</html>

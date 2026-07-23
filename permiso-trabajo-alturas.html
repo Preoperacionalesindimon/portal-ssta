@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSTA-F-116 · Permiso de Trabajo en Alturas</title>
+<style>
+  :root{
+    --navy:#0f3a5f;
+    --navy-dark:#0a2842;
+    --blue:#1c6ea4;
+    --paper:#ffffff;
+    --bg:#eef2f5;
+    --line:#c7d0d6;
+    --line-soft:#e3e8eb;
+    --ok:#1d7a4c;
+    --warn:#b3261e;
+    --text:#1c2530;
+    --muted:#5c6a76;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:24px 12px 80px;
+  }
+  .sheet{
+    max-width:980px;
+    margin:0 auto;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+  }
+  .head{
+    display:grid;
+    grid-template-columns:1.2fr 2fr 1fr;
+    border-bottom:2px solid var(--navy);
+  }
+  .head .logo{
+    display:flex;align-items:center;gap:8px;
+    padding:14px 16px;
+    border-right:1px solid var(--line);
+  }
+  .logo-badge{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:14px;flex-shrink:0;
+  }
+  .logo small{display:block;color:var(--muted);font-size:10px;margin-top:2px;}
+  .logo b{font-size:14px;color:var(--navy-dark);}
+  .head .title{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:10px;border-right:1px solid var(--line);
+    text-align:center;
+  }
+  .head .title h1{font-size:16px;margin:0;color:var(--navy-dark);letter-spacing:.3px;}
+  .head .meta{padding:8px 14px;font-size:11px;color:var(--muted);}
+  .head .meta div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dotted var(--line-soft);}
+  .head .meta div:last-child{border-bottom:none;}
+  .head .meta b{color:var(--text);font-weight:600;}
+
+  .section{border-top:1px solid var(--line);}
+  .section-title{
+    background:var(--navy);
+    color:#fff;
+    font-size:12.5px;
+    font-weight:600;
+    padding:7px 14px;
+    letter-spacing:.2px;
+  }
+  .section-note{
+    background:#fff7e0;
+    color:#7a5b00;
+    font-size:11px;
+    padding:6px 14px;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .grid{padding:12px 14px;display:grid;gap:10px;}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+  .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;}
+  .field label{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],.field textarea,.field select{
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:7px 9px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fafbfc;
+    color:var(--text);
+  }
+  .field textarea{resize:vertical;min-height:44px;}
+  .field input:focus,.field textarea:focus,.field select:focus{
+    outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(28,110,164,.15);
+  }
+
+  .yn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line-soft);}
+  .yn-row:last-child{border-bottom:none;}
+  .yn-label{flex:1;min-width:220px;font-size:12.5px;}
+  .yn-opts{display:flex;gap:6px;}
+  .yn-btn{
+    border:1px solid var(--line);border-radius:4px;background:#fafbfc;
+    font-size:11.5px;padding:5px 12px;cursor:pointer;font-weight:600;color:var(--muted);
+    transition:.12s;
+  }
+  .yn-btn.active-si{background:var(--ok);color:#fff;border-color:var(--ok);}
+  .yn-btn.active-na{background:#8a97a3;color:#fff;border-color:#8a97a3;}
+  .yn-btn.active-no{background:var(--warn);color:#fff;border-color:var(--warn);}
+
+  .calc-box{
+    background:#f4f8fb;border:1px solid var(--line);border-radius:5px;padding:12px 14px;margin:0 14px 12px;
+  }
+  .calc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line-soft);font-size:12.5px;}
+  .calc-row:last-child{border-bottom:none;}
+  .calc-row input{width:90px;text-align:right;border:1px solid var(--line);border-radius:4px;padding:5px 7px;font-size:13px;}
+  .calc-total{font-weight:700;font-size:14px;color:var(--navy-dark);}
+  .alert-box{
+    display:flex;gap:10px;align-items:flex-start;
+    background:#fdecea;border:1px solid #f3b6b1;border-radius:5px;padding:10px 12px;margin-top:8px;font-size:12px;color:#7a1f16;
+  }
+  .alert-result{
+    margin-top:10px;padding:8px 10px;border-radius:5px;font-weight:700;font-size:13px;text-align:center;
+  }
+  .alert-result.pending{background:#eef1f3;color:var(--muted);}
+  .alert-result.pass{background:#e4f4ea;color:var(--ok);}
+  .alert-result.fail{background:#fdecea;color:var(--warn);}
+
+  .checklist{padding:0 14px 12px;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;}
+  .chk input{width:16px;height:16px;}
+
+  table.mini{width:100%;border-collapse:collapse;font-size:12px;margin:0 14px 12px;width:calc(100% - 28px);}
+  table.mini th{background:#f4f6f8;font-size:10.5px;color:var(--muted);text-transform:uppercase;padding:6px 8px;border:1px solid var(--line-soft);text-align:left;}
+  table.mini td{border:1px solid var(--line-soft);padding:5px 7px;}
+  table.mini input,table.mini select{border:none;background:transparent;width:100%;font-size:12px;font-family:inherit;}
+  table.mini input:focus,table.mini select:focus{outline:none;background:#fafbfc;}
+
+  .workers-wrap{padding:0 14px 12px;}
+  .worker-card{
+    border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:10px;background:#fbfcfd;position:relative;
+  }
+  .worker-card h4{margin:0 0 8px;font-size:12.5px;color:var(--navy-dark);}
+  .worker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px;}
+  .worker-grid input,.worker-grid select{
+    border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:12px;width:100%;font-family:inherit;
+  }
+  .sig-pad-wrap{margin-top:6px;}
+  .sig-pad-wrap label{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px;}
+  canvas.sigpad{
+    width:100%;height:110px;border:1.5px dashed var(--line);border-radius:5px;background:#fff;touch-action:none;cursor:crosshair;display:block;
+  }
+  .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+  .sig-actions button{
+    font-size:11px;border:1px solid var(--line);background:#fff;border-radius:4px;padding:4px 10px;cursor:pointer;color:var(--muted);
+  }
+  .sig-actions button:hover{background:#f4f6f8;}
+  .sig-status{font-size:11px;color:var(--muted);}
+  .sig-status.signed{color:var(--ok);font-weight:600;}
+  .remove-worker{
+    position:absolute;top:10px;right:10px;background:none;border:none;color:var(--warn);font-size:12px;cursor:pointer;font-weight:600;
+  }
+  .add-worker-btn{
+    width:100%;padding:10px;border:1.5px dashed var(--blue);border-radius:6px;background:#f0f6fb;color:var(--blue);
+    font-weight:600;font-size:12.5px;cursor:pointer;margin-top:4px;
+  }
+  .add-worker-btn:hover{background:#e3eef7;}
+
+  .footer-actions{
+    position:sticky;bottom:0;background:var(--paper);border-top:2px solid var(--navy);
+    padding:12px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
+    max-width:980px;margin:0 auto;box-shadow:0 -2px 10px rgba(0,0,0,.06);
+  }
+  .btn{
+    padding:9px 18px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+  }
+  .btn-primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn-primary:hover{background:var(--navy-dark);}
+  .btn-secondary{background:#fff;color:var(--navy);}
+  .btn-secondary:hover{background:#f4f6f8;}
+  #status-msg{font-size:11.5px;color:var(--muted);align-self:center;margin-right:auto;}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .footer-actions,.add-worker-btn,.remove-worker{display:none !important;}
+    .sheet{box-shadow:none;border:none;}
+  }
+  @media (max-width:640px){
+    .head{grid-template-columns:1fr;}
+    .head .logo,.head .title{border-right:none;border-bottom:1px solid var(--line);}
+  }
+
+  /* ── Gate screen ── */
+  .gate-screen{
+    min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .gate-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;
+    padding:32px 28px;max-width:420px;width:100%;text-align:center;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+  }
+  .gate-card h2{color:var(--navy-dark);font-size:18px;margin-bottom:6px;}
+  .gate-card p{color:var(--muted);font-size:13px;margin-bottom:22px;}
+  .gate-btn{width:100%;padding:14px;font-size:14px;margin-bottom:10px;}
+  #closeCodeBox{margin-top:16px;text-align:left;border-top:1px solid var(--line-soft);padding-top:16px;}
+  #closeCodeBox label{font-size:11.5px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;}
+  #closeCodeBox input{
+    width:100%;border:1px solid var(--line);border-radius:5px;padding:10px;font-size:14px;
+    margin-bottom:10px;text-transform:uppercase;font-family:monospace;letter-spacing:.5px;
+  }
+  #closeCodeMsg{font-size:12px;margin-top:8px;min-height:16px;}
+  #closeCodeMsg.err{color:var(--warn);}
+  #closeCodeMsg.ok{color:var(--ok);}
+
+  /* ── Permit status bar ── */
+  .permit-status-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    background:#f4f8fb;border-bottom:1px solid var(--line);padding:10px 16px;font-size:12.5px;
+  }
+  .permit-status-bar .code-tag{
+    font-family:monospace;font-weight:700;background:var(--navy);color:#fff;padding:4px 10px;border-radius:5px;letter-spacing:.4px;
+  }
+  .status-pill{padding:3px 10px;border-radius:20px;font-weight:700;font-size:11px;}
+  .status-pill.abierto{background:#fff3cd;color:#7a5b00;}
+  .status-pill.cerrado{background:#e4f4ea;color:var(--ok);}
+  .copy-code-btn{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:11px;padding:4px 9px;cursor:pointer;color:var(--navy);}
+  .copy-code-btn:hover{background:#f4f6f8;}
+
+  fieldset.readonly-phase{border:none;padding:0;margin:0;}
+  fieldset.readonly-phase[disabled] .yn-btn,fieldset.readonly-phase[disabled] input,
+  fieldset.readonly-phase[disabled] select,fieldset.readonly-phase[disabled] textarea,
+  fieldset.readonly-phase[disabled] button{opacity:.75;cursor:not-allowed;}
+  fieldset.readonly-phase[disabled] canvas.sigpad{pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ GATE SCREEN ══════════ -->
+<div class="gate-screen" id="gateScreen">
+  <div class="gate-card">
+    <h2>🧗 Permiso de Trabajo en Alturas</h2>
+    <p>SSTA-F-116 · Seleccione una opción para continuar</p>
+    <button type="button" class="btn btn-primary gate-btn" id="btnNewPermit">🔓 Abrir nuevo permiso</button>
+    <button type="button" class="btn btn-secondary gate-btn" id="btnClosePermit">🔒 Cerrar permiso existente</button>
+    <div id="closeCodeBox" style="display:none;">
+      <label>Código del permiso (se entregó al abrirlo)</label>
+      <input type="text" id="closeCodeInput" placeholder="Ej: ALT-20260715-001">
+      <button type="button" class="btn btn-primary" style="width:100%;" id="btnFetchPermit">Buscar permiso</button>
+      <div id="closeCodeMsg"></div>
+    </div>
+    <a href="index.html" style="display:block;margin-top:16px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
+  </div>
+</div>
+
+<div class="sheet" id="permitForm" style="display:none;">
+
+  <div class="head">
+    <div class="logo">
+      <div class="logo-badge">IN</div>
+      <div>
+        <b>INDIMON</b>
+        <small>Una solución eficiente a su alcance</small>
+      </div>
+    </div>
+    <div class="title">
+      <h1>Permiso de trabajo en alturas</h1>
+    </div>
+    <div class="meta">
+      <div><span>Código</span><b>SSTA-F-116</b></div>
+      <div><span>Versión</span><b>3</b></div>
+      <div><span>Fecha</span><b>15/05/2017</b></div>
+      <div><span>Actualización</span><b>24 abr 2024</b></div>
+    </div>
+  </div>
+
+  <div class="permit-status-bar" id="permitStatusBar" style="display:none;">
+    <div>Código de permiso: <span class="code-tag" id="permitCodeTag">—</span>
+      <button type="button" class="copy-code-btn" id="copyCodeBtn">Copiar</button>
+    </div>
+    <span class="status-pill abierto" id="permitStatusPill">ABIERTO</span>
+  </div>
+
+  <fieldset class="readonly-phase" id="openPhase">
+
+  <!-- 1. PLANEACION -->
+  <div class="section">
+    <div class="section-title">1. Planeación del trabajo</div>
+    <div class="section-note">Tenga presente que se debe realizar una planeación oportuna, antes de dar inicio a esta actividad.</div>
+    <div class="grid">
+      <div class="yn-row">
+        <div class="yn-label">¿Se ha realizado una planeación previa a la actividad teniendo en cuenta a todas las partes involucradas e interesadas?</div>
+        <div class="yn-opts" data-yn data-mode="sino"><button type="button" data-v="SI">SÍ</button><button type="button" data-v="NO">NO</button></div>
+      </div>
+      <div class="field"><label>¿Por qué? (si respondió NO)</label><textarea placeholder="Justificación"></textarea></div>
+
+      <div class="row" style="margin-top:6px;">
+        <div class="field"><label>1.2 Control de energías peligrosas</label><div class="yn-opts" data-yn></div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Trabajo en caliente</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Trabajo en espacios confinados</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Izaje de cargas</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Altura aproximada a trabajar (mts)</label><input type="number" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AUTORIZACION -->
+  <div class="section">
+    <div class="section-title">2. Autorización del trabajo seguro en alturas</div>
+    <div class="grid">
+      <div class="row">
+        <div class="field"><label>Fecha inicio</label><input type="date"></div>
+        <div class="field"><label>Hora inicio</label><input type="time"></div>
+        <div class="field"><label>Fecha culminación</label><input type="date"></div>
+        <div class="field"><label>Hora culminación</label><input type="time"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Área(s)</label><input type="text" placeholder="Área donde se realiza el trabajo"></div>
+      </div>
+      <div class="field"><label>Descripción de la actividad</label><textarea placeholder="Describa la actividad a realizar"></textarea></div>
+    </div>
+  </div>
+
+  <!-- 3. TIPO -->
+  <div class="section">
+    <div class="section-title">3. Tipo de trabajo en alturas</div>
+    <div class="grid">
+      <div class="row">
+        <div class="field"><label>Trabajo en positivo</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Trabajo en negativo</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Bordes desprotegidos, techos, laderas…</label><div class="yn-opts" data-yn></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SISTEMAS DE ACCESO -->
+  <div class="section">
+    <div class="section-title">4. Sistemas de acceso a utilizar para trabajo seguro en alturas</div>
+    <div class="grid" id="section4">
+      <div class="yn-row"><div class="yn-label">Escaleras certificadas</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Andamio certificado</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Elevador de personas certificado</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Estructura</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Acceso por cuerdas</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Sistema de descenso certificado</div><div class="yn-opts" data-yn></div></div>
+      <div class="row"><div class="field"><label>Otro, ¿cuál?</label><input type="text"></div></div>
+      <hr style="border:none;border-top:1px solid var(--line-soft);margin:4px 0;">
+      <div class="yn-row"><div class="yn-label">Inspección del sistema de acceso realizada</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Compatibles entre sí: tamaño, forma, figura, material y diámetro</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Resistencia a cargas con factor de seguridad ≥ 2</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Sistemas de acceso adecuados y en óptimas condiciones de uso</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Se encuentra amarrado y venteado</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Superficie de apoyo adecuada en espacio, resistencia, inclinación y antideslizante</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Trabajadores capacitados sobre uso y cuidado de los sistemas de acceso</div><div class="yn-opts" data-yn></div></div>
+      <div class="row">
+        <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text"></div>
+        <div class="field"><label>Cédula</label><input type="text"></div>
+      </div>
+      <div class="sig-pad-wrap">
+        <label>Firma inspector de acceso</label>
+        <canvas class="sigpad" width="600" height="150"></canvas>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. PUNTO DE ANCLAJE -->
+  <div class="section">
+    <div class="section-title">5. Punto de anclaje</div>
+    <div class="grid">
+      <div class="yn-row">
+        <div class="yn-label">Se han revisado todos los puntos de anclaje a usar por cada uno de los trabajadores referenciados y estos cuentan con una resistencia mínima de 5000 libras.</div>
+        <div class="yn-opts" data-yn></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. CALCULOS -->
+  <div class="section">
+    <div class="section-title">6. Cálculos para las distancias de trabajo seguro en alturas</div>
+    <div class="calc-box">
+      <div class="calc-row"><span>Altura del trabajador (AT) en metros</span><input type="number" step="0.01" id="calc-at" value="0"></div>
+      <div class="calc-row"><span>Requerimiento de claridad (RC) en metros — Res. 4272/2021</span><input type="number" step="0.01" id="calc-rc" value="1.00"></div>
+      <div class="calc-row"><span>Distancia de caída libre (DCL) — largo eslinga de detención</span><input type="number" step="0.01" id="calc-dcl" value="0"></div>
+      <div class="calc-row"><span>Distancia de desaceleración (DA) — absorbedor de impacto</span><input type="number" step="0.01" id="calc-da" value="0"></div>
+      <div class="calc-row calc-total"><span>Distancia total requerida — DTR = AT + RC + DCL + DA</span><span id="calc-dtr">1.00 m</span></div>
+      <div class="calc-row"><span>Altura mínima de trabajo (AMT) — altura de conexión al punto de anclaje</span><input type="number" step="0.01" id="calc-amt" value="0"></div>
+      <div class="alert-box">Realice el cálculo de la distancia total requerida (DTR); el resultado debe ser inferior a la altura mínima de trabajo (AMT). De no cumplirse este requisito, abstengase de realizar y/o autorizar la actividad.</div>
+      <div class="alert-result pending" id="calc-result">Ingrese los valores para validar: ¿AMT &gt; DTR?</div>
+    </div>
+  </div>
+
+  <!-- 7. EPP -->
+  <div class="section">
+    <div class="section-title">7. Elementos de protección personal obligatorios</div>
+    <div class="grid">
+      <div class="yn-row"><div class="yn-label">Zapato de seguridad</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Casco de seguridad con barbuquejo</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Guante con resistencia a la abrasión</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Gafas de seguridad</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Protección auditiva</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">Ropa de trabajo</div><div class="yn-opts" data-yn></div></div>
+      <div class="field" style="margin-top:6px;"><label>7.1 Elementos de protección personal de acuerdo a la actividad a realizar</label><textarea placeholder="Detalle EPP adicional requerido"></textarea></div>
+    </div>
+  </div>
+
+  <!-- 8. EPCC -->
+  <div class="section">
+    <div class="section-title">8. Elementos de protección contra caídas a utilizar</div>
+    <div class="section-note">Todos los equipos referenciados deben estar certificados según Resolución 4272/2021 e inspeccionados antes de su uso.</div>
+    <table class="mini" id="table-epcc">
+      <thead><tr><th style="width:38%">Elemento</th><th>Usa (SI/N/A)</th><th>¿Inspeccionado antes de uso?</th><th>¿Certificado Res. 4272/2021?</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- 9. PREGUNTAS OBLIGATORIAS -->
+  <div class="section">
+    <div class="section-title">9. Condiciones obligatorias — respuesta afirmativa requerida</div>
+    <div class="section-note">Las siguientes preguntas deben tener respuesta afirmativa; de lo contrario no se autoriza el trabajo en alturas.</div>
+    <div class="grid">
+      <div class="yn-row"><div class="yn-label">9.1 ¿Equipo de comunicación disponible en caso de emergencia?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">9.2 ¿Se tiene definido un plan de rescate?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">9.3 ¿El área se encuentra señalizada, delimitada y se han controlado todos los riesgos asociados?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">9.4 ¿Se ha realizado el control de riesgos eléctricos asociados a la actividad?</div><div class="yn-opts" data-yn></div></div>
+
+      <div class="row" style="margin-top:6px;"><b style="font-size:12px;color:var(--navy-dark);">9.5 Riesgos por manipulación de herramientas identificados y controlados</b></div>
+      <div class="row">
+        <div class="field"><label>Herramienta manual</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Herramienta eléctrica</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Herramienta hidráulica</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Herramienta neumática</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Otro, ¿cuál?</label><input type="text"></div>
+      </div>
+
+      <div class="row" style="margin-top:6px;"><b style="font-size:12px;color:var(--navy-dark);">9.6 Riesgos locativos identificados y controlados</b></div>
+      <div class="row">
+        <div class="field"><label>Orden y aseo</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Superficies resbalosas</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Estructuras a bajo nivel</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Riesgos naturales / lluvia-tormenta</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Uso de escaleras</label><div class="yn-opts" data-yn></div></div>
+        <div class="field"><label>Señalización / delimitación</label><div class="yn-opts" data-yn></div></div>
+
+      <div class="yn-row"><div class="yn-label">9.7 Distancia segura con líneas o equipos eléctricos energizados garantizada, con EPP dieléctrico y elementos necesarios</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">9.8 ¿Se cuentan con medidas de prevención? (procedimiento, ATS, señalización, ayudante de seguridad)</div><div class="yn-opts" data-yn></div></div>
+      </div>
+      <div class="field"><label>9.9 Descripción de la identificación de peligros y control de otros riesgos asociados a la actividad</label><textarea placeholder="Detalle otros riesgos y controles"></textarea></div>
+    </div>
+  </div>
+
+  <!-- 10. TRABAJADORES -->
+  <div class="section">
+    <div class="section-title">Trabajadores autorizados — declaración y firma</div>
+    <div class="section-note">Al firmar, cada trabajador declara estar en plena capacidad física y mental, capacitado con certificación vigente (18 meses), con EPP inspeccionado en perfectas condiciones, afiliación vigente a seguridad social y apto para trabajar en alturas.</div>
+    <div class="workers-wrap" id="workersWrap"></div>
+    <div class="workers-wrap" style="padding-top:0;"><button type="button" class="add-worker-btn" id="addWorkerBtn">+ Agregar trabajador</button></div>
+  </div>
+
+  <!-- ROLES RESPONSABLES -->
+  <div class="section">
+    <div class="section-title">Roles responsables</div>
+    <div class="grid" id="rolesWrap"></div>
+  </div>
+
+  </fieldset><!-- /openPhase -->
+
+  <fieldset class="readonly-phase" id="closePhase" disabled style="display:none;">
+  <!-- 11. CIERRE -->
+  <div class="section">
+    <div class="section-title">10. Cierre del permiso de trabajo</div>
+    <div class="grid">
+      <div class="field"><label>Motivo del cierre</label>
+        <select>
+          <option>Actividad finalizada</option>
+          <option>Actividad cancelada</option>
+          <option>Evento no deseado</option>
+          <option>Condiciones y/o actos inseguros</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label>Fecha real de cierre</label><input type="date"></div>
+        <div class="field"><label>Hora de cierre</label><input type="time"></div>
+      </div>
+      <div class="yn-row"><div class="yn-label">¿El personal que se encontraba interviniendo el equipo fue retirado?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">¿Se aplicaron las tres primeras "S" en el área antes de entregar el equipo?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">¿Se han inspeccionado y almacenado correctamente los equipos de protección contra caídas?</div><div class="yn-opts" data-yn></div></div>
+      <div class="yn-row"><div class="yn-label">¿Se han recogido y almacenado correctamente las herramientas usadas en la actividad?</div><div class="yn-opts" data-yn></div></div>
+      <div class="field"><label>Observaciones</label><textarea placeholder="Observaciones finales del cierre"></textarea></div>
+
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text"></div>
+      </div>
+      <div class="sig-pad-wrap">
+        <label>Firma coordinador — VoBo antes de archivar</label>
+        <canvas class="sigpad" width="600" height="150"></canvas>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text"></div>
+      </div>
+      <div class="sig-pad-wrap">
+        <label>Firma supervisor de proyecto</label>
+        <canvas class="sigpad" width="600" height="150"></canvas>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+      </div>
+    </div>
+  </div>
+  </fieldset><!-- /closePhase -->
+
+</div>
+
+<div class="footer-actions">
+  <span id="status-msg">Complete la sección 1 a 9 y guarde para generar el código del permiso.</span>
+  <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
+  <button class="btn btn-primary" id="btnSaveOpen">Guardar y generar código</button>
+  <button class="btn btn-primary" id="btnSaveClose" style="display:none;">Guardar cierre del permiso</button>
+</div>
+
+<script>
+// ---------- YES/NO/NA toggle groups ----------
+document.querySelectorAll('.yn-opts').forEach(group => {
+  if(!group.hasAttribute('data-mode')){
+    group.innerHTML = '<button type="button" class="yn-btn" data-v="SI">SI</button><button type="button" class="yn-btn" data-v="N/A">N/A</button>';
+  }
+  group.querySelectorAll('button').forEach(btn=>{
+    btn.classList.add('yn-btn');
+    btn.addEventListener('click', ()=>{
+      const already = btn.classList.contains('active-si')||btn.classList.contains('active-na')||btn.classList.contains('active-no');
+      group.querySelectorAll('button').forEach(b=>b.classList.remove('active-si','active-na','active-no'));
+      if(already) return;
+      const v = btn.dataset.v;
+      if(v==='SI') btn.classList.add('active-si');
+      else if(v==='NO') btn.classList.add('active-no');
+      else btn.classList.add('active-na');
+    });
+  });
+});
+
+// ---------- EPCC table ----------
+const epccItems = [
+  "Cinta de anclaje certificada",
+  "Eslinga para detención de caídas en Y con absorbedor de impacto",
+  "Eslinga para detención de caídas autoretráctil en Y con absorbedor de impacto",
+  "Eslinga para detención de caídas sin absorbedor de impacto",
+  "Sistema autoretráctil",
+  "Arnés de cuerpo entero",
+  "Eslinga de posicionamiento",
+  "Línea de vida vertical con arrestador de caída",
+  "Línea de vida horizontal",
+  "Otro, ¿cuál?"
+];
+const tbody = document.querySelector('#table-epcc tbody');
+epccItems.forEach(name=>{
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${name}</td>
+    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
+    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
+    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>`;
+  tbody.appendChild(tr);
+});
+
+// ---------- Roles responsables ----------
+const roles = [
+  "Coordinador trabajo en alturas","Supervisor de proyecto","Ayudante de seguridad","Rescatista",
+  "Encargado del área enterado turno 1","Encargado del área enterado turno 2","Responsable de activar el plan de emergencia"
+];
+const rolesWrap = document.getElementById('rolesWrap');
+roles.forEach(r=>{
+  const div = document.createElement('div');
+  div.className = 'row';
+  div.innerHTML = `
+    <div class="field"><label>${r} — Nombre</label><input type="text"></div>
+    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>`;
+  rolesWrap.appendChild(div);
+});
+
+// ---------- Calculo DTR ----------
+const at = document.getElementById('calc-at');
+const rc = document.getElementById('calc-rc');
+const dcl = document.getElementById('calc-dcl');
+const da = document.getElementById('calc-da');
+const amt = document.getElementById('calc-amt');
+const dtrOut = document.getElementById('calc-dtr');
+const resultBox = document.getElementById('calc-result');
+
+function updateCalc(){
+  const v = (el)=> parseFloat(el.value)||0;
+  const dtr = v(at)+v(rc)+v(dcl)+v(da);
+  dtrOut.textContent = dtr.toFixed(2)+' m';
+  const amtVal = v(amt);
+  if(amtVal===0 && dtr===parseFloat(rc.value||1)){
+    resultBox.className='alert-result pending';
+    resultBox.textContent='Ingrese los valores para validar: ¿AMT > DTR?';
+  } else if(amtVal > dtr){
+    resultBox.className='alert-result pass';
+    resultBox.textContent=`Cumple: AMT (${amtVal.toFixed(2)} m) > DTR (${dtr.toFixed(2)} m). Se puede autorizar la actividad.`;
+  } else {
+    resultBox.className='alert-result fail';
+    resultBox.textContent=`No cumple: AMT (${amtVal.toFixed(2)} m) ≤ DTR (${dtr.toFixed(2)} m). Abstenerse de realizar o autorizar la actividad.`;
+  }
+}
+[at,rc,dcl,da,amt].forEach(el=>el.addEventListener('input', updateCalc));
+updateCalc();
+
+// ---------- Signature pads (generic init, incl. dynamically added ones) ----------
+const sigPadResizers = [];
+function initSigPad(canvas){
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const ratio = Math.max(window.devicePixelRatio||1,1);
+    const rect = canvas.getBoundingClientRect();
+    if(rect.width===0 || rect.height===0) return; // still hidden, skip
+    canvas.width = rect.width*ratio;
+    canvas.height = rect.height*ratio;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(ratio,ratio);
+    ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#0f3a5f';
+  }
+  resize();
+  sigPadResizers.push(resize);
+  let drawing=false, hasSigned=false;
+  const statusEl = canvas.parentElement.querySelector('.sig-status');
+  function pos(e){
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches? e.touches[0].clientX : e.clientX)-rect.left;
+    const cy = (e.touches? e.touches[0].clientY : e.clientY)-rect.top;
+    return {x:cx,y:cy};
+  }
+  function start(e){ if(canvas.closest('fieldset[disabled]')) return; drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
+  function move(e){
+    if(!drawing) return;
+    const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();
+    if(!hasSigned){ hasSigned=true; statusEl.textContent='Firmado'; statusEl.classList.add('signed'); }
+    e.preventDefault();
+  }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end);
+
+  canvas.parentElement.querySelector('.clear-sig').addEventListener('click',()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
+  });
+}
+function resizeAllSigPads(){
+  sigPadResizers.forEach(fn=>fn());
+}
+document.querySelectorAll('canvas.sigpad').forEach(initSigPad);
+
+// ---------- Workers (dynamic rows) ----------
+let workerCount = 0;
+const workersWrap = document.getElementById('workersWrap');
+
+function addWorker(){
+  workerCount++;
+  const card = document.createElement('div');
+  card.className = 'worker-card';
+  card.innerHTML = `
+    <button type="button" class="remove-worker">Eliminar</button>
+    <h4>Trabajador ${workerCount}</h4>
+    <div class="worker-grid">
+      <input type="text" placeholder="Nombre completo">
+      <input type="text" placeholder="Cédula">
+      <input type="text" placeholder="Cargo">
+      <select><option value="">Verificación seguridad social</option><option>Verificada</option><option>Pendiente</option></select>
+      <select><option value="">Estado</option><option>Trabajador autorizado y apto</option><option>No apto</option></select>
+    </div>
+    <div class="sig-pad-wrap">
+      <label>Firma del trabajador</label>
+      <canvas class="sigpad" width="600" height="150"></canvas>
+      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+    </div>`;
+  workersWrap.appendChild(card);
+  initSigPad(card.querySelector('canvas.sigpad'));
+  card.querySelector('.remove-worker').addEventListener('click', ()=>{
+    card.remove();
+  });
+}
+document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
+addWorker(); addWorker();
+
+// ==================================================================
+// CONFIGURACIÓN — pega aquí la URL de tu Apps Script (termina en /exec)
+// ==================================================================
+const CONFIG = {
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz9GGsiiN1vQCtbGv6DNbbIuuvnZzQtkdnyvTRRKCz-5DpCcf1FLabYsmwzR_MErX4Y/exec'
+};
+
+const statusMsg = document.getElementById('status-msg');
+
+// ---------- Helpers: serialize / apply generic phase data (order-based) ----------
+function collectYN(container){
+  return [...container.querySelectorAll('.yn-opts')].map(g=>{
+    const active = g.querySelector('.active-si,.active-na,.active-no');
+    return active ? active.dataset.v : '';
+  });
+}
+function applyYN(container, values){
+  const groups = [...container.querySelectorAll('.yn-opts')];
+  groups.forEach((g,i)=>{
+    const v = values[i];
+    g.querySelectorAll('button').forEach(b=>b.classList.remove('active-si','active-na','active-no'));
+    if(!v) return;
+    const btn = [...g.querySelectorAll('button')].find(b=>b.dataset.v===v);
+    if(btn){ btn.classList.add(v==='SI'?'active-si':v==='NO'?'active-no':'active-na'); }
+  });
+}
+function collectTextFields(container){
+  return [...container.querySelectorAll('input[type=text],input[type=number],input[type=date],input[type=time],textarea,select')]
+    .filter(el=>!el.closest('.worker-card') && !el.closest('#table-epcc') && !el.closest('#rolesWrap'))
+    .map(el=>el.value);
+}
+function applyTextFields(container, values){
+  const els = [...container.querySelectorAll('input[type=text],input[type=number],input[type=date],input[type=time],textarea,select')]
+    .filter(el=>!el.closest('.worker-card') && !el.closest('#table-epcc') && !el.closest('#rolesWrap'));
+  els.forEach((el,i)=>{ if(values[i]!==undefined) el.value = values[i]; });
+}
+function collectSig(canvas){ return canvas.toDataURL('image/png'); }
+function applySig(canvas, dataUrl){
+  if(!dataUrl) return;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = ()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    const statusEl = canvas.parentElement.querySelector('.sig-status');
+    if(statusEl){ statusEl.textContent='Firmado'; statusEl.classList.add('signed'); }
+  };
+  img.src = dataUrl;
+}
+
+function collectEpcc(){
+  return [...document.querySelectorAll('#table-epcc tbody tr')].map(tr=>{
+    const sels = tr.querySelectorAll('select');
+    return [sels[0].value, sels[1].value, sels[2].value];
+  });
+}
+function applyEpcc(rows){
+  const trs = document.querySelectorAll('#table-epcc tbody tr');
+  trs.forEach((tr,i)=>{
+    if(!rows[i]) return;
+    const sels = tr.querySelectorAll('select');
+    sels[0].value = rows[i][0]||''; sels[1].value = rows[i][1]||''; sels[2].value = rows[i][2]||'';
+  });
+}
+function collectRoles(){
+  return [...document.querySelectorAll('#rolesWrap .field input')].map(i=>i.value);
+}
+function applyRoles(values){
+  const els = document.querySelectorAll('#rolesWrap .field input');
+  els.forEach((el,i)=>{ if(values[i]!==undefined) el.value = values[i]; });
+}
+function collectWorkers(){
+  return [...document.querySelectorAll('.worker-card')].map(card=>{
+    const inputs = card.querySelectorAll('.worker-grid input,.worker-grid select');
+    return {
+      fields: [...inputs].map(i=>i.value),
+      sig: collectSig(card.querySelector('canvas.sigpad'))
+    };
+  });
+}
+function applyWorkers(list){
+  // reset to only what's needed
+  workersWrap.innerHTML = '';
+  workerCount = 0;
+  list.forEach(w=>{
+    addWorker();
+    const card = workersWrap.lastElementChild;
+    const inputs = card.querySelectorAll('.worker-grid input,.worker-grid select');
+    inputs.forEach((el,i)=>{ if(w.fields[i]!==undefined) el.value = w.fields[i]; });
+    applySig(card.querySelector('canvas.sigpad'), w.sig);
+  });
+}
+
+function collectOpenData(){
+  const openPhase = document.getElementById('openPhase');
+  const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
+  return {
+    yn: collectYN(openPhase),
+    text: collectTextFields(openPhase),
+    epcc: collectEpcc(),
+    roles: collectRoles(),
+    workers: collectWorkers(),
+    accessInspectorSig: accessSigCanvas ? collectSig(accessSigCanvas) : null
+  };
+}
+function applyOpenData(data){
+  const openPhase = document.getElementById('openPhase');
+  applyYN(openPhase, data.yn||[]);
+  applyTextFields(openPhase, data.text||[]);
+  applyEpcc(data.epcc||[]);
+  applyRoles(data.roles||[]);
+  applyWorkers(data.workers||[]);
+  const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
+  if(accessSigCanvas) applySig(accessSigCanvas, data.accessInspectorSig);
+  updateCalc();
+}
+function collectCloseData(){
+  const closePhase = document.getElementById('closePhase');
+  const sigs = [...closePhase.querySelectorAll('canvas.sigpad')].map(collectSig);
+  return { yn: collectYN(closePhase), text: collectTextFields(closePhase), sigs };
+}
+function applyCloseData(data){
+  const closePhase = document.getElementById('closePhase');
+  applyYN(closePhase, data.yn||[]);
+  applyTextFields(closePhase, data.text||[]);
+  const canvases = [...closePhase.querySelectorAll('canvas.sigpad')];
+  canvases.forEach((c,i)=> applySig(c, (data.sigs||[])[i]));
+}
+
+// ---------- Validation ----------
+function validatePhase(container){
+  const missing = [];
+  container.querySelectorAll('.yn-opts').forEach(g=>{
+    const active = g.querySelector('.active-si,.active-na,.active-no');
+    if(!active){
+      const row = g.closest('.yn-row') || g.closest('.field') || g.closest('.row');
+      const label = row ? (row.querySelector('.yn-label,label')||{}).textContent : null;
+      missing.push(label ? label.trim() : 'una pregunta SI/N/A');
+    }
+  });
+  const sigsPending = [];
+  container.querySelectorAll('.sig-pad-wrap').forEach(wrap=>{
+    const statusEl = wrap.querySelector('.sig-status');
+    if(!statusEl || !statusEl.classList.contains('signed')){
+      const label = wrap.querySelector('label');
+      sigsPending.push(label ? label.textContent.trim() : 'una firma');
+    }
+  });
+  return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
+}
+function showValidationAlert(result){
+  let msg = 'Faltan campos por completar antes de guardar:\n';
+  if(result.missing.length){
+    msg += `\n• ${result.missing.length} pregunta(s) SI/N/A sin responder`;
+  }
+  if(result.sigsPending.length){
+    msg += `\n• ${result.sigsPending.length} firma(s) pendiente(s): ${result.sigsPending.slice(0,5).join(', ')}${result.sigsPending.length>5?'…':''}`;
+  }
+  alert(msg);
+}
+
+
+function generateCode(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  const rand = String(Math.floor(Math.random()*900)+100);
+  return `ALT-${y}${m}${d}-${rand}`;
+}
+
+// ---------- Mode / navigation ----------
+let currentMode = null; // 'open' | 'close-view'
+let currentCode = null;
+
+const gateScreen = document.getElementById('gateScreen');
+const sheetEl = document.getElementById('permitForm');
+const statusBar = document.getElementById('permitStatusBar');
+const codeTag = document.getElementById('permitCodeTag');
+const statusPill = document.getElementById('permitStatusPill');
+const openPhaseEl = document.getElementById('openPhase');
+const closePhaseEl = document.getElementById('closePhase');
+const btnSaveOpen = document.getElementById('btnSaveOpen');
+const btnSaveClose = document.getElementById('btnSaveClose');
+
+document.getElementById('btnNewPermit').addEventListener('click', ()=>{
+  currentMode = 'open';
+  gateScreen.style.display='none';
+  sheetEl.style.display='block';
+  openPhaseEl.style.display='block';
+  openPhaseEl.disabled = false;
+  closePhaseEl.style.display='none';
+  statusBar.style.display='none';
+  btnSaveOpen.style.display='inline-block';
+  btnSaveClose.style.display='none';
+  statusMsg.textContent = 'Complete la sección 1 a 9 y guarde para generar el código del permiso.';
+  resizeAllSigPads();
+});
+
+document.getElementById('btnClosePermit').addEventListener('click', ()=>{
+  document.getElementById('closeCodeBox').style.display='block';
+});
+
+document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
+  const code = document.getElementById('closeCodeInput').value.trim().toUpperCase();
+  const msg = document.getElementById('closeCodeMsg');
+  if(!code){ msg.textContent='Ingrese un código.'; msg.className='err'; return; }
+  if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ msg.textContent='Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código.'; msg.className='err'; return; }
+  msg.textContent='Buscando...'; msg.className='';
+  try{
+    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}`);
+    const json = await res.json();
+    if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
+    if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado previamente.'; msg.className='err'; return; }
+    // Success: load into form
+    currentMode = 'close-view';
+    currentCode = json.code;
+    gateScreen.style.display='none';
+    sheetEl.style.display='block';
+    statusBar.style.display='flex';
+    codeTag.textContent = currentCode;
+    statusPill.textContent = 'ABIERTO — completando cierre';
+    statusPill.className = 'status-pill abierto';
+    openPhaseEl.style.display='block';
+    openPhaseEl.disabled = true; // read-only reference
+    closePhaseEl.style.display='block';
+    closePhaseEl.disabled = false;
+    resizeAllSigPads();
+    applyOpenData(json.openData||{});
+    btnSaveOpen.style.display='none';
+    btnSaveClose.style.display='inline-block';
+    statusMsg.textContent = 'Permiso cargado. Complete la sección 10 (Cierre) y guarde.';
+  }catch(err){
+    msg.textContent = 'Error de conexión con el backend.'; msg.className='err';
+  }
+});
+
+document.getElementById('btnBackToGate').addEventListener('click', ()=>{
+  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.reload();
+});
+
+document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(currentCode||'');
+  statusMsg.textContent = 'Código copiado al portapapeles.';
+});
+
+btnSaveOpen.addEventListener('click', async ()=>{
+  if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ alert('Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código antes de guardar.'); return; }
+  const check = validatePhase(openPhaseEl);
+  if(!check.valid){ showValidationAlert(check); return; }
+  const code = generateCode();
+  const data = collectOpenData();
+  btnSaveOpen.disabled = true;
+  statusMsg.textContent = 'Guardando...';
+  try{
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'open', code, data })
+    });
+    const json = await res.json();
+    if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveOpen.disabled=false; return; }
+    currentCode = code; currentMode='open-saved';
+    statusBar.style.display='flex';
+    codeTag.textContent = code;
+    statusPill.textContent = 'ABIERTO';
+    statusPill.className = 'status-pill abierto';
+    statusMsg.textContent = 'Permiso guardado. Comparta el código con quien vaya a cerrarlo.';
+    openPhaseEl.disabled = true;
+    btnSaveOpen.style.display='none';
+    alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
+  }catch(err){
+    statusMsg.textContent = 'Error de conexión con el backend.';
+    btnSaveOpen.disabled = false;
+  }
+});
+
+btnSaveClose.addEventListener('click', async ()=>{
+  if(!currentCode) return;
+  const check = validatePhase(closePhaseEl);
+  if(!check.valid){ showValidationAlert(check); return; }
+  const data = collectCloseData();
+  btnSaveClose.disabled = true;
+  statusMsg.textContent = 'Guardando cierre...';
+  try{
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'close', code: currentCode, data })
+    });
+    const json = await res.json();
+    if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveClose.disabled=false; return; }
+    statusPill.textContent = 'CERRADO';
+    statusPill.className = 'status-pill cerrado';
+    closePhaseEl.disabled = true;
+    btnSaveClose.style.display='none';
+    statusMsg.textContent = 'Permiso cerrado correctamente. Puede exportarlo a PDF para archivarlo.';
+    alert('Permiso cerrado correctamente.');
+  }catch(err){
+    statusMsg.textContent = 'Error de conexión con el backend.';
+    btnSaveClose.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
