@@ -19,12 +19,14 @@
     --muted:#5c6a76;
   }
   *{box-sizing:border-box;}
+  html{overflow-x:hidden;}
   body{
     margin:0;
     font-family:'Segoe UI',Arial,sans-serif;
     background:var(--bg);
     color:var(--text);
     padding:24px 16px 80px;
+    overflow-x:hidden;
   }
   .sheet{
     max-width:980px;
@@ -194,22 +196,39 @@
   @media (max-width:640px){
     .head{grid-template-columns:1fr;}
     .head .logo,.head .title{border-right:none;border-bottom:1px solid var(--line);}
+    .head .logo{padding:10px 14px;}
+    .head .title{padding:8px;}
+    .head .title h1{font-size:14.5px;}
+    .head .meta{padding:6px 12px;font-size:10.5px;}
   }
   @media (max-width:600px){
-    body{padding:20px 14px 100px;}
-    .grid{padding:16px;gap:14px;}
-    .section-title{padding:11px 14px;font-size:12px;}
-    .section-note{padding:8px 14px;}
-    .row{gap:14px;row-gap:16px;}
-    .field{min-width:140px;}
+    body{padding:16px 10px 100px;}
+    .grid{padding:14px;gap:12px;}
+    .section-title{padding:10px 12px;font-size:11.5px;}
+    .section-note{padding:7px 12px;font-size:10.5px;}
+
+    /* Apilar los campos de cada fila en una sola columna, evita amontonamiento */
+    .row{flex-direction:column;gap:12px;}
+    .row .field{min-width:0;width:100%;max-width:none !important;}
+    .field input,.field select,.field textarea{font-size:13.5px;}
+
     .yn-row{gap:8px;padding:9px 0;}
     .yn-label{min-width:100%;font-size:12.5px;line-height:1.4;}
     .yn-opts{width:100%;}
 
+    .worker-card{padding:10px;}
+    .worker-grid{grid-template-columns:1fr 1fr;gap:8px;}
+    canvas.sigpad{height:100px;}
+
+    .calc-box{padding:12px;}
+    .calc-row{flex-direction:column;align-items:flex-start;gap:4px;}
+    .calc-row input{width:100%;text-align:left;}
+
     /* Tabla EPCC: permitir scroll interno propio en vez de apretar columnas */
     #table-epcc{min-width:520px;}
-    .footer-actions{padding:10px 12px;}
-    #status-msg{font-size:10px;}
+    .footer-actions{padding:10px 12px;gap:8px;}
+    .footer-actions .btn{padding:7px 12px;font-size:11.5px;}
+    #status-msg{font-size:10px;width:100%;order:-1;margin-bottom:4px;}
   }
 
   /* ── Gate screen ── */
@@ -326,7 +345,7 @@
     <div class="grid">
       <div class="yn-row">
         <div class="yn-label">¿Se ha realizado una planeación previa a la actividad teniendo en cuenta a todas las partes involucradas e interesadas?</div>
-        <div class="yn-opts" data-yn data-mode="sino"><button type="button" data-v="SI">SÍ</button><button type="button" data-v="NO">NO</button></div>
+        <div class="yn-opts" data-yn data-mode="sino"><button type="button" class="yn-btn" data-v="SI">SÍ</button><button type="button" class="yn-btn" data-v="NO">NO</button></div>
       </div>
       <div class="field"><label>¿Por qué? (si respondió NO)</label><textarea placeholder="Justificación"></textarea></div>
 
