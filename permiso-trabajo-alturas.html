@@ -93,6 +93,9 @@
     background:#fafbfc;
     color:var(--text);
   }
+  .field input[type=date],.field input[type=time]{overflow:hidden;}
+  .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:3px;padding:2px;cursor:pointer;}
+  .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:4px;}
   .field textarea{resize:vertical;min-height:44px;}
   .field input:focus,.field textarea:focus,.field select:focus{
     outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(28,110,164,.15);

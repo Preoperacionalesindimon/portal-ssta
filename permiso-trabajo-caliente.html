@@ -69,6 +69,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 }
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
+.field input[type=date],.field input[type=time]{overflow:hidden;}
+.field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:4px;padding:2px;cursor:pointer;}
+.field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:6px;}
 .field textarea{min-height:64px;resize:vertical;}
 .field input:disabled,.field textarea:disabled,.field select:disabled{background:#f0ede4;color:#7a7466;}
 .radio-row{display:flex;gap:18px;align-items:center;margin-top:4px;flex-wrap:wrap;}
@@ -292,6 +295,7 @@ canvas.pad.locked{cursor:default;}
       <span class="status" id="footerStatus">—</span>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+        <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
         <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
       </div>
     </div>
@@ -409,8 +413,11 @@ function applyToggleState(stateObj){
 function setupPad(canvas){
   const ctx=canvas.getContext('2d');
   function resize(){
-    const rect=canvas.getBoundingClientRect(); const ratio=window.devicePixelRatio||1;
+    const rect=canvas.getBoundingClientRect();
+    if(rect.width===0||rect.height===0) return; // aún oculto, se reintentará al mostrarse
+    const ratio=window.devicePixelRatio||1;
     canvas.width=rect.width*ratio; canvas.height=rect.height*ratio;
+    ctx.setTransform(1,0,0,1,0,0);
     ctx.scale(ratio,ratio); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.strokeStyle='#1f2a33';
   }
   resize();
@@ -428,8 +435,12 @@ function setupPad(canvas){
     clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; markUnsigned(canvas.id); },
     getDataUrl:()=> hasInk? canvas.toDataURL('image/png') : null,
     setDataUrl:(url)=>{ if(!url) return; const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); hasInk=true; markSigned(canvas.id); }; img.src=url; },
-    hasInk:()=>hasInk
+    hasInk:()=>hasInk,
+    refreshSize:resize
   };
+}
+function refreshPadsIn(container){
+  container.querySelectorAll('canvas.pad, canvas.mini-pad').forEach(c=>{ if(pads[c.id]) pads[c.id].refreshSize(); });
 }
 function findStatusFor(id){
   if(id.startsWith('padCierre')) return document.getElementById('status'+id.replace('pad',''));
@@ -738,6 +749,7 @@ async function openCloseModeWithCode(code){
   document.getElementById('permitCodeDisplay').textContent=permitCode;
   document.getElementById('closeLockedMsg').classList.add('hidden');
   document.getElementById('closeFields').classList.remove('hidden');
+  refreshPadsIn(document.getElementById('closeFields'));
   document.getElementById('titleSec7').classList.remove('locked');
   document.getElementById('footerStatus').textContent='Revisa los datos de apertura (bloqueados) y diligencia la sección 7 de cierre.';
   document.getElementById('mainActionBtn').textContent='Guardar cierre en la hoja';
@@ -804,6 +816,9 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+document.getElementById('backToStartBtn').addEventListener('click', ()=>{
+  if(confirm('¿Volver al inicio? Se perderá lo que no hayas guardado.')) location.reload();
+});
 </script>
 </body>
 </html>
