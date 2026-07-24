@@ -417,12 +417,12 @@
   <div class="section">
     <div class="section-title">6. Cálculos para las distancias de trabajo seguro en alturas</div>
     <div class="calc-box">
-      <div class="calc-row"><span>Altura del trabajador (AT) en metros</span><input type="number" step="0.01" id="calc-at" value="0"></div>
-      <div class="calc-row"><span>Requerimiento de claridad (RC) en metros — Res. 4272/2021</span><input type="number" step="0.01" id="calc-rc" value="1.00"></div>
-      <div class="calc-row"><span>Distancia de caída libre (DCL) — largo eslinga de detención</span><input type="number" step="0.01" id="calc-dcl" value="0"></div>
-      <div class="calc-row"><span>Distancia de desaceleración (DA) — absorbedor de impacto</span><input type="number" step="0.01" id="calc-da" value="0"></div>
+      <div class="calc-row"><span>Altura del trabajador (AT) en metros</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-at" value="0.00"></div>
+      <div class="calc-row"><span>Requerimiento de claridad (RC) en metros — Res. 4272/2021</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-rc" value="1.00"></div>
+      <div class="calc-row"><span>Distancia de caída libre (DCL) — largo eslinga de detención</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-dcl" value="0.00"></div>
+      <div class="calc-row"><span>Distancia de desaceleración (DA) — absorbedor de impacto</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-da" value="0.00"></div>
       <div class="calc-row calc-total"><span>Distancia total requerida — DTR = AT + RC + DCL + DA</span><span id="calc-dtr">1.00 m</span></div>
-      <div class="calc-row"><span>Altura mínima de trabajo (AMT) — altura de conexión al punto de anclaje</span><input type="number" step="0.01" id="calc-amt" value="0"></div>
+      <div class="calc-row"><span>Altura mínima de trabajo (AMT) — altura de conexión al punto de anclaje</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-amt" value="0.00"></div>
       <div class="alert-box">Realice el cálculo de la distancia total requerida (DTR); el resultado debe ser inferior a la altura mínima de trabajo (AMT). De no cumplirse este requisito, abstengase de realizar y/o autorizar la actividad.</div>
       <div class="alert-result pending" id="calc-result">Ingrese los valores para validar: ¿AMT &gt; DTR?</div>
     </div>
@@ -602,52 +602,11 @@ epccItems.forEach(name=>{
   tbody.appendChild(tr);
 });
 
-// ---------- Roles responsables ----------
-const roles = [
-  "Coordinador trabajo en alturas","Supervisor de proyecto","Ayudante de seguridad","Rescatista",
-  "Encargado del área enterado turno 1","Encargado del área enterado turno 2","Responsable de activar el plan de emergencia"
-];
-const rolesWrap = document.getElementById('rolesWrap');
-roles.forEach(r=>{
-  const div = document.createElement('div');
-  div.className = 'row';
-  div.innerHTML = `
-    <div class="field"><label>${r} — Nombre</label><input type="text"></div>
-    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>`;
-  rolesWrap.appendChild(div);
-});
-
-// ---------- Calculo DTR ----------
-const at = document.getElementById('calc-at');
-const rc = document.getElementById('calc-rc');
-const dcl = document.getElementById('calc-dcl');
-const da = document.getElementById('calc-da');
-const amt = document.getElementById('calc-amt');
-const dtrOut = document.getElementById('calc-dtr');
-const resultBox = document.getElementById('calc-result');
-
-function updateCalc(){
-  const v = (el)=> parseFloat(el.value)||0;
-  const dtr = v(at)+v(rc)+v(dcl)+v(da);
-  dtrOut.textContent = dtr.toFixed(2)+' m';
-  const amtVal = v(amt);
-  if(amtVal===0 && dtr===parseFloat(rc.value||1)){
-    resultBox.className='alert-result pending';
-    resultBox.textContent='Ingrese los valores para validar: ¿AMT > DTR?';
-  } else if(amtVal > dtr){
-    resultBox.className='alert-result pass';
-    resultBox.textContent=`Cumple: AMT (${amtVal.toFixed(2)} m) > DTR (${dtr.toFixed(2)} m). Se puede autorizar la actividad.`;
-  } else {
-    resultBox.className='alert-result fail';
-    resultBox.textContent=`No cumple: AMT (${amtVal.toFixed(2)} m) ≤ DTR (${dtr.toFixed(2)} m). Abstenerse de realizar o autorizar la actividad.`;
-  }
-}
-[at,rc,dcl,da,amt].forEach(el=>el.addEventListener('input', updateCalc));
-updateCalc();
-
 // ---------- Signature pads (generic init, incl. dynamically added ones) ----------
 const sigPadResizers = [];
 function initSigPad(canvas){
+  if(canvas.dataset.sigInit) return;
+  canvas.dataset.sigInit = '1';
   const ctx = canvas.getContext('2d');
   function resize(){
     const ratio = Math.max(window.devicePixelRatio||1,1);
@@ -689,6 +648,71 @@ function initSigPad(canvas){
     hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
   });
 }
+
+// ---------- Roles responsables ----------
+const roles = [
+  "Coordinador trabajo en alturas","Supervisor de proyecto","Ayudante de seguridad","Rescatista",
+  "Encargado del área enterado turno 1","Encargado del área enterado turno 2","Responsable de activar el plan de emergencia"
+];
+const rolesWrap = document.getElementById('rolesWrap');
+roles.forEach(r=>{
+  const div = document.createElement('div');
+  div.className = 'row';
+  div.innerHTML = `
+    <div class="field"><label>${r} — Nombre</label><input type="text"></div>
+    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>
+    <div class="field" style="min-width:220px;">
+      <label>Firma</label>
+      <canvas class="sigpad" width="600" height="150"></canvas>
+      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+    </div>`;
+  rolesWrap.appendChild(div);
+  initSigPad(div.querySelector('canvas.sigpad'));
+});
+
+// ---------- Calculo DTR ----------
+const at = document.getElementById('calc-at');
+const rc = document.getElementById('calc-rc');
+const dcl = document.getElementById('calc-dcl');
+const da = document.getElementById('calc-da');
+const amt = document.getElementById('calc-amt');
+const dtrOut = document.getElementById('calc-dtr');
+const resultBox = document.getElementById('calc-result');
+
+function updateCalc(){
+  const v = (el)=> parseFloat(el.value)||0;
+  const dtr = v(at)+v(rc)+v(dcl)+v(da);
+  dtrOut.textContent = dtr.toFixed(2)+' m';
+  const amtVal = v(amt);
+  if(amtVal===0 && dtr===parseFloat(rc.value||1)){
+    resultBox.className='alert-result pending';
+    resultBox.textContent='Ingrese los valores para validar: ¿AMT > DTR?';
+  } else if(amtVal > dtr){
+    resultBox.className='alert-result pass';
+    resultBox.textContent=`Cumple: AMT (${amtVal.toFixed(2)} m) > DTR (${dtr.toFixed(2)} m). Se puede autorizar la actividad.`;
+  } else {
+    resultBox.className='alert-result fail';
+    resultBox.textContent=`No cumple: AMT (${amtVal.toFixed(2)} m) ≤ DTR (${dtr.toFixed(2)} m). Abstenerse de realizar o autorizar la actividad.`;
+  }
+}
+function attachDecimalMask(input){
+  input.addEventListener('input', ()=>{
+    let digits = input.value.replace(/\D/g,'');
+    digits = digits.replace(/^0+(?=\d)/,'');
+    while(digits.length<3) digits = '0'+digits;
+    const entero = digits.slice(0,-2);
+    const decimales = digits.slice(-2);
+    input.value = `${parseInt(entero,10)}.${decimales}`;
+    updateCalc();
+  });
+  input.addEventListener('focus', ()=>{
+    setTimeout(()=> input.setSelectionRange(input.value.length, input.value.length), 0);
+  });
+}
+document.querySelectorAll('.calc-mask').forEach(attachDecimalMask);
+[at,rc,dcl,da,amt].forEach(el=>el.addEventListener('input', updateCalc));
+updateCalc();
+
 function resizeAllSigPads(){
   sigPadResizers.forEach(fn=>fn());
 }
@@ -791,11 +815,17 @@ function applyEpcc(rows){
   });
 }
 function collectRoles(){
-  return [...document.querySelectorAll('#rolesWrap .field input')].map(i=>i.value);
+  const texts = [...document.querySelectorAll('#rolesWrap .field input')].map(i=>i.value);
+  const sigs = [...document.querySelectorAll('#rolesWrap canvas.sigpad')].map(collectSig);
+  return { texts, sigs };
 }
-function applyRoles(values){
+function applyRoles(data){
+  const values = Array.isArray(data) ? data : (data && data.texts) || [];
+  const sigs = Array.isArray(data) ? [] : (data && data.sigs) || [];
   const els = document.querySelectorAll('#rolesWrap .field input');
   els.forEach((el,i)=>{ if(values[i]!==undefined) el.value = values[i]; });
+  const canvases = document.querySelectorAll('#rolesWrap canvas.sigpad');
+  canvases.forEach((c,i)=>{ if(sigs[i]) applySig(c, sigs[i]); });
 }
 function collectWorkers(){
   return [...document.querySelectorAll('.worker-card')].map(card=>{
