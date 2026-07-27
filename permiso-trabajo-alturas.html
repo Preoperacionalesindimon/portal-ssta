@@ -95,7 +95,7 @@
     background:#fafbfc;
     color:var(--text);
   }
-  .field input[type=date],.field input[type=time]{overflow:hidden;}
+  .field input[type=date],.field input[type=time]{overflow:hidden;min-width:0;max-width:100%;}
   .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:3px;padding:2px;cursor:pointer;}
   .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:4px;}
   .field textarea{resize:vertical;min-height:44px;}
@@ -209,7 +209,7 @@
 
     /* Apilar los campos de cada fila en una sola columna, evita amontonamiento */
     .row{flex-direction:column;gap:12px;}
-    .row .field{min-width:0;width:100%;max-width:none !important;}
+    .row .field{min-width:0;width:100%;max-width:none !important;box-sizing:border-box;}
     .field input,.field select,.field textarea{font-size:13.5px;}
 
     .yn-row{gap:8px;padding:9px 0;}
@@ -229,11 +229,6 @@
     .footer-actions{padding:10px 12px;gap:8px;}
     .footer-actions .btn{padding:7px 12px;font-size:11.5px;}
     #status-msg{font-size:10px;width:100%;order:-1;margin-bottom:4px;}
-
-    /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
-       el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
-    input,select,textarea{font-size:16px !important;}
-    .calc-row input{text-align:left;}
   }
 
   /* ── Gate screen ── */
@@ -278,28 +273,6 @@
   fieldset.readonly-phase[disabled] select,fieldset.readonly-phase[disabled] textarea,
   fieldset.readonly-phase[disabled] button{opacity:.75;cursor:not-allowed;}
   fieldset.readonly-phase[disabled] canvas.sigpad{pointer-events:none;}
-
-
-/* ===== CORRECCIÓN DE ESPACIADO MÓVIL ===== */
-@media screen and (max-width: 600px) {
-  body { padding: 12px 8px 92px !important; }
-  .grid { padding: 10px 12px !important; gap: 8px !important; }
-  .section-title { padding: 8px 12px !important; }
-  .section-note { padding: 6px 12px !important; }
-  .row { gap: 8px !important; }
-  .field { gap: 3px !important; min-width: 0 !important; }
-  .yn-row { padding: 7px 0 !important; gap: 6px !important; }
-  .yn-label { line-height: 1.3 !important; }
-  .field input, .field select, .field textarea {
-    font-size: 16px !important;
-    min-height: 42px;
-    padding: 7px 9px !important;
-  }
-  .field textarea { min-height: 58px !important; }
-  .worker-grid { grid-template-columns: 1fr !important; }
-  table.mini { margin-left: 0; margin-right: 0; width: 100%; }
-}
-
 </style>
 </head>
 <body>
@@ -597,7 +570,7 @@
 
 </div>
 
-<div class="footer-actions">
+<div class="footer-actions" id="footerActionsBar" style="display:none;">
   <span id="status-msg">Complete la sección 1 a 9 y guarde para generar el código del permiso.</span>
   <button class="btn btn-secondary" id="printBtn">Imprimir / PDF</button>
   <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
@@ -993,6 +966,7 @@ document.getElementById('btnNewPermit').addEventListener('click', ()=>{
   currentMode = 'open';
   gateScreen.style.display='none';
   sheetEl.style.display='block';
+  document.getElementById('footerActionsBar').style.display='flex';
   openPhaseEl.style.display='block';
   openPhaseEl.disabled = false;
   closePhaseEl.style.display='none';
@@ -1047,6 +1021,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
     currentCode = json.code;
     gateScreen.style.display='none';
     sheetEl.style.display='block';
+    document.getElementById('footerActionsBar').style.display='flex';
     statusBar.style.display='flex';
     codeTag.textContent = currentCode;
     statusPill.textContent = 'ABIERTO — completando cierre';
@@ -1066,7 +1041,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnBackToGate').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.href='index.html';
+  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.reload();
 });
 
 document.getElementById('copyCodeBtn').addEventListener('click', ()=>{

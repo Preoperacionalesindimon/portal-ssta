@@ -67,14 +67,11 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   .exec-table td.idx{display:none;}
   .exec-table td.helper{display:flex;align-items:center;gap:10px;}
   .exec-table td.helper::before{margin-bottom:0;}
-
-  /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
-     el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
-  input,select,textarea{font-size:16px !important;}
 }
+.field{min-width:0;}
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
-.field input[type=date],.field input[type=time]{overflow:hidden;}
+.field input[type=date],.field input[type=time]{overflow:hidden;min-width:0;max-width:100%;}
 .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:4px;padding:2px;cursor:pointer;}
 .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:6px;}
 .field textarea{min-height:64px;resize:vertical;}
@@ -136,39 +133,6 @@ canvas.pad.locked{cursor:default;}
 #app{display:none;}
 .hidden{display:none !important;}
 @media print{.footer-actions,.add-row-btn,.sig-actions,#landing{display:none !important;}body{background:#fff;}}
-
-
-/* ===== CORRECCIÓN DE ESPACIADO MÓVIL ===== */
-@media screen and (max-width: 600px) {
-  body { padding: 12px 8px 92px !important; }
-  .section { margin-top: 14px !important; }
-  .section-body { padding: 14px 16px !important; }
-  .grid2, .grid3, .sig-fields {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  .field { margin: 0 !important; min-width: 0; }
-  .field input, .field select, .field textarea {
-    font-size: 16px !important;
-    min-height: 44px;
-    height: 44px;
-    padding: 8px 10px !important;
-    line-height: 1.25;
-  }
-  .field textarea {
-    height: auto;
-    min-height: 70px;
-  }
-  input[type="date"], input[type="time"] {
-    height: 44px !important;
-    min-height: 44px !important;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .exec-table tr { padding: 12px !important; margin-bottom: 12px !important; }
-  .exec-table td { padding: 7px 0 !important; }
-}
-
 </style>
 </head>
 <body>
@@ -855,7 +819,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
 
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
 document.getElementById('backToStartBtn').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no hayas guardado.')) location.href='index.html';
+  if(confirm('¿Volver al inicio? Se perderá lo que no hayas guardado.')) location.reload();
 });
 </script>
 </body>
