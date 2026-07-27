@@ -21,8 +21,6 @@
   *{box-sizing:border-box;}
   html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
   body{
-    overflow-wrap:anywhere;
-    word-break:break-word;
     margin:0;
     font-family:'Segoe UI',Arial,sans-serif;
     background:var(--bg);
@@ -83,8 +81,6 @@
     font-size:11px;
     padding:6px 14px;
     border-bottom:1px solid var(--line-soft);
-    overflow-wrap:anywhere;
-    word-break:break-word;
   }
   .grid{padding:12px 14px;display:grid;gap:10px;}
   .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
@@ -99,7 +95,7 @@
     background:#fafbfc;
     color:var(--text);
   }
-  .field input[type=date],.field input[type=time]{overflow:hidden;min-width:0;max-width:100%;}
+  .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
   .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:3px;padding:2px;cursor:pointer;}
   .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:4px;}
   .field textarea{resize:vertical;min-height:44px;}
@@ -107,9 +103,9 @@
     outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(28,110,164,.15);
   }
 
-  .yn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line-soft);min-width:0;}
+  .yn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line-soft);}
   .yn-row:last-child{border-bottom:none;}
-  .yn-label{flex:1 1 220px;min-width:0;font-size:12.5px;overflow-wrap:anywhere;word-break:break-word;}
+  .yn-label{flex:1;min-width:220px;font-size:12.5px;}
   .yn-opts{display:flex;gap:6px;}
   .yn-btn{
     border:1px solid var(--line);border-radius:4px;background:#fafbfc;
@@ -213,7 +209,7 @@
 
     /* Apilar los campos de cada fila en una sola columna, evita amontonamiento */
     .row{flex-direction:column;gap:12px;}
-    .row .field{min-width:0;width:100%;box-sizing:border-box;}
+    .row .field{min-width:0;width:100%;max-width:none !important;}
     .field input,.field select,.field textarea{font-size:13.5px;}
 
     .yn-row{gap:8px;padding:9px 0;}
@@ -233,6 +229,11 @@
     .footer-actions{padding:10px 12px;gap:8px;}
     .footer-actions .btn{padding:7px 12px;font-size:11.5px;}
     #status-msg{font-size:10px;width:100%;order:-1;margin-bottom:4px;}
+
+    /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
+       el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
+    input,select,textarea{font-size:16px !important;}
+    .calc-row input{text-align:left;}
   }
 
   /* ── Gate screen ── */
@@ -272,7 +273,7 @@
   .copy-code-btn{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:11px;padding:4px 9px;cursor:pointer;color:var(--navy);}
   .copy-code-btn:hover{background:#f4f6f8;}
 
-  fieldset.readonly-phase{border:none;padding:0;margin:0;}
+  fieldset.readonly-phase{border:none;padding:0;margin:0;min-width:0;width:100%;}
   fieldset.readonly-phase[disabled] .yn-btn,fieldset.readonly-phase[disabled] input,
   fieldset.readonly-phase[disabled] select,fieldset.readonly-phase[disabled] textarea,
   fieldset.readonly-phase[disabled] button{opacity:.75;cursor:not-allowed;}
@@ -283,7 +284,6 @@
 
 <!-- ══════════ GATE SCREEN ══════════ -->
 <div class="gate-wrap" id="gateScreen">
-  <div style="background:#ff0000;color:#fff;text-align:center;padding:10px;font-weight:900;font-size:16px;">VERSIÓN DE PRUEBA — SI VES ESTO EN ROJO, SÍ SE ACTUALIZÓ (borrar después)</div>
   <div class="gate-top">
     <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Alturas</h1></div>
     <div class="meta">Código: <b>SSTA-F-116</b> · V1</div>
@@ -575,7 +575,7 @@
 
 </div>
 
-<div class="footer-actions" id="footerActionsBar" style="display:none;">
+<div class="footer-actions">
   <span id="status-msg">Complete la sección 1 a 9 y guarde para generar el código del permiso.</span>
   <button class="btn btn-secondary" id="printBtn">Imprimir / PDF</button>
   <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
@@ -971,7 +971,6 @@ document.getElementById('btnNewPermit').addEventListener('click', ()=>{
   currentMode = 'open';
   gateScreen.style.display='none';
   sheetEl.style.display='block';
-  document.getElementById('footerActionsBar').style.display='flex';
   openPhaseEl.style.display='block';
   openPhaseEl.disabled = false;
   closePhaseEl.style.display='none';
@@ -1026,7 +1025,6 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
     currentCode = json.code;
     gateScreen.style.display='none';
     sheetEl.style.display='block';
-    document.getElementById('footerActionsBar').style.display='flex';
     statusBar.style.display='flex';
     codeTag.textContent = currentCode;
     statusPill.textContent = 'ABIERTO — completando cierre';
@@ -1046,7 +1044,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnBackToGate').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.reload();
+  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.href='index.html';
 });
 
 document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
