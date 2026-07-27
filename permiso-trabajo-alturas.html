@@ -229,6 +229,11 @@
     .footer-actions{padding:10px 12px;gap:8px;}
     .footer-actions .btn{padding:7px 12px;font-size:11.5px;}
     #status-msg{font-size:10px;width:100%;order:-1;margin-bottom:4px;}
+
+    /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
+       el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
+    input,select,textarea{font-size:16px !important;}
+    .calc-row input{text-align:left;}
   }
 
   /* ── Gate screen ── */
@@ -1039,7 +1044,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnBackToGate').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.reload();
+  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.href='index.html';
 });
 
 document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
