@@ -188,9 +188,24 @@
   .btn-secondary:hover{background:#f4f6f8;}
   #status-msg{font-size:10.5px;color:var(--muted);align-self:center;margin-right:auto;line-height:1.3;}
 
+  .validation-banner{
+    display:none;background:#fdecea;border:1px solid #e08a80;color:#7a1f14;
+    padding:10px 14px;border-radius:6px;margin:0 0 12px;font-size:12px;line-height:1.5;
+  }
+  .validation-banner.show{display:block;}
+  .validation-banner strong{display:block;margin-bottom:4px;font-size:12.5px;}
+  .validation-banner ul{margin:0;padding-left:18px;}
+  .draft-banner{
+    display:none;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;
+    padding:10px 14px;border-radius:6px;margin:0 0 12px;font-size:12px;line-height:1.5;
+    align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;
+  }
+  .draft-banner.show{display:flex;}
+  .draft-banner .btn{font-size:11px;padding:6px 10px;}
+
   @media print{
     body{background:#fff;padding:0;}
-    .footer-actions,.add-worker-btn,.remove-worker{display:none !important;}
+    .footer-actions,.add-worker-btn,.remove-worker,.validation-banner,.draft-banner{display:none !important;}
     .sheet{box-shadow:none;border:none;}
   }
   @media (max-width:640px){
@@ -333,6 +348,15 @@
       <div><span>Actualización</span><b>24 abr 2024</b></div>
     </div>
   </div>
+
+  <div class="draft-banner" id="draftBanner">
+    <span id="draftBannerText"></span>
+    <span style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-secondary" id="draftRestoreBtn">Continuar borrador</button>
+      <button type="button" class="btn btn-secondary" id="draftDiscardBtn">Descartar</button>
+    </span>
+  </div>
+  <div class="validation-banner" id="validationBanner"></div>
 
   <div class="permit-status-bar" id="permitStatusBar" style="display:none;">
     <div>Código de permiso: <span class="code-tag" id="permitCodeTag">—</span>
@@ -583,14 +607,20 @@
   <button class="btn btn-primary" id="btnSaveClose" style="display:none;">Guardar cierre del permiso</button>
 </div>
 
+<script src="common.js"></script>
 <script>
 // ---------- YES/NO/NA toggle groups ----------
 document.querySelectorAll('.yn-opts').forEach(group => {
   if(!group.hasAttribute('data-mode')){
     group.innerHTML = '<button type="button" class="yn-btn" data-v="SI">SI</button><button type="button" class="yn-btn" data-v="N/A">N/A</button>';
   }
+  const rowLabel = (group.closest('.yn-row')||group.closest('.field')||{}).querySelector
+    ? (group.closest('.yn-row')||group.closest('.field')).querySelector('.yn-label,label')
+    : null;
+  const labelTxt = rowLabel ? rowLabel.textContent.trim() : '';
   group.querySelectorAll('button').forEach(btn=>{
     btn.classList.add('yn-btn');
+    if(labelTxt) btn.setAttribute('aria-label', `${btn.dataset.v==='SI'?'Sí':btn.dataset.v} — ${labelTxt}`);
     btn.addEventListener('click', ()=>{
       const already = btn.classList.contains('active-si')||btn.classList.contains('active-na')||btn.classList.contains('active-no');
       group.querySelectorAll('button').forEach(b=>b.classList.remove('active-si','active-na','active-no'));
@@ -631,6 +661,12 @@ const sigPadResizers = [];
 function initSigPad(canvas){
   if(canvas.dataset.sigInit) return;
   canvas.dataset.sigInit = '1';
+  const wrapLabel = canvas.parentElement.querySelector('label');
+  const labelTxt = wrapLabel ? wrapLabel.textContent.trim() : 'firma';
+  canvas.setAttribute('role','img');
+  canvas.setAttribute('aria-label', `Área para dibujar: ${labelTxt}`);
+  const clearBtn = canvas.parentElement.querySelector('.clear-sig');
+  if(clearBtn) clearBtn.setAttribute('aria-label', `Borrar ${labelTxt}`);
   const ctx = canvas.getContext('2d');
   function resize(){
     const ratio = Math.max(window.devicePixelRatio||1,1);
@@ -933,14 +969,23 @@ function validatePhase(container){
   return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
 }
 function showValidationAlert(result){
-  let msg = 'Faltan campos por completar antes de guardar:\n';
+  const banner = document.getElementById('validationBanner');
+  let html = '<strong>Faltan campos por completar antes de guardar:</strong><ul>';
   if(result.missing.length){
-    msg += `\n• ${result.missing.length} pregunta(s) SI/N/A sin responder`;
+    html += `<li>${result.missing.length} pregunta(s) SI/N-A sin responder</li>`;
   }
   if(result.sigsPending.length){
-    msg += `\n• ${result.sigsPending.length} firma(s) pendiente(s): ${result.sigsPending.slice(0,5).join(', ')}${result.sigsPending.length>5?'…':''}`;
+    html += `<li>${result.sigsPending.length} firma(s) pendiente(s): ${result.sigsPending.slice(0,5).join(', ')}${result.sigsPending.length>5?'…':''}</li>`;
   }
-  alert(msg);
+  html += '</ul>';
+  banner.innerHTML = html;
+  banner.classList.add('show');
+  banner.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function hideValidationBanner(){
+  const banner = document.getElementById('validationBanner');
+  banner.classList.remove('show');
+  banner.innerHTML = '';
 }
 
 
@@ -979,6 +1024,7 @@ document.getElementById('btnNewPermit').addEventListener('click', ()=>{
   btnSaveClose.style.display='none';
   statusMsg.textContent = 'Complete la sección 1 a 9 y guarde para generar el código del permiso.';
   resizeAllSigPads();
+  checkForOpenDraft();
 });
 
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
@@ -987,7 +1033,7 @@ document.getElementById('btnListOpen').addEventListener('click', async ()=>{
   const listEl = document.getElementById('openPermitsList');
   listEl.innerHTML = 'Buscando…';
   try{
-    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=list`);
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list`);
     const json = await res.json();
     if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
     const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
@@ -1005,7 +1051,7 @@ document.getElementById('btnListOpen').addEventListener('click', async ()=>{
       listEl.appendChild(div);
     });
   }catch(err){
-    listEl.innerHTML = '<em>Error de conexión con el backend.</em>';
+    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
   }
 });
 
@@ -1016,7 +1062,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
   if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ msg.textContent='Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código.'; msg.className='err'; return; }
   msg.textContent='Buscando...'; msg.className='';
   try{
-    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}`);
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}`);
     const json = await res.json();
     if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
     if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado previamente.'; msg.className='err'; return; }
@@ -1038,8 +1084,9 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
     btnSaveOpen.style.display='none';
     btnSaveClose.style.display='inline-block';
     statusMsg.textContent = 'Permiso cargado. Complete la sección 10 (Cierre) y guarde.';
+    checkForCloseDraft(currentCode);
   }catch(err){
-    msg.textContent = 'Error de conexión con el backend.'; msg.className='err';
+    msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
   }
 });
 
@@ -1052,8 +1099,60 @@ document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
   statusMsg.textContent = 'Código copiado al portapapeles.';
 });
 
+// ---------- Borrador local (autosave) ----------
+const DRAFT_KEY_OPEN = 'indimon-draft-alturas-open';
+const draftKeyClose = code => `indimon-draft-alturas-close-${code}`;
+
+const saveOpenDraft = debounce(()=>{
+  if(currentMode!=='open') return;
+  DraftStore.save(DRAFT_KEY_OPEN, collectOpenData());
+}, 1200);
+const saveCloseDraft = debounce(()=>{
+  if(!currentCode) return;
+  DraftStore.save(draftKeyClose(currentCode), collectCloseData());
+}, 1200);
+
+['input','change','click','mouseup','touchend'].forEach(evt=>{
+  openPhaseEl.addEventListener(evt, saveOpenDraft);
+  closePhaseEl.addEventListener(evt, ()=>{ if(currentMode==='close-view') saveCloseDraft(); });
+});
+
+function checkForOpenDraft(){
+  const draft = DraftStore.load(DRAFT_KEY_OPEN);
+  const banner = document.getElementById('draftBanner');
+  if(!draft){ banner.classList.remove('show'); return; }
+  document.getElementById('draftBannerText').textContent = `Hay un borrador sin guardar de un permiso de apertura (${formatSavedAt(draft.savedAt)}).`;
+  banner.classList.add('show');
+  document.getElementById('draftRestoreBtn').onclick = ()=>{
+    applyOpenData(draft.data);
+    banner.classList.remove('show');
+    statusMsg.textContent = 'Borrador restaurado. Continúe diligenciando y guarde cuando termine.';
+  };
+  document.getElementById('draftDiscardBtn').onclick = ()=>{
+    DraftStore.clear(DRAFT_KEY_OPEN);
+    banner.classList.remove('show');
+  };
+}
+function checkForCloseDraft(code){
+  const draft = DraftStore.load(draftKeyClose(code));
+  const banner = document.getElementById('draftBanner');
+  if(!draft){ banner.classList.remove('show'); return; }
+  document.getElementById('draftBannerText').textContent = `Hay un borrador sin guardar del cierre de este permiso (${formatSavedAt(draft.savedAt)}).`;
+  banner.classList.add('show');
+  document.getElementById('draftRestoreBtn').onclick = ()=>{
+    applyCloseData(draft.data);
+    banner.classList.remove('show');
+    statusMsg.textContent = 'Borrador de cierre restaurado. Continúe y guarde cuando termine.';
+  };
+  document.getElementById('draftDiscardBtn').onclick = ()=>{
+    DraftStore.clear(draftKeyClose(code));
+    banner.classList.remove('show');
+  };
+}
+
 btnSaveOpen.addEventListener('click', async ()=>{
   if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ alert('Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código antes de guardar.'); return; }
+  hideValidationBanner();
   const check = validatePhase(openPhaseEl);
   if(!check.valid){ showValidationAlert(check); return; }
   const code = generateCode();
@@ -1061,7 +1160,7 @@ btnSaveOpen.addEventListener('click', async ()=>{
   btnSaveOpen.disabled = true;
   statusMsg.textContent = 'Guardando...';
   try{
-    const res = await fetch(CONFIG.SCRIPT_URL, {
+    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({ action:'open', code, data })
@@ -1076,22 +1175,24 @@ btnSaveOpen.addEventListener('click', async ()=>{
     statusMsg.textContent = 'Permiso guardado. Comparta el código con quien vaya a cerrarlo.';
     openPhaseEl.disabled = true;
     btnSaveOpen.style.display='none';
+    DraftStore.clear(DRAFT_KEY_OPEN);
     alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
   }catch(err){
-    statusMsg.textContent = 'Error de conexión con el backend.';
+    statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
     btnSaveOpen.disabled = false;
   }
 });
 
 btnSaveClose.addEventListener('click', async ()=>{
   if(!currentCode) return;
+  hideValidationBanner();
   const check = validatePhase(closePhaseEl);
   if(!check.valid){ showValidationAlert(check); return; }
   const data = collectCloseData();
   btnSaveClose.disabled = true;
   statusMsg.textContent = 'Guardando cierre...';
   try{
-    const res = await fetch(CONFIG.SCRIPT_URL, {
+    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({ action:'close', code: currentCode, data })
@@ -1103,9 +1204,10 @@ btnSaveClose.addEventListener('click', async ()=>{
     closePhaseEl.disabled = true;
     btnSaveClose.style.display='none';
     statusMsg.textContent = 'Permiso cerrado correctamente. Puede exportarlo a PDF para archivarlo.';
+    DraftStore.clear(draftKeyClose(currentCode));
     alert('Permiso cerrado correctamente.');
   }catch(err){
-    statusMsg.textContent = 'Error de conexión con el backend.';
+    statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
     btnSaveClose.disabled = false;
   }
 });
