@@ -4,17 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SSTA-F-119 · Permiso de Trabajo en Caliente</title>
+<link rel="stylesheet" href="common.css">
 <style>
 :root{
   --ember:#c8461a;--ember-dark:#9c3413;--steel:#1f2a33;--steel-mid:#3a4753;
   --paper:#f6f3ec;--paper-panel:#ffffff;--line:#d8d2c4;--ok:#2f6b45;--warn:#b8860b;
-  --ink:#20242a;--muted:#6b6459;font-family:'Segoe UI',system-ui,sans-serif;
+  --ink:#20242a;--muted:#6b6459;font-family:var(--font-family, 'Segoe UI', system-ui, sans-serif);
 }
 *{box-sizing:border-box;}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035) 0 2px, transparent 2px 14px),var(--paper);color:var(--ink);padding:24px 16px 80px;}
 .wrap{max-width:980px;margin:0 auto;}
-.hdr{background:var(--steel);color:#f4f0e6;border-radius:10px;padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+.hdr{background:var(--steel);color:#f4f0e6;border-radius:var(--radius-lg, 14px);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+.hdr-left{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+.hdr-logo{width:44px;height:44px;min-width:44px;border-radius:50%;background:var(--ember);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);}
 .hdr::before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle, rgba(200,70,26,.55), transparent 70%);}
 .hdr .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e2b79c;margin-bottom:4px;}
 .hdr h1{margin:0;font-size:22px;font-weight:700;}
@@ -24,7 +27,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .status-banner.open{background:#fff2e5;color:var(--ember-dark);border:1px solid #f0c19c;}
 .status-banner.closed{background:#e9f5ec;color:var(--ok);border:1px solid #b9dcc2;}
 .status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
-.section{background:var(--paper-panel);border:1px solid var(--line);border-radius:10px;margin-top:18px;overflow:hidden;}
+.section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
 .section-title{background:linear-gradient(90deg, var(--ember), var(--ember-dark));color:#fff;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
 .section-title.locked{background:linear-gradient(90deg, var(--steel-mid), var(--steel));}
 .section-body{padding:18px 20px;}
@@ -87,7 +90,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .check-item:last-child{border-bottom:none;}
 .check-item p{margin:0;font-size:13.5px;line-height:1.4;flex:1;padding-top:2px;}
 .toggle{display:flex;gap:4px;flex-shrink:0;}
-.toggle button{border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:11.5px;font-weight:700;border-radius:5px;cursor:pointer;color:var(--muted);min-width:44px;}
+.toggle button{border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:11.5px;font-weight:700;border-radius:var(--radius-sm, 7px);cursor:pointer;color:var(--muted);min-width:44px;}
 .toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;}
 .toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;}
 .toggle button:disabled{opacity:.8;cursor:default;}
@@ -114,11 +117,11 @@ canvas.pad.locked{cursor:default;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
 .close-q p{margin:0;font-size:13.5px;flex:1;}
-.footer-actions{position:sticky;bottom:0;margin-top:24px;background:var(--steel);border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);}
+.footer-actions{position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);}
 .footer-actions .status{color:#e2b79c;font-size:11px;font-weight:600;line-height:1.3;}
-.btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm, 7px);font-size:12.5px;font-weight:700;cursor:pointer;}
 .btn-main:hover{background:var(--ember-dark);}
-.btn-secondary{background:transparent;color:#c7cdd2;border:1px solid #4a5762;padding:9px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-secondary{background:transparent;color:#c7cdd2;border:1px solid #4a5762;padding:9px 16px;border-radius:var(--radius-sm, 7px);font-size:12px;font-weight:600;cursor:pointer;}
 .btn-secondary:hover{border-color:#c7cdd2;color:#fff;}
 /* LANDING */
 #landing{max-width:640px;margin:60px auto;text-align:center;}
@@ -151,7 +154,7 @@ canvas.pad.locked{cursor:default;}
   <!-- LANDING -->
   <div id="landing">
     <div class="hdr" style="margin-bottom:26px;">
-      <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Caliente</h1></div>
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Caliente</h1></div></div>
       <div class="meta">Código: <b>SSTA-F-119</b> · V2</div>
     </div>
     <h2>¿Qué deseas hacer?</h2>
@@ -181,7 +184,7 @@ canvas.pad.locked{cursor:default;}
   <!-- APP -->
   <div id="app">
     <div class="hdr">
-      <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Seguridad para Trabajo en Caliente</h1></div>
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Seguridad para Trabajo en Caliente</h1></div></div>
       <div class="meta">Código: <b>SSTA-F-119</b> · Versión: <b>2</b><br>Fecha doc: 15/05/2017 · Act.: 25/01/2023</div>
     </div>
     <div class="status-banner open" id="statusBanner">
@@ -312,16 +315,15 @@ canvas.pad.locked{cursor:default;}
       </div>
     </div>
 
-    <div class="footer-actions">
-      <span class="status" id="footerStatus">—</span>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
-        <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
-        <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
-      </div>
-    </div>
-  </div>
+</div>
 
+<div class="footer-actions">
+  <span class="status" id="footerStatus">—</span>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+    <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
+    <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
+  </div>
 </div>
 
 <script src="common.js"></script>
@@ -639,20 +641,21 @@ function loadOpenDataIntoForm(data){
 /* ================= WEB APP URL (Google Apps Script) ================= */
 // URL fija del backend en Google Apps Script (Permisos SSTA-F-119)
 const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec';
+const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
 }
 async function sendToSheet(payload){
   const url = getWebAppUrl(); if(!url) return {ok:false};
   try{
-    const res = await fetchWithRetry(url, { method:'POST', body: JSON.stringify(payload), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+    const res = await fetchWithRetry(url, { method:'POST', body: JSON.stringify(Object.assign({}, payload, {token: API_TOKEN})), headers:{'Content-Type':'text/plain;charset=utf-8'} });
     return await res.json();
   }catch(err){ return {ok:false, error:'No se pudo conectar con el backend. Verifique su conexión e intente de nuevo.'}; }
 }
 async function fetchFromSheet(code){
   const url = getWebAppUrl(); if(!url) return null;
   try{
-    const res = await fetchWithRetry(url + '?code=' + encodeURIComponent(code));
+    const res = await fetchWithRetry(url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(API_TOKEN));
     const data = await res.json();
     if(data.ok===false){ alert(data.error || 'Permiso no encontrado'); return null; }
     return data;
@@ -661,7 +664,7 @@ async function fetchFromSheet(code){
 async function fetchOpenList(){
   const url = getWebAppUrl(); if(!url) return [];
   try{
-    const res = await fetchWithRetry(url + '?list=1');
+    const res = await fetchWithRetry(url + '?list=1&token=' + encodeURIComponent(API_TOKEN));
     const data = await res.json();
     return (data.rows||[]).filter(r=> r.status==='ABIERTO');
   }catch(err){ return []; }
@@ -931,7 +934,7 @@ function checkForCloseDraft(code){
 
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
 document.getElementById('backToStartBtn').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no hayas guardado.')) location.href='index.html';
+  location.href='index.html';
 });
 
 </script>

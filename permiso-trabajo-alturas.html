@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SSTA-F-116 · Permiso de Trabajo en Alturas</title>
+<link rel="stylesheet" href="common.css">
 <style>
   :root{
     --navy:#0f3a5f;
@@ -22,7 +23,7 @@
   html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
   body{
     margin:0;
-    font-family:'Segoe UI',Arial,sans-serif;
+    font-family:var(--font-family, 'Segoe UI', Arial, sans-serif);
     background:var(--bg);
     color:var(--text);
     padding:24px 16px 80px;
@@ -33,7 +34,8 @@
     margin:0 auto;
     background:var(--paper);
     border:1px solid var(--line);
-    border-radius:6px;
+    border-radius:var(--radius-lg, 14px);
+    box-shadow:var(--shadow-card, 0 3px 10px rgba(0,0,0,.07));
     overflow:hidden;
     box-shadow:0 2px 10px rgba(0,0,0,.06);
   }
@@ -180,7 +182,7 @@
     max-width:980px;margin:0 auto;box-shadow:0 -2px 10px rgba(0,0,0,.06);
   }
   .btn{
-    padding:8px 15px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+    padding:8px 15px;border-radius:var(--radius-sm, 7px);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);
   }
   .btn-primary{background:var(--navy);color:#fff;border-color:var(--navy);}
   .btn-primary:hover{background:var(--navy-dark);}
@@ -814,7 +816,8 @@ addWorker(); addWorker();
 // CONFIGURACIÓN — pega aquí la URL de tu Apps Script (termina en /exec)
 // ==================================================================
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz9GGsiiN1vQCtbGv6DNbbIuuvnZzQtkdnyvTRRKCz-5DpCcf1FLabYsmwzR_MErX4Y/exec'
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz9GGsiiN1vQCtbGv6DNbbIuuvnZzQtkdnyvTRRKCz-5DpCcf1FLabYsmwzR_MErX4Y/exec',
+  API_TOKEN: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' // debe coincidir con API_TOKEN en el Apps Script
 };
 
 const statusMsg = document.getElementById('status-msg');
@@ -1033,7 +1036,7 @@ document.getElementById('btnListOpen').addEventListener('click', async ()=>{
   const listEl = document.getElementById('openPermitsList');
   listEl.innerHTML = 'Buscando…';
   try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list`);
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
     const json = await res.json();
     if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
     const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
@@ -1062,7 +1065,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
   if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ msg.textContent='Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código.'; msg.className='err'; return; }
   msg.textContent='Buscando...'; msg.className='';
   try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}`);
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
     const json = await res.json();
     if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
     if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado previamente.'; msg.className='err'; return; }
@@ -1091,7 +1094,7 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnBackToGate').addEventListener('click', ()=>{
-  if(confirm('¿Volver al inicio? Se perderá lo que no haya guardado.')) location.href='index.html';
+  location.href='index.html';
 });
 
 document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
@@ -1163,7 +1166,7 @@ btnSaveOpen.addEventListener('click', async ()=>{
     const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'open', code, data })
+      body: JSON.stringify({ action:'open', code, data, token: CONFIG.API_TOKEN })
     });
     const json = await res.json();
     if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveOpen.disabled=false; return; }
@@ -1195,7 +1198,7 @@ btnSaveClose.addEventListener('click', async ()=>{
     const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'close', code: currentCode, data })
+      body: JSON.stringify({ action:'close', code: currentCode, data, token: CONFIG.API_TOKEN })
     });
     const json = await res.json();
     if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveClose.disabled=false; return; }
