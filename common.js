@@ -62,3 +62,26 @@ function formatSavedAt(iso) {
     return d.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch (e) { return ''; }
 }
+
+/**
+ * OfflineBanner: muestra/oculta un aviso fijo cuando el navegador detecta
+ * que no hay conexión, para que en zonas de planta con señal débil quede
+ * claro que lo que se ve puede ser una copia guardada (caché) y no la
+ * versión más reciente. No interfiere con el borrador local: ese sigue
+ * guardando normalmente sin conexión.
+ */
+const OfflineBanner = {
+  init() {
+    if (document.getElementById('offlineBanner')) return; // ya existe
+    const el = document.createElement('div');
+    el.id = 'offlineBanner';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.textContent = '⚠ Sin conexión — mostrando la última versión guardada. Los datos nuevos se guardarán cuando vuelva la señal.';
+    document.body.prepend(el);
+    const update = () => { el.style.display = navigator.onLine ? 'none' : 'block'; };
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
+  }
+};

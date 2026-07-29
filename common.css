@@ -20,4 +20,21 @@
   --brand-index:  #F2C200; /* amarillo INDIMON — portal */
   --brand-alturas:#123a63; /* azul navy — trabajo en alturas */
   --brand-caliente:#c8461a;/* rojo/naranja — trabajo en caliente */
+
+  --offline-bg: #7a1f14;   /* aviso de sin conexión, compartido por las 3 páginas */
+}
+
+/* Aviso de sin conexión (creado dinámicamente por OfflineBanner en common.js) */
+#offlineBanner{
+  display:none;
+  position:sticky;
+  top:0;
+  z-index:9999;
+  background:var(--offline-bg);
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+  padding:7px 10px;
+  letter-spacing:.2px;
 }

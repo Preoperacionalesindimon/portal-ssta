@@ -6,6 +6,7 @@
 <title>Portal SSTA – INDIMON S.A.S.</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="common.css">
+<script src="common.js"></script>
 <meta name="theme-color" content="#F2C200">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -345,7 +346,7 @@
   <div class="search-box">
     <label for="searchInput">Buscar formulario, reporte o documento</label>
     <input type="text" id="searchInput" placeholder="Ejemplo: PQRS, mototool, convivencia, documentos">
-    <div class="search-count" id="searchCount"></div>
+    <div class="search-count" id="searchCount" role="status" aria-live="polite"></div>
   </div>
 
   <div class="accordion">
@@ -641,6 +642,9 @@
 <button class="back-to-top" id="backToTop" title="Ir arriba">↑</button>
 
 <script>
+  // ── Aviso de sin conexión ──
+  OfflineBanner.init();
+
   // ── Fecha en footer ──
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const now = new Date();
@@ -655,6 +659,14 @@
         items.forEach((other) => {
           if (other !== item) other.removeAttribute('open');
         });
+        // En móvil, si la sección abierta queda fuera de vista, llevarla al inicio
+        // del viewport para que el usuario no tenga que buscarla con el dedo.
+        setTimeout(() => {
+          const rect = item.getBoundingClientRect();
+          if (rect.top < 0 || rect.top > 120) {
+            item.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 50);
       }
     });
   });
@@ -671,8 +683,8 @@
     });
   }
 
-  searchInput.addEventListener('input', function () {
-    const term = this.value.toLowerCase().trim();
+  const runSearch = debounce(function () {
+    const term = searchInput.value.toLowerCase().trim();
     let count = 0;
 
     cards.forEach((card) => {
@@ -693,7 +705,8 @@
     }
 
     updateEmptyMessages();
-  });
+  }, 180);
+  searchInput.addEventListener('input', runSearch);
 
   updateEmptyMessages();
 
@@ -710,7 +723,7 @@
   // Pega aquí la URL /exec de cada backend. Deja vacío ("") si aún no existe.
   const PERMIT_BACKENDS = [
     { nombre: 'Trabajo en Caliente', url: 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec' },
-    { nombre: 'Trabajo en Alturas', url: '' }
+    { nombre: 'Trabajo en Alturas', url: 'https://script.google.com/macros/s/AKfycbz9GGsiiN1vQCtbGv6DNbbIuuvnZzQtkdnyvTRRKCz-5DpCcf1FLabYsmwzR_MErX4Y/exec' }
   ];
 
   async function contarPermisosAbiertos() {
@@ -718,7 +731,7 @@
     for (const backend of PERMIT_BACKENDS) {
       if (!backend.url) continue;
       try {
-        const res = await fetch(backend.url + '?list=1');
+        const res = await fetchWithRetry(backend.url + '?list=1');
         const data = await res.json();
         if (data.ok && Array.isArray(data.rows)) {
           total += data.rows.filter(r => r.status === 'ABIERTO').length;

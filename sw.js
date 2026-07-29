@@ -15,15 +15,24 @@ const APP_SHELL = [
   './common.css',
   './common.js',
   './manifest.json',
-  './icon-192.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Instala: descarga y guarda en caché el "esqueleto" de la app.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .catch(()=>{ /* si algún archivo no existe todavía, no bloquea la instalación */ })
+    caches.open(CACHE_NAME).then((cache) =>
+      // cache.addAll() es todo-o-nada: si UN solo archivo falla (p.ej. un ícono
+      // que aún no existe), no se cachea NINGUNO y el modo offline queda roto en
+      // silencio. Por eso aquí se cachea cada archivo por separado: si uno falla,
+      // los demás igual quedan disponibles sin conexión.
+      Promise.all(
+        APP_SHELL.map((url) => cache.add(url).catch(() => {
+          /* archivo individual no disponible; se omite sin afectar al resto */
+        }))
+      )
+    )
   );
   self.skipWaiting();
 });
