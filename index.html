@@ -323,6 +323,72 @@
     .accordion-item summary{font-size:14px;padding:.9rem 1rem;}
     .header h1{font-size:17px;}
   }
+
+  /* Indicador offline en el buscador */
+  .search-box.offline{border-color:#e08a80;background:#fdecea;}
+  .search-box.offline label{color:#7a1f14;}
+  .search-box.offline::after{content:"⚠ Sin conexión";display:block;font-size:11px;color:#7a1f14;margin-top:6px;font-weight:600;}
+
+  /* ── Sub-secciones colapsables dentro de Preoperacionales ── */
+  .sub-accordion{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+  .sub-item{
+    background:#f8f8f8;
+    border:1px solid #e2e2e2;
+    border-radius:10px;
+    overflow:hidden;
+    transition:border-color .2s;
+  }
+  .sub-item[open]{
+    border-color:#c8c8c8;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+  }
+  .sub-item summary{
+    list-style:none;
+    cursor:pointer;
+    padding:.7rem .9rem;
+    font-size:13px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    color:#444;
+  }
+  .sub-item summary::-webkit-details-marker{display:none;}
+  .sub-item summary::after{
+    content:"▾";
+    font-size:14px;
+    color:#888;
+    transition:transform .2s;
+  }
+  .sub-item[open] summary::after{transform:rotate(180deg);}
+  .sub-item summary .sub-icon{font-size:16px;margin-right:4px;}
+  .sub-item summary .sub-count{
+    font-size:11px;
+    font-weight:600;
+    color:#888;
+    background:#eee;
+    padding:2px 8px;
+    border-radius:12px;
+    margin-left:auto;
+  }
+  .sub-content{padding:0 .8rem .8rem;}
+  .sub-content .grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:0;}
+
+  /* Tarjetas compactas dentro de sub-secciones */
+  .sub-content .card{padding:.65rem .8rem;}
+  .sub-content .card .card-icon{font-size:18px;margin-bottom:4px;}
+  .sub-content .card .card-title{font-size:12.5px;}
+  .sub-content .card .card-sub{font-size:10.5px;}
+
+  @media(max-width:600px){
+    .sub-content .grid{grid-template-columns:1fr !important;}
+    .sub-content .card{padding:.7rem .8rem;}
+    .sub-item summary{font-size:12.5px;padding:.65rem .8rem;}
+  }
 </style>
 </head>
 <body>
@@ -360,133 +426,179 @@
         </span>
       </summary>
       <div class="accordion-content">
-        <div class="grid">
 
-          <a class="card searchable-card" data-search="condiciones salud alto riesgo formulario google forms" href="https://forms.gle/cqyEWkMgjBxSZmPP8" target="_blank" rel="noopener">
-            <div class="card-icon">🫀</div>
-            <div class="card-text">
-              <div class="card-title">Condiciones de salud</div>
-              <div class="card-sub">Alto riesgo</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
+        <div class="sub-accordion">
 
-          <a class="card searchable-card" data-search="inspección mototool general preoperacional herramientas formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSdO6-E_F2UNLcjAfK9g0rwFO67i-6l_wubje_rE8OflMlSVYg/viewform" target="_blank" rel="noopener">
-            <div class="card-icon">🔧</div>
-            <div class="card-text">
-              <div class="card-title">Motortool</div>
-              <div class="card-sub">General</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
+          <!-- Sub: Herramientas manuales -->
+          <details class="sub-item">
+            <summary>
+              <span class="sub-icon">🔩</span>
+              <span>Herramientas manuales</span>
+              <span class="sub-count">6</span>
+            </summary>
+            <div class="sub-content">
+              <div class="grid">
+                <a class="card searchable-card" data-search="inspección mototool general preoperacional herramientas formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSdO6-E_F2UNLcjAfK9g0rwFO67i-6l_wubje_rE8OflMlSVYg/viewform" target="_blank" rel="noopener">
+                  <div class="card-icon">🔧</div>
+                  <div class="card-text">
+                    <div class="card-title">Motortool</div>
+                    <div class="card-sub">General</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="inspección pulidoras general formulario google forms" href="https://forms.gle/gFKTP5ZCNbi8pakc8" target="_blank" rel="noopener">
+                  <div class="card-icon">🔩</div>
+                  <div class="card-text">
+                    <div class="card-title">Pulidora</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="herramientas menores preoperacional formulario google forms" href="https://forms.gle/i2ijZhkhN2C1EhTP7" target="_blank" rel="noopener">
+                  <div class="card-icon">🛠️</div>
+                  <div class="card-text">
+                    <div class="card-title">Herramientas menores</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional General De Taladros formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSckteKJ-xujUTJAi4XgaPlW60Td9uzl4S2FqRsrsFcX8kwI_Q/viewform?usp=sharing&ouid=116389296710509681828" target="_blank" rel="noopener">
+                  <div class="card-icon">⛏️</div>
+                  <div class="card-text">
+                    <div class="card-title">Taladro</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional Satinadora formulario google forms" href="https://forms.gle/SSUMg1b6DZ65XWQe7" target="_blank" rel="noopener">
+                  <div class="card-icon">⚒️</div>
+                  <div class="card-text">
+                    <div class="card-title">Satinadora</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional Taladro De Árbol Fresador formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScYVKO9-CHIu3wr3XN73M1kLvc_k9W_IIyfmhuFYcfeQMGvpw/viewform" target="_blank" rel="noopener">
+                  <div class="card-icon">🗜️</div>
+                  <div class="card-text">
+                    <div class="card-title">Taladro de Árbol</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+              </div>
             </div>
-          </a>
+          </details>
 
-          <a class="card searchable-card" data-search="preoperacional equipo soldar inspección formulario google forms" href="https://forms.gle/KaJBDcimBKnEJA8D6" target="_blank" rel="noopener">
-            <div class="card-icon">⚡</div>
-            <div class="card-text">
-              <div class="card-title">Equipo de soldar</div>
-              <div class="card-sub">Inspección</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
+          <!-- Sub: Equipos eléctricos -->
+          <details class="sub-item">
+            <summary>
+              <span class="sub-icon">⚡</span>
+              <span>Equipos eléctricos</span>
+              <span class="sub-count">4</span>
+            </summary>
+            <div class="sub-content">
+              <div class="grid">
+                <a class="card searchable-card" data-search="preoperacional equipo soldar inspección formulario google forms" href="https://forms.gle/KaJBDcimBKnEJA8D6" target="_blank" rel="noopener">
+                  <div class="card-icon">⚡</div>
+                  <div class="card-text">
+                    <div class="card-title">Equipo de soldar</div>
+                    <div class="card-sub">Inspección</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección General Polipasto formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScEXjpocpoo-J7d0PmaAjyUyJyijIlvg2-2jk9AJQA5ae0ShQ/viewform?usp=publish-editor" target="_blank" rel="noopener">
+                  <div class="card-icon">🪝</div>
+                  <div class="card-text">
+                    <div class="card-title">Polipasto</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional Equipo de Oxicorte formulario google forms" href="https://forms.gle/67fxgkYPNo2s6SKHA" target="_blank" rel="noopener">
+                  <div class="card-icon">💥</div>
+                  <div class="card-text">
+                    <div class="card-title">Oxicorte</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección General De Roladora formulario google forms" href="https://forms.gle/he7SPUTDsNDDfjiW8" target="_blank" rel="noopener">
+                  <div class="card-icon">⚙️</div>
+                  <div class="card-text">
+                    <div class="card-title">Roladora</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+              </div>
             </div>
-          </a>
+          </details>
 
-          <a class="card searchable-card" data-search="inspección pulidoras general formulario google forms" href="https://forms.gle/gFKTP5ZCNbi8pakc8" target="_blank" rel="noopener">
-            <div class="card-icon">🔩</div>
-            <div class="card-text">
-              <div class="card-title">Pulidora</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
+          <!-- Sub: Equipos de altura -->
+          <details class="sub-item">
+            <summary>
+              <span class="sub-icon">🧗</span>
+              <span>Equipos de altura</span>
+              <span class="sub-count">3</span>
+            </summary>
+            <div class="sub-content">
+              <div class="grid">
+                <a class="card searchable-card" data-search="Inspección Preoperacional Andamios Multidereccionales formulario google forms" href="https://forms.gle/Jnbi4XeQe5cDFq4q7" target="_blank" rel="noopener">
+                  <div class="card-icon">🧗🏼‍♂️</div>
+                  <div class="card-text">
+                    <div class="card-title">Andamio</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional Equipos De Altura formulario google forms" href="https://forms.gle/7GZ9WnGekwtcuWy46" target="_blank" rel="noopener">
+                  <div class="card-icon">👷‍♂️</div>
+                  <div class="card-text">
+                    <div class="card-title">Equipo De Alturas</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                <a class="card searchable-card" data-search="Inspección Preoperacional Escaleras formulario google forms" href="https://forms.gle/cgicvb7SFRKyPjxi6" target="_blank" rel="noopener">
+                  <div class="card-icon">🪜</div>
+                  <div class="card-text">
+                    <div class="card-title">Escaleras</div>
+                    <div class="card-sub">Preoperacional</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+              </div>
             </div>
-          </a>
+          </details>
 
-          <a class="card searchable-card" data-search="herramientas menores preoperacional formulario google forms" href="https://forms.gle/i2ijZhkhN2C1EhTP7" target="_blank" rel="noopener">
-            <div class="card-icon">🛠️</div>
-            <div class="card-text">
-              <div class="card-title">Herramientas menores</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
+          <!-- Sub: Salud -->
+          <details class="sub-item">
+            <summary>
+              <span class="sub-icon">🫀</span>
+              <span>Salud</span>
+              <span class="sub-count">1</span>
+            </summary>
+            <div class="sub-content">
+              <div class="grid">
+                <a class="card searchable-card" data-search="condiciones salud alto riesgo formulario google forms" href="https://forms.gle/cqyEWkMgjBxSZmPP8" target="_blank" rel="noopener">
+                  <div class="card-icon">🫀</div>
+                  <div class="card-text">
+                    <div class="card-title">Condiciones de salud</div>
+                    <div class="card-sub">Alto riesgo</div>
+                    <div class="ext-badge forms">↗</div>
+                  </div>
+                </a>
+                              </div>
             </div>
-          </a>
+          </details>
 
-          <a class="card searchable-card" data-search="Inspección General De Roladora formulario google forms" href="https://forms.gle/he7SPUTDsNDDfjiW8" target="_blank" rel="noopener">
-            <div class="card-icon">⚙️</div>
-            <div class="card-text">
-              <div class="card-title">Roladora</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
-
-          <a class="card searchable-card" data-search="Inspección Preoperacional Taladro De Árbol Fresador formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScYVKO9-CHIu3wr3XN73M1kLvc_k9W_IIyfmhuFYcfeQMGvpw/viewform" target="_blank" rel="noopener">
-            <div class="card-icon">🗜️</div>
-            <div class="card-text">
-              <div class="card-title">Taladro de Árbol</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
-
-          <a class="card searchable-card" data-search="Inspección General Polipasto formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLScEXjpocpoo-J7d0PmaAjyUyJyijIlvg2-2jk9AJQA5ae0ShQ/viewform?usp=publish-editor" target="_blank" rel="noopener">
-            <div class="card-icon">🪝</div>
-            <div class="card-text">
-              <div class="card-title">Polipasto</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
-          <a class="card searchable-card" data-search="Inspección Preoperacional General De Taladros formulario google forms" href="https://docs.google.com/forms/d/e/1FAIpQLSckteKJ-xujUTJAi4XgaPlW60Td9uzl4S2FqRsrsFcX8kwI_Q/viewform?usp=sharing&ouid=116389296710509681828" target="_blank" rel="noopener">
-            <div class="card-icon">⛏️</div>
-            <div class="card-text">
-              <div class="card-title">Taladro</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
-     <a class="card searchable-card" data-search="Inspección Preoperacional Equipo de Oxicorte formulario google forms" href="https://forms.gle/67fxgkYPNo2s6SKHA" target="_blank" rel="noopener">
-            <div class="card-icon">💥</div>
-            <div class="card-text">
-              <div class="card-title">Oxicorte</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
- <a class="card searchable-card" data-search="Inspección Preoperacional Andamios Multidereccionales formulario google forms" href="https://forms.gle/Jnbi4XeQe5cDFq4q7" target="_blank" rel="noopener">
-            <div class="card-icon">🧗🏼‍♂️</div>
-            <div class="card-text">
-              <div class="card-title">Andamio</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
- <a class="card searchable-card" data-search="Inspección Preoperacional Equipos De Altura formulario google forms" href="https://forms.gle/7GZ9WnGekwtcuWy46" target="_blank" rel="noopener">
-            <div class="card-icon">👷‍♂️</div>
-            <div class="card-text">
-              <div class="card-title">Equipo De Alturas</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
- <a class="card searchable-card" data-search="Inspección Preoperacional Escaleras formulario google forms" href="https://forms.gle/cgicvb7SFRKyPjxi6" target="_blank" rel="noopener">
-            <div class="card-icon">🪜</div>
-            <div class="card-text">
-              <div class="card-title">Escaleras</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
-<a class="card searchable-card" data-search="Inspección Preoperacional Satinadora formulario google forms" href="https://forms.gle/SSUMg1b6DZ65XWQe7" target="_blank" rel="noopener">
-            <div class="card-icon">⚒️</div>
-            <div class="card-text">
-              <div class="card-title">Satinadora</div>
-              <div class="card-sub">Preoperacional</div>
-              <div class="ext-badge forms">↗ Google Forms</div>
-            </div>
-          </a>
         </div>
+
         <div class="empty-message">No hay resultados en esta sección.</div>
       </div>
     </details>
-
-    <!-- ── PERMISOS ── -->
+<!-- ── PERMISOS ── -->
     <details class="accordion-item sec-permisos">
       <summary>
         <span class="summary-left">
@@ -645,6 +757,15 @@
   // ── Aviso de sin conexión ──
   OfflineBanner.init();
 
+  // Indicador visual en el buscador cuando no hay conexión
+  const searchBox = document.querySelector('.search-box');
+  function updateSearchBoxOffline(){
+    if(searchBox) searchBox.classList.toggle('offline', !navigator.onLine);
+  }
+  window.addEventListener('online', updateSearchBoxOffline);
+  window.addEventListener('offline', updateSearchBoxOffline);
+  updateSearchBoxOffline();
+
   // ── Fecha en footer ──
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const now = new Date();
@@ -659,6 +780,10 @@
         items.forEach((other) => {
           if (other !== item) other.removeAttribute('open');
         });
+        // Contar permisos abiertos solo cuando se abre la sección de permisos
+        if(item.classList.contains('sec-permisos')){
+          contarPermisosAbiertos();
+        }
         // En móvil, si la sección abierta queda fuera de vista, llevarla al inicio
         // del viewport para que el usuario no tenga que buscarla con el dedo.
         setTimeout(() => {
@@ -680,6 +805,20 @@
     document.querySelectorAll('.accordion-content').forEach((section) => {
       const visible = [...section.querySelectorAll('.searchable-card')].filter(c => !c.classList.contains('hidden'));
       section.querySelector('.empty-message').style.display = visible.length === 0 ? 'block' : 'none';
+
+      // Sub-secciones: mostrar/ocultar según resultados
+      section.querySelectorAll('.sub-item').forEach(sub => {
+        const subVisible = [...sub.querySelectorAll('.searchable-card')].filter(c => !c.classList.contains('hidden'));
+        if(subVisible.length === 0 && searchInput.value.trim() !== ''){
+          sub.style.display = 'none';
+        } else {
+          sub.style.display = '';
+          // Abrir sub-sección automáticamente si tiene resultados y hay búsqueda activa
+          if(searchInput.value.trim() !== '' && subVisible.length > 0){
+            sub.open = true;
+          }
+        }
+      });
     });
   }
 
@@ -699,9 +838,22 @@
       items.forEach((item) => {
         item.open = !!item.querySelector('.searchable-card:not(.hidden)');
       });
+      if(count === 0){
+        searchCount.innerHTML = 'No se encontró nada con "' + term + '". <button type="button" id="clearSearchBtn" style="background:none;border:none;color:#c8461a;text-decoration:underline;cursor:pointer;font-size:11px;margin-left:4px;">Ver todo</button>';
+        document.getElementById('clearSearchBtn').addEventListener('click', ()=>{
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+          searchInput.focus();
+        });
+      }
     } else {
       searchCount.textContent = '';
       items.forEach((item, i) => { item.open = i === 0; });
+      // Cerrar sub-secciones al limpiar búsqueda
+      document.querySelectorAll('.sub-item').forEach(sub => {
+        sub.open = false;
+        sub.style.display = '';
+      });
     }
 
     updateEmptyMessages();
@@ -744,7 +896,7 @@
       badge.style.display = 'inline-block';
     }
   }
-  contarPermisosAbiertos();
+  // contarPermisosAbiertos(); // ahora se llama solo al abrir la sección de permisos
 
 </script>
 <script>
