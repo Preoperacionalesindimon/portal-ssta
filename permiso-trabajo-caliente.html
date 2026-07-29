@@ -339,7 +339,7 @@ canvas.pad.locked{cursor:default;}
 
 </div>
 
-<div class="footer-actions">
+<div class="footer-actions" id="footerActions" style="display:none;">
   <span class="status" id="footerStatus">—</span>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
@@ -831,6 +831,7 @@ document.getElementById('cardNew').addEventListener('click', ()=>{
   MODE='open'; permitCode=genCode();
   document.getElementById('landing').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('footerActions').style.display='flex';
   initRender();
   document.getElementById('statusBanner').className='status-banner open';
   document.getElementById('statusBannerText').textContent='Apertura de permiso en curso';
@@ -849,6 +850,7 @@ async function openCloseModeWithCode(code){
   MODE='close';
   document.getElementById('landing').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('footerActions').style.display='flex';
   initRender();
   loadOpenDataIntoForm(data);
   lockOpenSections();
@@ -1042,6 +1044,7 @@ function checkForCloseDraft(code){
 
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
 document.getElementById('backToStartBtn').addEventListener('click', ()=>{
+  document.getElementById('footerActions').style.display='none';
   location.href='index.html';
 });
 
