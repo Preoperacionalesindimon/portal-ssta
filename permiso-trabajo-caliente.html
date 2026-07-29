@@ -77,6 +77,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 }
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
+.field input.field-invalid,.field textarea.field-invalid,.field select.field-invalid{border-color:#c0392b;border-width:2px;background:#fdecea;}
+.field.field-invalid{box-shadow:inset 3px 0 0 #c0392b;padding-left:8px;}
+.section-body.field-invalid{box-shadow:inset 0 0 0 2px #c0392b;border-radius:0 0 var(--radius-lg,14px) var(--radius-lg,14px);}
 .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
 .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:4px;padding:2px;cursor:pointer;}
 .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:6px;}
@@ -145,7 +148,21 @@ canvas.pad.locked{cursor:default;}
 .draft-banner{display:none;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;}
 .draft-banner.show{display:flex;}
 .draft-banner button{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #a9c9ef;background:#fff;cursor:pointer;color:#1a4a7a;font-weight:600;}
-@media print{.footer-actions,.add-row-btn,.sig-actions,#landing,.validation-banner,.draft-banner{display:none !important;}body{background:#fff;}}
+@media print{
+  .footer-actions,.add-row-btn,.sig-actions,#landing,.validation-banner,.draft-banner{display:none !important;}
+  body{background:#fff;padding:0;}
+  .wrap{max-width:100%;}
+  .hdr{background:#fff !important;color:#1a1a1a !important;border:2px solid var(--steel);box-shadow:none;}
+  .hdr::before{display:none;}
+  .hdr .brand{color:var(--ember);}
+  .hdr .meta{color:#444;}
+  .hdr-logo{background:var(--ember) !important;color:#fff !important;}
+  .section{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+  .section-title{background:#eee !important;color:#1a1a1a !important;}
+  .toggle button.on{background:var(--ember) !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  canvas.pad,canvas.mini-pad{border:1px solid #999 !important;}
+  @page{margin:14mm 10mm;}
+}
 </style>
 </head>
 <body>
@@ -174,7 +191,12 @@ canvas.pad.locked{cursor:default;}
           <input type="text" id="codeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
           <button class="btn-secondary" id="loadCodeBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Buscar permiso</button>
           <button class="btn-secondary" id="listOpenBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <button class="btn-secondary" id="listClosedBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver historial (cerrados)</button>
           <div id="openList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
+          <div id="historyPanel" style="display:none;margin-top:10px;text-align:left;">
+            <input type="text" id="historySearch" placeholder="Buscar por código o responsable..." style="width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12.5px;margin-bottom:8px;">
+            <div id="closedList" style="font-size:12.5px;max-height:260px;overflow-y:auto;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -302,13 +324,13 @@ canvas.pad.locked{cursor:default;}
               <h5>Trabajador autorizado responsable del trabajo</h5>
               <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
               <canvas class="pad" id="padCierre1"></canvas>
-              <div class="sig-actions"><button type="button" data-clear="padCierre1">Borrar firma</button><span class="sig-status" id="statusCierre1">Sin firmar</span></div>
+              <div class="sig-actions"><button type="button" data-clear="padCierre1">Borrar firma</button><button type="button" data-undo="padCierre1">Deshacer trazo</button><span class="sig-status" id="statusCierre1">Sin firmar</span></div>
             </div>
             <div class="sig-block">
               <h5>Supervisor SSTA</h5>
               <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
               <canvas class="pad" id="padCierre2"></canvas>
-              <div class="sig-actions"><button type="button" data-clear="padCierre2">Borrar firma</button><span class="sig-status" id="statusCierre2">Sin firmar</span></div>
+              <div class="sig-actions"><button type="button" data-clear="padCierre2">Borrar firma</button><button type="button" data-undo="padCierre2">Deshacer trazo</button><span class="sig-status" id="statusCierre2">Sin firmar</span></div>
             </div>
           </div>
         </div>
@@ -436,6 +458,7 @@ function applyToggleState(stateObj){
 /* ================= SIGNATURE PAD ================= */
 function setupPad(canvas){
   const ctx=canvas.getContext('2d');
+  let history=[];
   function resize(){
     const rect=canvas.getBoundingClientRect();
     if(rect.width===0||rect.height===0) return; // aún oculto, se reintentará al mostrarse
@@ -443,20 +466,29 @@ function setupPad(canvas){
     canvas.width=rect.width*ratio; canvas.height=rect.height*ratio;
     ctx.setTransform(1,0,0,1,0,0);
     ctx.scale(ratio,ratio); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.strokeStyle='#1f2a33';
+    history=[];
   }
   resize();
   let drawing=false,hasInk=false,lastX=0,lastY=0;
   function pos(e){ const r=canvas.getBoundingClientRect();
     const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
     return [cx,cy]; }
-  function start(e){ if(canvas.dataset.locked==='1') return; e.preventDefault(); drawing=true; [lastX,lastY]=pos(e); }
+  function saveHistory(){
+    try{ history.push(ctx.getImageData(0,0,canvas.width,canvas.height)); if(history.length>15) history.shift(); }catch(e){}
+  }
+  function start(e){ if(canvas.dataset.locked==='1') return; e.preventDefault(); saveHistory(); drawing=true; [lastX,lastY]=pos(e); }
   function move(e){ if(!drawing||canvas.dataset.locked==='1') return; e.preventDefault();
     const [x,y]=pos(e); ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(x,y); ctx.stroke(); [lastX,lastY]=[x,y]; hasInk=true; markSigned(canvas.id); }
   function end(){ drawing=false; }
   canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
   canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
   pads[canvas.id]={
-    clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; markUnsigned(canvas.id); },
+    clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); history=[]; hasInk=false; markUnsigned(canvas.id); },
+    undo:()=>{
+      if(history.length===0){ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; markUnsigned(canvas.id); return; }
+      const prev=history.pop(); ctx.putImageData(prev,0,0);
+      if(history.length===0){ hasInk=false; markUnsigned(canvas.id); }
+    },
     getDataUrl:()=> hasInk? canvas.toDataURL('image/png') : null,
     setDataUrl:(url)=>{ if(!url) return; const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); hasInk=true; markSigned(canvas.id); }; img.src=url; },
     hasInk:()=>hasInk,
@@ -485,7 +517,7 @@ function buildResponsablesUI(){
     div.innerHTML=`<h5>${label}</h5>
       <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc"></div>
       <canvas class="pad" id="pad_${id}"></canvas>
-      <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
+      <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><button type="button" data-undo="pad_${id}">Deshacer trazo</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
     cont.appendChild(div);
   });
 }
@@ -531,6 +563,11 @@ document.addEventListener('click', e=>{
   const btn=e.target.closest('button[data-clear]'); if(!btn) return;
   if(locked && !btn.closest('#closeFields')) return;
   const id=btn.dataset.clear; if(pads[id]) pads[id].clear();
+});
+document.addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-undo]'); if(!btn) return;
+  if(locked && !btn.closest('#closeFields')) return;
+  const id=btn.dataset.undo; if(pads[id]) pads[id].undo();
 });
 
 /* ================= LOCK / UNLOCK OPEN SECTIONS ================= */
@@ -669,6 +706,14 @@ async function fetchOpenList(){
     return (data.rows||[]).filter(r=> r.status==='ABIERTO');
   }catch(err){ return []; }
 }
+async function fetchClosedList(){
+  const url = getWebAppUrl(); if(!url) return [];
+  try{
+    const res = await fetchWithRetry(url + '?list=1&token=' + encodeURIComponent(API_TOKEN));
+    const data = await res.json();
+    return (data.rows||[]).filter(r=> r.status==='CERRADO');
+  }catch(err){ return []; }
+}
 
 /* ================= VALIDATION ================= */
 function scrollToEl(el){ if(el) el.scrollIntoView({behavior:'smooth', block:'center'}); }
@@ -739,13 +784,41 @@ function validateCloseData(){
 }
 
 function showMissing(missing){
+  document.querySelectorAll('.field-invalid').forEach(el=> el.classList.remove('field-invalid'));
   const banner = document.getElementById('validationBanner');
   banner.innerHTML = '<strong>Faltan los siguientes campos por diligenciar:</strong><ul>'
     + missing.map(m=>`<li>${m.msg}</li>`).join('') + '</ul>';
   banner.classList.add('show');
   banner.scrollIntoView({behavior:'smooth', block:'center'});
+  missing.forEach(m=>{
+    if(!m.el) return;
+    const target = (m.el.type==='radio'||m.el.type==='checkbox') ? (m.el.closest('.field')||m.el) : m.el;
+    target.classList.add('field-invalid');
+  });
   scrollToEl(missing[0].el);
 }
+// Quita la marca roja de un campo en tiempo real, apenas el usuario lo completa
+// (sin esperar a que vuelva a intentar guardar).
+document.getElementById('app').addEventListener('blur', (e)=>{
+  const el = e.target;
+  if(!el.classList || !el.classList.contains('field-invalid')) return;
+  if((el.value||'').trim()) el.classList.remove('field-invalid');
+}, true);
+document.getElementById('app').addEventListener('input', (e)=>{
+  const el = e.target;
+  if(el.classList && el.classList.contains('field-invalid') && (el.value||'').trim()) el.classList.remove('field-invalid');
+});
+document.getElementById('app').addEventListener('click', ()=>{
+  ['checklistContainer','equiposContainer'].forEach(id=>{
+    const cont = document.getElementById(id);
+    if(!cont || !cont.classList.contains('field-invalid')) return;
+    const state = id==='checklistContainer' ? checklistState : equiposState;
+    if(Object.values(state).every(v=> v!==null)) cont.classList.remove('field-invalid');
+  });
+  document.querySelectorAll('input[name=q1],input[name=q2],input[name=q3],input[name=q4]').forEach(r=>{
+    if(r.checked) r.closest('.field')?.classList.remove('field-invalid');
+  });
+});
 function hideValidationBanner(){
   const banner = document.getElementById('validationBanner');
   banner.classList.remove('show');
@@ -816,6 +889,40 @@ document.getElementById('listOpenBtn').addEventListener('click', async ()=>{
     div.addEventListener('click', ()=> openCloseModeWithCode(r.permitCode));
     listEl.appendChild(div);
   });
+});
+
+let closedPermitsCache = [];
+document.getElementById('listClosedBtn').addEventListener('click', async ()=>{
+  const panel = document.getElementById('historyPanel');
+  const listEl = document.getElementById('closedList');
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  if(!opening) return;
+  listEl.innerHTML = 'Buscando…';
+  closedPermitsCache = await fetchClosedList();
+  renderClosedPermits(closedPermitsCache);
+});
+function renderClosedPermits(rows){
+  const listEl = document.getElementById('closedList');
+  if(rows.length===0){ listEl.innerHTML = '<em>No hay permisos cerrados aún.</em>'; return; }
+  listEl.innerHTML = '';
+  rows.slice().sort((a,b)=> new Date(b.updatedAt||0) - new Date(a.updatedAt||0)).forEach(r=>{
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#f7f6f2;';
+    const updTxt = r.updatedAt ? new Date(r.updatedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    div.innerHTML = `<b>${r.permitCode}</b> <span style="color:var(--ok);float:right;font-weight:700;">CERRADO</span>
+      <div style="margin-top:3px;color:var(--steel);">Responsable: ${r.responsable || '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}
+      <div style="color:var(--muted);font-size:11.5px;">Actualizado: ${updTxt}</div>`;
+    listEl.appendChild(div);
+  });
+}
+document.getElementById('historySearch').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(!q){ renderClosedPermits(closedPermitsCache); return; }
+  renderClosedPermits(closedPermitsCache.filter(r=>
+    (r.permitCode||'').toLowerCase().includes(q) || (r.responsable||'').toLowerCase().includes(q)
+  ));
 });
 
 document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
@@ -937,6 +1044,13 @@ document.getElementById('backToStartBtn').addEventListener('click', ()=>{
   location.href='index.html';
 });
 
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>

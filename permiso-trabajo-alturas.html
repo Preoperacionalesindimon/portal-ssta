@@ -100,6 +100,10 @@
   .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
   .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:3px;padding:2px;cursor:pointer;}
   .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:4px;}
+  .yn-opts.field-invalid .yn-btn{border-color:#c0392b;}
+  .yn-row.field-invalid .yn-label{color:#c0392b;font-weight:700;}
+  .sig-pad-wrap.field-invalid canvas.sigpad{border-color:#c0392b;border-width:2px;}
+  .sig-pad-wrap.field-invalid label{color:#c0392b;}
   .field textarea{resize:vertical;min-height:44px;}
   .field input:focus,.field textarea:focus,.field select:focus{
     outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(28,110,164,.15);
@@ -160,7 +164,8 @@
   canvas.sigpad{
     width:100%;height:110px;border:1.5px dashed var(--line);border-radius:5px;background:#fff;touch-action:none;cursor:crosshair;display:block;
   }
-  .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+  .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:4px;flex-wrap:wrap;gap:6px;}
+  .sig-actions .sig-status{margin-left:auto;}
   .sig-actions button{
     font-size:11px;border:1px solid var(--line);background:#fff;border-radius:4px;padding:4px 10px;cursor:pointer;color:var(--muted);
   }
@@ -209,6 +214,10 @@
     body{background:#fff;padding:0;}
     .footer-actions,.add-worker-btn,.remove-worker,.validation-banner,.draft-banner{display:none !important;}
     .sheet{box-shadow:none;border:none;}
+    .section{break-inside:avoid;}
+    .section-title,.yn-btn.active{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    canvas.sigpad{border:1px solid #999 !important;}
+    @page{margin:14mm 10mm;}
   }
   @media (max-width:640px){
     .head{grid-template-columns:1fr;}
@@ -322,8 +331,13 @@
         <input type="text" id="closeCodeInput" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
         <button class="gate-btn-secondary" id="btnFetchPermit" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Buscar permiso</button>
         <button class="gate-btn-secondary" id="btnListOpen" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver permisos abiertos</button>
+        <button class="gate-btn-secondary" id="btnListClosed" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver historial (cerrados)</button>
         <div id="closeCodeMsg"></div>
         <div id="openPermitsList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
+        <div id="historyPanel" style="display:none;margin-top:10px;text-align:left;">
+          <input type="text" id="historySearch" placeholder="Buscar por código o responsable..." style="width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12.5px;margin-bottom:8px;">
+          <div id="closedPermitsList" style="font-size:12.5px;max-height:260px;overflow-y:auto;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -447,7 +461,7 @@
       <div class="sig-pad-wrap">
         <label>Firma inspector de acceso</label>
         <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
       </div>
     </div>
   </div>
@@ -584,7 +598,7 @@
       <div class="sig-pad-wrap">
         <label>Firma coordinador — VoBo antes de archivar</label>
         <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
       </div>
 
       <div class="row" style="margin-top:8px;">
@@ -593,7 +607,7 @@
       <div class="sig-pad-wrap">
         <label>Firma supervisor de proyecto</label>
         <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
       </div>
     </div>
   </div>
@@ -669,7 +683,10 @@ function initSigPad(canvas){
   canvas.setAttribute('aria-label', `Área para dibujar: ${labelTxt}`);
   const clearBtn = canvas.parentElement.querySelector('.clear-sig');
   if(clearBtn) clearBtn.setAttribute('aria-label', `Borrar ${labelTxt}`);
+  const undoBtn = canvas.parentElement.querySelector('.undo-sig');
+  if(undoBtn) undoBtn.setAttribute('aria-label', `Deshacer último trazo de ${labelTxt}`);
   const ctx = canvas.getContext('2d');
+  let history = [];
   function resize(){
     const ratio = Math.max(window.devicePixelRatio||1,1);
     const rect = canvas.getBoundingClientRect();
@@ -679,6 +696,7 @@ function initSigPad(canvas){
     ctx.setTransform(1,0,0,1,0,0);
     ctx.scale(ratio,ratio);
     ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#0f3a5f';
+    history = [];
   }
   resize();
   sigPadResizers.push(resize);
@@ -690,7 +708,13 @@ function initSigPad(canvas){
     const cy = (e.touches? e.touches[0].clientY : e.clientY)-rect.top;
     return {x:cx,y:cy};
   }
-  function start(e){ if(canvas.closest('fieldset[disabled]')) return; drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
+  function saveHistory(){
+    try{
+      history.push(ctx.getImageData(0,0,canvas.width,canvas.height));
+      if(history.length>15) history.shift();
+    }catch(e){ /* canvas vacío o sin tamaño aún */ }
+  }
+  function start(e){ if(canvas.closest('fieldset[disabled]')) return; saveHistory(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
   function move(e){
     if(!drawing) return;
     const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();
@@ -707,8 +731,22 @@ function initSigPad(canvas){
 
   canvas.parentElement.querySelector('.clear-sig').addEventListener('click',()=>{
     ctx.clearRect(0,0,canvas.width,canvas.height);
+    history = [];
     hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
   });
+  if(undoBtn){
+    undoBtn.addEventListener('click', ()=>{
+      if(canvas.closest('fieldset[disabled]')) return;
+      if(history.length===0){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
+        return;
+      }
+      const prev = history.pop();
+      ctx.putImageData(prev,0,0);
+      if(history.length===0){ hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed'); }
+    });
+  }
 }
 
 // ---------- Roles responsables ----------
@@ -726,7 +764,7 @@ roles.forEach(r=>{
     <div class="field" style="min-width:220px;">
       <label>Firma</label>
       <canvas class="sigpad" width="600" height="150"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
     </div>`;
   rolesWrap.appendChild(div);
   initSigPad(div.querySelector('canvas.sigpad'));
@@ -801,7 +839,7 @@ function addWorker(){
     <div class="sig-pad-wrap">
       <label>Firma del trabajador</label>
       <canvas class="sigpad" width="600" height="150"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><span class="sig-status">Sin firmar</span></div>
+      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
     </div>`;
   workersWrap.appendChild(card);
   initSigPad(card.querySelector('canvas.sigpad'));
@@ -953,10 +991,14 @@ function applyCloseData(data){
 // ---------- Validation ----------
 function validatePhase(container){
   const missing = [];
+  container.querySelectorAll('.yn-opts').forEach(g=> g.classList.remove('field-invalid'));
+  container.querySelectorAll('.sig-pad-wrap').forEach(w=> w.classList.remove('field-invalid'));
   container.querySelectorAll('.yn-opts').forEach(g=>{
     const active = g.querySelector('.active-si,.active-na,.active-no');
     if(!active){
+      g.classList.add('field-invalid');
       const row = g.closest('.yn-row') || g.closest('.field') || g.closest('.row');
+      if(row) row.classList.add('field-invalid');
       const label = row ? (row.querySelector('.yn-label,label')||{}).textContent : null;
       missing.push(label ? label.trim() : 'una pregunta SI/N/A');
     }
@@ -965,11 +1007,33 @@ function validatePhase(container){
   container.querySelectorAll('.sig-pad-wrap').forEach(wrap=>{
     const statusEl = wrap.querySelector('.sig-status');
     if(!statusEl || !statusEl.classList.contains('signed')){
+      wrap.classList.add('field-invalid');
       const label = wrap.querySelector('label');
       sigsPending.push(label ? label.textContent.trim() : 'una firma');
     }
   });
   return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
+}
+// Quita la marca roja de un campo en tiempo real apenas el usuario lo completa,
+// sin esperar a que vuelva a intentar guardar.
+document.addEventListener('click', (e)=>{
+  const ynBtn = e.target.closest('.yn-opts .yn-btn');
+  if(ynBtn){
+    const group = ynBtn.closest('.yn-opts');
+    if(group) setTimeout(()=>{
+      group.classList.remove('field-invalid');
+      const row = group.closest('.yn-row') || group.closest('.field') || group.closest('.row');
+      if(row) row.classList.remove('field-invalid');
+    }, 0);
+  }
+});
+document.addEventListener('mouseup', markSigPadFixedIfSigned, true);
+document.addEventListener('touchend', markSigPadFixedIfSigned, true);
+function markSigPadFixedIfSigned(e){
+  const wrap = e.target.closest && e.target.closest('.sig-pad-wrap');
+  if(!wrap) return;
+  const statusEl = wrap.querySelector('.sig-status');
+  if(statusEl && statusEl.classList.contains('signed')) wrap.classList.remove('field-invalid');
 }
 function showValidationAlert(result){
   const banner = document.getElementById('validationBanner');
@@ -1056,6 +1120,46 @@ document.getElementById('btnListOpen').addEventListener('click', async ()=>{
   }catch(err){
     listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
   }
+});
+
+let closedPermitsCache = [];
+document.getElementById('btnListClosed').addEventListener('click', async ()=>{
+  const panel = document.getElementById('historyPanel');
+  const listEl = document.getElementById('closedPermitsList');
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  if(!opening) return;
+  listEl.innerHTML = 'Buscando…';
+  try{
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
+    const json = await res.json();
+    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener el historial.</em>'; return; }
+    closedPermitsCache = json.rows.filter(r=> r.status==='CERRADO');
+    renderClosedPermits(closedPermitsCache);
+  }catch(err){
+    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
+  }
+});
+function renderClosedPermits(rows){
+  const listEl = document.getElementById('closedPermitsList');
+  if(rows.length===0){ listEl.innerHTML = '<em>No hay permisos cerrados aún.</em>'; return; }
+  listEl.innerHTML = '';
+  rows.slice().sort((a,b)=> new Date(b.closedAt||0) - new Date(a.closedAt||0)).forEach(r=>{
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;background:#f7f9fb;';
+    const closedTxt = r.closedAt ? new Date(r.closedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    div.innerHTML = `<b>${r.code}</b> <span style="color:#2f6b45;float:right;font-weight:600;">CERRADO</span>
+      <div style="margin-top:3px;">Responsable: ${r.responsable || '<em>sin dato</em>'}</div>
+      <div style="color:#888;">Cerrado: ${closedTxt}</div>`;
+    listEl.appendChild(div);
+  });
+}
+document.getElementById('historySearch').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(!q){ renderClosedPermits(closedPermitsCache); return; }
+  renderClosedPermits(closedPermitsCache.filter(r=>
+    (r.code||'').toLowerCase().includes(q) || (r.responsable||'').toLowerCase().includes(q)
+  ));
 });
 
 document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
@@ -1214,6 +1318,13 @@ btnSaveClose.addEventListener('click', async ()=>{
     btnSaveClose.disabled = false;
   }
 });
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 </script>
 
 </body>

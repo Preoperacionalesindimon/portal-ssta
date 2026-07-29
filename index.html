@@ -734,6 +734,13 @@
   contarPermisosAbiertos();
 
 </script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* si falla, la app sigue funcionando normal, solo sin modo offline */ });
+  });
+}
+</script>
 
 </body>
 </html>
