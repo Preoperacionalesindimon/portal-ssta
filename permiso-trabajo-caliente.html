@@ -428,9 +428,9 @@ function renderToggleGroup(container, data, statePrefix, stateObj, progressElId)
       const key=statePrefix+'_'+(idCounter++);
       if(!(key in stateObj)) stateObj[key]=null;
       const row=document.createElement('div'); row.className='check-item';
-      row.innerHTML=`<p>${text}</p><div class="toggle">
-        <button type="button" data-key="${key}" data-val="C">C</button>
-        <button type="button" data-key="${key}" data-val="NA">NA</button></div>`;
+      row.innerHTML=`<p>${text}</p><div class="toggle" role="group" aria-label="${text.replace(/"/g,'&quot;')}">
+        <button type="button" data-key="${key}" data-val="C" aria-pressed="false">C</button>
+        <button type="button" data-key="${key}" data-val="NA" aria-pressed="false">NA</button></div>`;
       catDiv.appendChild(row);
     });
     container.appendChild(catDiv);
@@ -440,8 +440,9 @@ function renderToggleGroup(container, data, statePrefix, stateObj, progressElId)
     const btn=e.target.closest('button[data-key]'); if(!btn) return;
     const key=btn.dataset.key, val=btn.dataset.val;
     stateObj[key]=val;
-    btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active-c','active-na'));
+    btn.parentElement.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-c','active-na'); b.setAttribute('aria-pressed','false'); });
     btn.classList.add(val==='C'?'active-c':'active-na');
+    btn.setAttribute('aria-pressed','true');
     updateProgress(stateObj, progressElId);
   });
 }
@@ -452,7 +453,12 @@ function updateProgress(stateObj, elId){
 function applyToggleState(stateObj){
   document.querySelectorAll('button[data-key]').forEach(btn=>{
     const key=btn.dataset.key, val=stateObj[key];
-    if(val){ btn.classList.toggle('active-c', val==='C'); btn.classList.toggle('active-na', val==='NA'); }
+    if(val){
+      const active = val==='C' ? btn.dataset.val==='C' : btn.dataset.val==='NA';
+      btn.classList.toggle('active-c', val==='C' && btn.dataset.val==='C');
+      btn.classList.toggle('active-na', val==='NA' && btn.dataset.val==='NA');
+      btn.setAttribute('aria-pressed', active ? 'true':'false');
+    }
   });
 }
 
@@ -951,6 +957,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
     } else {
       btn.disabled=false;
       document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
+      Outbox.add(getWebAppUrl(), Object.assign({}, data, {token: API_TOKEN}));
     }
   } else if(MODE==='close'){
     const openData=collectOpenData();
@@ -965,6 +972,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
     } else {
       btn.disabled=false;
       document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
+      Outbox.add(getWebAppUrl(), Object.assign({}, full, {token: API_TOKEN}));
     }
   }
   btn.textContent=originalText;
@@ -1050,11 +1058,10 @@ document.getElementById('backToStartBtn').addEventListener('click', ()=>{
 
 </script>
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
-}
+window.addEventListener('load', ()=>{
+  UpdateManager.init();
+  Outbox.flush(); // reintenta lo pendiente si ya hay señal al abrir la página
+});
 </script>
 </body>
 </html>

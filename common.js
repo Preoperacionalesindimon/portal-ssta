@@ -70,6 +70,136 @@ function formatSavedAt(iso) {
  * versión más reciente. No interfiere con el borrador local: ese sigue
  * guardando normalmente sin conexión.
  */
+/**
+ * UpdateManager: detecta cuando hay una versión nueva del portal ya
+ * descargada (Service Worker "esperando") y muestra un banner para que
+ * el usuario decida cuándo actualizar — nunca se recarga la página solo,
+ * para no perder un permiso a medio llenar.
+ * Requiere sw.js v2 (que no hace skipWaiting automático).
+ */
+const UpdateManager = {
+  init() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // Ya hay un SW nuevo esperando desde antes de esta carga.
+      if (reg.waiting) this._showBanner(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const nuevo = reg.installing;
+        if (!nuevo) return;
+        nuevo.addEventListener('statechange', () => {
+          if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
+            this._showBanner(nuevo);
+          }
+        });
+      });
+    }).catch(() => {});
+
+    // Cuando el SW nuevo toma control, recarga una sola vez.
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (recargando) return;
+      recargando = true;
+      location.reload();
+    });
+
+    // Mensaje del SW pidiendo reintentar la cola pendiente (background sync).
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data === 'TRY_FLUSH_OUTBOX') Outbox.flush();
+    });
+  },
+  _showBanner(worker) {
+    if (document.getElementById('updateBanner')) return;
+    const el = document.createElement('div');
+    el.id = 'updateBanner';
+    el.setAttribute('role', 'status');
+    el.innerHTML = `
+      <span>🔄 Hay una versión nueva del portal disponible.</span>
+      <button type="button" id="updateBannerBtn">Actualizar ahora</button>`;
+    document.body.prepend(el);
+    document.getElementById('updateBannerBtn').addEventListener('click', () => {
+      worker.postMessage('SKIP_WAITING');
+      el.remove();
+    });
+  }
+};
+
+/**
+ * Outbox: cola de permisos que no se pudieron guardar por falta de señal.
+ * Usa IndexedDB (no localStorage) porque el Service Worker también debe
+ * poder leerla/escribirla en segundo plano vía Background Sync.
+ * Uso desde los formularios (dentro del catch de fetchWithRetry):
+ *   await Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token });
+ * Y al cargar la página: Outbox.flush();  // reintenta lo pendiente
+ */
+const Outbox = {
+  _dbPromise: null,
+  _db() {
+    if (this._dbPromise) return this._dbPromise;
+    this._dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open('ssta-outbox', 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return this._dbPromise;
+  },
+  async add(url, body) {
+    const db = await this._db();
+    return new Promise((resolve) => {
+      const tx = db.transaction('pending', 'readwrite');
+      tx.objectStore('pending').add({ url, body, savedAt: new Date().toISOString() });
+      tx.oncomplete = async () => {
+        // Registra el Background Sync si el navegador lo soporta; si no,
+        // igual queda guardado y se reintentará la próxima vez que la
+        // página cargue con señal (ver flush() en init de cada formulario).
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            await reg.sync.register('sync-outbox');
+          } catch (e) { /* sin soporte o permiso denegado; no es crítico */ }
+        }
+        resolve();
+      };
+    });
+  },
+  async list() {
+    const db = await this._db();
+    return new Promise((resolve) => {
+      const tx = db.transaction('pending', 'readonly');
+      const req = tx.objectStore('pending').getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve([]);
+    });
+  },
+  async remove(id) {
+    const db = await this._db();
+    return new Promise((resolve) => {
+      const tx = db.transaction('pending', 'readwrite');
+      tx.objectStore('pending').delete(id);
+      tx.oncomplete = () => resolve();
+    });
+  },
+  /** Reintenta enviar todo lo pendiente. Llamar al cargar la página y al volver la señal. */
+  async flush() {
+    if (!navigator.onLine) return;
+    const items = await this.list();
+    for (const item of items) {
+      try {
+        const res = await fetch(item.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(item.body)
+        });
+        const json = await res.json();
+        if (json.ok) await this.remove(item.id);
+      } catch (e) { /* sigue sin señal; se reintenta después */ }
+    }
+  }
+};
+window.addEventListener('online', () => Outbox.flush());
+
 const OfflineBanner = {
   init() {
     if (document.getElementById('offlineBanner')) return; // ya existe

@@ -489,6 +489,10 @@
       <div class="calc-row"><span>Altura mínima de trabajo (AMT) — altura de conexión al punto de anclaje</span><input type="text" inputmode="decimal" class="calc-mask" id="calc-amt" value="0.00"></div>
       <div class="alert-box">Realice el cálculo de la distancia total requerida (DTR); el resultado debe ser inferior a la altura mínima de trabajo (AMT). De no cumplirse este requisito, abstengase de realizar y/o autorizar la actividad.</div>
       <div class="alert-result pending" id="calc-result">Ingrese los valores para validar: ¿AMT &gt; DTR?</div>
+      <div class="field" id="calc-justif-wrap" style="display:none;margin-top:10px;">
+        <label>El cálculo NO cumple — Justificación y medidas de control adicionales (obligatorio para continuar)</label>
+        <textarea id="calc-justif" placeholder="Explique por qué se autoriza pese al incumplimiento y qué controles adicionales se implementan"></textarea>
+      </div>
     </div>
   </div>
 
@@ -635,17 +639,21 @@ document.querySelectorAll('.yn-opts').forEach(group => {
     ? (group.closest('.yn-row')||group.closest('.field')).querySelector('.yn-label,label')
     : null;
   const labelTxt = rowLabel ? rowLabel.textContent.trim() : '';
+  group.setAttribute('role','group');
+  if(labelTxt) group.setAttribute('aria-label', labelTxt);
   group.querySelectorAll('button').forEach(btn=>{
     btn.classList.add('yn-btn');
     if(labelTxt) btn.setAttribute('aria-label', `${btn.dataset.v==='SI'?'Sí':btn.dataset.v} — ${labelTxt}`);
+    btn.setAttribute('aria-pressed', 'false');
     btn.addEventListener('click', ()=>{
       const already = btn.classList.contains('active-si')||btn.classList.contains('active-na')||btn.classList.contains('active-no');
-      group.querySelectorAll('button').forEach(b=>b.classList.remove('active-si','active-na','active-no'));
+      group.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-si','active-na','active-no'); b.setAttribute('aria-pressed','false'); });
       if(already) return;
       const v = btn.dataset.v;
       if(v==='SI') btn.classList.add('active-si');
       else if(v==='NO') btn.classList.add('active-no');
       else btn.classList.add('active-na');
+      btn.setAttribute('aria-pressed','true');
     });
   });
 });
@@ -785,15 +793,19 @@ function updateCalc(){
   const dtr = v(at)+v(rc)+v(dcl)+v(da);
   dtrOut.textContent = dtr.toFixed(2)+' m';
   const amtVal = v(amt);
+  const justifWrap = document.getElementById('calc-justif-wrap');
   if(amtVal===0 && dtr===parseFloat(rc.value||1)){
     resultBox.className='alert-result pending';
     resultBox.textContent='Ingrese los valores para validar: ¿AMT > DTR?';
+    justifWrap.style.display='none';
   } else if(amtVal > dtr){
     resultBox.className='alert-result pass';
     resultBox.textContent=`Cumple: AMT (${amtVal.toFixed(2)} m) > DTR (${dtr.toFixed(2)} m). Se puede autorizar la actividad.`;
+    justifWrap.style.display='none';
   } else {
     resultBox.className='alert-result fail';
     resultBox.textContent=`No cumple: AMT (${amtVal.toFixed(2)} m) ≤ DTR (${dtr.toFixed(2)} m). Abstenerse de realizar o autorizar la actividad.`;
+    justifWrap.style.display='block';
   }
 }
 function attachDecimalMask(input){
@@ -872,10 +884,10 @@ function applyYN(container, values){
   const groups = [...container.querySelectorAll('.yn-opts')];
   groups.forEach((g,i)=>{
     const v = values[i];
-    g.querySelectorAll('button').forEach(b=>b.classList.remove('active-si','active-na','active-no'));
+    g.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-si','active-na','active-no'); b.setAttribute('aria-pressed','false'); });
     if(!v) return;
     const btn = [...g.querySelectorAll('button')].find(b=>b.dataset.v===v);
-    if(btn){ btn.classList.add(v==='SI'?'active-si':v==='NO'?'active-no':'active-na'); }
+    if(btn){ btn.classList.add(v==='SI'?'active-si':v==='NO'?'active-no':'active-na'); btn.setAttribute('aria-pressed','true'); }
   });
 }
 function collectTextFields(container){
@@ -1013,6 +1025,17 @@ function validatePhase(container){
       sigsPending.push(label ? label.textContent.trim() : 'una firma');
     }
   });
+  // Bloquea el guardado si el cálculo de distancias (sección 6) no cumple
+  // (AMT <= DTR) y no se registró una justificación con controles adicionales.
+  const calcResultEl = container.querySelector('#calc-result');
+  if(calcResultEl && calcResultEl.classList.contains('fail')){
+    const justif = container.querySelector('#calc-justif');
+    if(!justif || !justif.value.trim()){
+      const justifWrap = document.getElementById('calc-justif-wrap');
+      if(justifWrap) justifWrap.classList.add('field-invalid');
+      missing.push('Justificación obligatoria: el cálculo de distancias (sección 6) no cumple (AMT ≤ DTR)');
+    }
+  }
   return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
 }
 // Quita la marca roja de un campo en tiempo real apenas el usuario lo completa,
@@ -1287,6 +1310,7 @@ btnSaveOpen.addEventListener('click', async ()=>{
     alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
   }catch(err){
     statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
+    Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token: CONFIG.API_TOKEN });
     btnSaveOpen.disabled = false;
   }
 });
@@ -1316,16 +1340,16 @@ btnSaveClose.addEventListener('click', async ()=>{
     alert('Permiso cerrado correctamente.');
   }catch(err){
     statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
+    Outbox.add(CONFIG.SCRIPT_URL, { action:'close', code: currentCode, data, token: CONFIG.API_TOKEN });
     btnSaveClose.disabled = false;
   }
 });
 </script>
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
-}
+window.addEventListener('load', ()=>{
+  UpdateManager.init();
+  Outbox.flush();
+});
 </script>
 
 </body>

@@ -24,6 +24,35 @@
   --offline-bg: #7a1f14;   /* aviso de sin conexión, compartido por las 3 páginas */
 }
 
+/* Aviso de nueva versión disponible (creado por UpdateManager en common.js) */
+#updateBanner{
+  position:sticky;
+  top:0;
+  z-index:9999;
+  background:#123a63;
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#updateBanner button{
+  background:#fff;
+  color:#123a63;
+  border:none;
+  border-radius:var(--radius-sm,7px);
+  font-size:11.5px;
+  font-weight:700;
+  padding:5px 12px;
+  cursor:pointer;
+}
+#updateBanner button:hover{background:#eef2f5;}
+
 /* Aviso de sin conexión (creado dinámicamente por OfflineBanner en common.js) */
 #offlineBanner{
   display:none;
