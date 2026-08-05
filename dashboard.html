@@ -2,171 +2,28 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Permisos abiertos · Portal SSTA</title>
 <link rel="stylesheet" href="common.css">
 <style>
-  body { margin: 0; font-family: var(--font-family); background: var(--bg-base); color: var(--text-primary); padding: 1.5rem 1rem 3rem; }
-  .wrapper { max-width: 800px; margin: 0 auto; }
-
-  .header {
-    background: var(--bg-elevated);
-    border-radius: var(--radius-lg);
-    padding: 1.1rem 1.4rem;
-    margin-bottom: 1rem;
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-card);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    position: relative;
-    overflow: hidden;
-  }
-  .header::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--perm-caliente) 0%, var(--perm-alturas) 100%);
-  }
-  .header h1 { font-size: 17px; margin: 0; font-weight: 700; }
-  .header a {
-    font-size: 13px;
-    color: var(--brand-navy);
-    text-decoration: none;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--bg-subtle);
-    transition: all var(--transition-fast);
-  }
-  .header a:hover {
-    background: var(--brand-gold-light);
-    color: var(--brand-navy);
-  }
-
-  .refresh-note {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    margin: 0 0 1rem;
-    font-weight: 500;
-  }
-
-  .list { display: flex; flex-direction: column; gap: 10px; }
-
-  .item {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 1rem 1.1rem;
-    border-left: 4px solid var(--brand-gold);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-fast);
-    animation: fadeIn 300ms ease-out backwards;
-  }
-  .item:hover {
-    box-shadow: var(--shadow-card);
-    transform: translateY(-1px);
-  }
-  .item.warn { border-left-color: var(--perm-caliente); background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--state-warning-bg) 100%); }
-  .item .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .code {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    background: var(--brand-navy);
-    color: #fff;
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    letter-spacing: .3px;
-  }
-  .tipo {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    font-weight: 600;
-  }
-  .tiempo { font-size: 13px; font-weight: 700; }
-  .tiempo.ok { color: var(--perm-ok); }
-  .tiempo.warn { color: var(--perm-caliente); }
-  .meta { font-size: 12.5px; color: var(--text-secondary); margin-top: 8px; font-weight: 500; }
-  .meta strong { color: var(--text-primary); }
-
-  .empty {
-    background: var(--bg-elevated);
-    border: 1.5px dashed var(--border-default);
-    border-radius: var(--radius-lg);
-    padding: 2.5rem 2rem;
-    text-align: center;
-    color: var(--text-tertiary);
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .empty .icon { font-size: 36px; margin-bottom: 10px; display: block; }
-
-  .loading {
-    text-align: center;
-    color: var(--text-tertiary);
-    font-size: 14px;
-    padding: 2.5rem;
-    font-weight: 500;
-  }
-  .loading::after {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--border-default);
-    border-top-color: var(--brand-gold);
-    border-radius: 50%;
-    margin-left: 8px;
-    animation: spin 1s linear infinite;
-    vertical-align: middle;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 1rem;
-  }
-  .stat-box {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 12px;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-  }
-  .stat-number {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--brand-navy);
-    line-height: 1;
-  }
-  .stat-label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    margin-top: 4px;
-    font-weight: 500;
-  }
-
-  @media (max-width: 640px) {
-    body { padding: 1rem .6rem 3rem; }
-    .header { padding: 1rem; }
-    .header h1 { font-size: 15px; }
-    .stats-bar { grid-template-columns: 1fr 1fr; }
-    .item { padding: .85rem .9rem; }
-    .code { font-size: 11px; padding: 3px 8px; }
-  }
+  body{margin:0;font-family:var(--font-family,-apple-system,sans-serif);background:#f4f4f4;color:#1a1a1a;padding:1.5rem 1rem 3rem;}
+  .wrapper{max-width:760px;margin:0 auto;}
+  .header{background:#fff;border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1rem;border:1px solid #d9d9d9;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .header h1{font-size:17px;margin:0;}
+  .header a{font-size:12.5px;color:#1c6ea4;text-decoration:none;font-weight:600;}
+  .refresh-note{font-size:11.5px;color:#888;margin:0 0 1rem;}
+  .list{display:flex;flex-direction:column;gap:10px;}
+  .item{background:#fff;border:1px solid #d9d9d9;border-radius:12px;padding:.9rem 1.1rem;border-left:4px solid #F2C200;}
+  .item.warn{border-left-color:#c8461a;}
+  .item .row1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .code{font-family:monospace;font-weight:700;background:#123a63;color:#fff;padding:3px 9px;border-radius:5px;font-size:12px;}
+  .tipo{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.3px;}
+  .tiempo{font-size:12px;font-weight:700;}
+  .tiempo.ok{color:#1d7a4c;}
+  .tiempo.warn{color:#c8461a;}
+  .meta{font-size:12px;color:#666;margin-top:6px;}
+  .empty{background:#fff;border:1px solid #d9d9d9;border-radius:14px;padding:2rem;text-align:center;color:#888;font-size:13px;}
+  .loading{text-align:center;color:#888;font-size:13px;padding:2rem;}
 </style>
 </head>
 <body>
@@ -175,30 +32,15 @@
     <h1>📋 Permisos abiertos</h1>
     <a href="index.html">← Volver al portal</a>
   </div>
-
-  <div class="stats-bar" id="statsBar">
-    <div class="stat-box">
-      <div class="stat-number" id="statTotal">—</div>
-      <div class="stat-label">Total abiertos</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-number" id="statAlert">—</div>
-      <div class="stat-label">+8 horas</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-number" id="statTypes">—</div>
-      <div class="stat-label">Tipos</div>
-    </div>
-  </div>
-
-  <p class="refresh-note" id="refreshNote">Cargando...</p>
+  <p class="refresh-note" id="refreshNote">Cargando…</p>
   <div class="list" id="list"></div>
 </div>
-
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
 
+// Mismos backends/token usados en los formularios de permisos.
+// Umbral (horas) a partir del cual un permiso abierto se marca en rojo.
 const HORAS_ALERTA = 8;
 const PERMIT_BACKENDS = [
   { nombre: 'Trabajo en Caliente', url: 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
@@ -220,9 +62,6 @@ async function cargar(){
   const listEl = document.getElementById('list');
   const noteEl = document.getElementById('refreshNote');
   let items = [];
-  let totalAlertas = 0;
-  let tipos = new Set();
-
   for(const backend of PERMIT_BACKENDS){
     try{
       const res = await fetchWithRetry(backend.url + '?list=1&token=' + encodeURIComponent(backend.token));
@@ -236,33 +75,26 @@ async function cargar(){
             area: r.sitio || r.area || '',
             fechaApertura: r.openedAt || r.updatedAt || null
           });
-          tipos.add(backend.nombre);
-          const h = horasDesde(r.openedAt || r.updatedAt);
-          if(h !== null && h >= HORAS_ALERTA) totalAlertas++;
         });
       }
     }catch(e){ /* backend no disponible; se omite */ }
   }
-
-  document.getElementById('statTotal').textContent = items.length;
-  document.getElementById('statAlert').textContent = totalAlertas;
-  document.getElementById('statTypes').textContent = tipos.size;
-
+  // Más antiguos primero — los que más urgen cerrar.
   items.sort((a,b)=>(horasDesde(a.fechaApertura)||0) < (horasDesde(b.fechaApertura)||0) ? 1 : -1);
 
   if(items.length===0){
     listEl.innerHTML = '';
-    listEl.insertAdjacentHTML('beforeend', '<div class="empty"><span class="icon">✅</span>No hay permisos abiertos en este momento</div>');
+    listEl.insertAdjacentHTML('beforeend', '<div class="empty">No hay permisos abiertos en este momento ✓</div>');
   } else {
-    listEl.innerHTML = items.map((it, idx)=>{
+    listEl.innerHTML = items.map(it=>{
       const h = horasDesde(it.fechaApertura);
       const alerta = h!==null && h >= HORAS_ALERTA;
-      return `<div class="item ${alerta?'warn':''}" style="animation-delay:${idx*50}ms">
+      return `<div class="item ${alerta?'warn':''}">
         <div class="row1">
           <span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>
         </div>
-        <div class="meta">${it.responsable ? '<strong>Responsable:</strong> '+it.responsable : ''}${it.area ? ' · <strong>Area:</strong> '+it.area : ''}</div>
+        <div class="meta">${it.responsable ? 'Responsable: '+it.responsable : ''}${it.area ? ' · Área: '+it.area : ''}</div>
       </div>`;
     }).join('');
   }

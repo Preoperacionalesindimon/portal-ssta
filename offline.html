@@ -2,121 +2,47 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Sin conexion · Portal SSTA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sin conexión · Portal SSTA</title>
 <link rel="stylesheet" href="common.css">
 <style>
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--bg-base) 0%, #E8ECF0 100%);
-    font-family: var(--font-family);
-    padding: 24px;
-    box-sizing: border-box;
-    text-align: center;
-    color: var(--text-primary);
+  body{
+    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:#eef2f5;font-family:var(--font-family, -apple-system, sans-serif);
+    padding:24px;box-sizing:border-box;text-align:center;color:#1c2530;
   }
-  .card {
-    max-width: 440px;
-    background: var(--bg-elevated);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-elevated);
-    padding: 40px 32px;
-    border: 1px solid var(--border-subtle);
-    animation: fadeIn 400ms ease-out;
+  .card{
+    max-width:420px;background:#fff;border-radius:var(--radius-lg,14px);
+    box-shadow:var(--shadow-card,0 3px 10px rgba(0,0,0,.07));padding:32px 26px;
   }
-  .icon {
-    font-size: 52px;
-    margin-bottom: 10px;
-    display: block;
+  .icon{font-size:44px;margin-bottom:6px;}
+  h1{font-size:18px;margin:6px 0 8px;color:#123a63;}
+  p{font-size:13.5px;color:#5c6a76;line-height:1.5;margin:0 0 18px;}
+  .list{text-align:left;font-size:12.5px;color:#5c6a76;background:#f4f8fb;border-radius:8px;padding:12px 16px;margin-bottom:20px;}
+  .list li{margin-bottom:6px;}
+  button{
+    width:100%;padding:11px;border:none;border-radius:var(--radius-sm,7px);
+    background:#123a63;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;
   }
-  h1 {
-    font-size: 20px;
-    margin: 8px 0 10px;
-    color: var(--brand-navy);
-    font-weight: 700;
-  }
-  p {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 0 0 20px;
-    font-weight: 500;
-  }
-  .list {
-    text-align: left;
-    font-size: 13px;
-    color: var(--text-secondary);
-    background: var(--bg-subtle);
-    border-radius: var(--radius-md);
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    border: 1px solid var(--border-subtle);
-  }
-  .list li {
-    margin-bottom: 8px;
-    line-height: 1.5;
-    list-style: none;
-    position: relative;
-    padding-left: 20px;
-  }
-  .list li::before {
-    content: '✓';
-    position: absolute;
-    left: 0;
-    color: var(--perm-ok);
-    font-weight: 700;
-  }
-  .list li:last-child { margin-bottom: 0; }
-  button {
-    width: 100%;
-    padding: 13px;
-    border: none;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--brand-navy) 0%, var(--perm-alturas) 100%);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s;
-    box-shadow: 0 4px 12px rgba(15,42,63,.2);
-  }
-  button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(15,42,63,.3);
-  }
-  button:active {
-    transform: scale(.97);
-  }
-  .sub {
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--text-tertiary);
-    font-weight: 500;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  button:hover{background:#0a2842;}
+  .sub{margin-top:14px;font-size:11.5px;color:#8a97a3;}
 </style>
 </head>
 <body>
   <div class="card">
-    <span class="icon">📡</span>
-    <h1>No hay conexion a internet</h1>
-    <p>Esta pagina aun no estaba guardada en tu dispositivo, asi que no se puede mostrar sin senal.</p>
+    <div class="icon">📡</div>
+    <h1>No hay conexión a internet</h1>
+    <p>Esta página aún no estaba guardada en tu dispositivo, así que no se puede mostrar sin señal.</p>
     <ul class="list">
-      <li>Si ya habias abierto el portal antes, vuelve al inicio: esa pagina si funciona sin conexion.</li>
+      <li>Si ya habías abierto el portal antes, vuelve al inicio: esa página sí funciona sin conexión.</li>
       <li>Si estabas llenando un permiso, tranquilo: lo que ya escribiste queda guardado como borrador en tu celular y no se pierde.</li>
-      <li>En cuanto vuelva la senal, se puede guardar normalmente.</li>
+      <li>En cuanto vuelva la señal, se puede guardar normalmente.</li>
     </ul>
     <button onclick="location.href='./index.html'">Ir al inicio del portal</button>
-    <div class="sub">Reintentando conexion automaticamente...</div>
+    <div class="sub">Reintentando conexión automáticamente…</div>
   </div>
 <script>
+  // Reintenta solo, sin que el usuario tenga que recargar a mano.
   window.addEventListener('online', () => location.reload());
   setInterval(() => { if (navigator.onLine) location.reload(); }, 5000);
 </script>
