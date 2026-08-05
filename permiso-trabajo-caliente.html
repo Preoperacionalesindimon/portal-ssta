@@ -93,9 +93,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .check-item:last-child{border-bottom:none;}
 .check-item p{margin:0;font-size:13.5px;line-height:1.4;flex:1;padding-top:2px;}
 .toggle{display:flex;gap:4px;flex-shrink:0;}
-.toggle button{border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:11.5px;font-weight:700;border-radius:var(--radius-sm, 7px);cursor:pointer;color:var(--muted);min-width:44px;}
-.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;}
-.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;}
+.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 12px;font-size:11.5px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:44px;transition:.14s;}
+.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
+.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700;}
 .toggle button:disabled{opacity:.8;cursor:default;}
 .progress-pill{font-size:11px;font-weight:700;color:#fff;background:var(--steel-mid);padding:4px 10px;border-radius:20px;}
 .sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
@@ -120,7 +120,7 @@ canvas.pad.locked{cursor:default;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
 .close-q p{margin:0;font-size:13.5px;flex:1;}
-.footer-actions{position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);}
+.footer-actions{margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-card);}
 .footer-actions .status{color:#e2b79c;font-size:11px;font-weight:600;line-height:1.3;}
 .btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm, 7px);font-size:12.5px;font-weight:700;cursor:pointer;}
 .btn-main:hover{background:var(--ember-dark);}
@@ -351,6 +351,7 @@ canvas.pad.locked{cursor:default;}
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
+ScrollProgress.init('#c8461a');
 /* ================= STATE ================= */
 let MODE = null; // 'open' | 'close'
 let permitCode = null;
