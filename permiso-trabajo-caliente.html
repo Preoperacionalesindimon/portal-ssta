@@ -71,9 +71,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   .exec-table td.helper{display:flex;align-items:center;gap:10px;}
   .exec-table td.helper::before{margin-bottom:0;}
 
-  /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
-     el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
   input,select,textarea{font-size:16px !important;}
+  .field input,.field select,.field textarea{font-size:16px !important;}
 }
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
