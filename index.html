@@ -17,10 +17,16 @@
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 
   body{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    background:#f4f4f4;
-    color:#1a1a1a;
+    font-family:var(--font-family, -apple-system, sans-serif);
+    background:var(--bg,#eef1f4);
+    color:var(--ink,#1a1a1a);
     min-height:100vh;
+  }
+
+  /* Franja de marca — ancla visual del portal, color institucional INDIMON */
+  .brand-strip{
+    height:5px;
+    background:linear-gradient(90deg, var(--brand-index,#F2C200), #ffd84d, var(--brand-index,#F2C200));
   }
 
   .wrapper{
@@ -31,32 +37,36 @@
 
   /* ── Header ── */
   .header{
-    background:#fff;
-    border-radius:14px;
-    padding:1.25rem 1.5rem;
+    background:var(--ink,#151b24);
+    background-image:radial-gradient(circle at 100% 0%, rgba(242,194,0,.18), transparent 55%);
+    border-radius:16px;
+    padding:1.4rem 1.6rem;
     margin-bottom:1rem;
-    border:1px solid #d9d9d9;
     display:flex;
     align-items:center;
-    gap:14px;
+    gap:16px;
+    box-shadow:var(--shadow-lift, 0 4px 14px rgba(15,25,35,.14));
   }
 
   .logo{
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    background:#F2C200;
+    width:48px;
+    height:48px;
+    border-radius:12px;
+    background:var(--brand-index,#F2C200);
     display:flex;
     align-items:center;
     justify-content:center;
     font-weight:700;
-    font-size:13px;
+    font-size:19px;
+    font-family:var(--font-display);
     color:#1a1a1a;
     flex-shrink:0;
+    transform:rotate(-4deg);
+    box-shadow:0 3px 10px rgba(0,0,0,.25);
   }
 
-  .header h1{font-size:19px;font-weight:600;margin-bottom:2px;}
-  .header p{font-size:13px;color:#666;}
+  .header h1{font-family:var(--font-display);font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;}
+  .header p{font-size:12.5px;color:#c7cdd4;}
 
   /* ── Instructivo ── */
   .helper-card{
@@ -392,10 +402,11 @@
 </style>
 </head>
 <body>
+<div class="brand-strip"></div>
 <div class="wrapper">
 
   <div class="header">
-    <div class="logo">IND</div>
+    <div class="logo">⛑</div>
     <div>
       <h1>Portal SSTA</h1>
       <p>INDIMON S.A.S. &mdash; Sistema de Gestión</p>

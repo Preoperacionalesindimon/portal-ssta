@@ -6,23 +6,24 @@
 <title>Permisos abiertos · Portal SSTA</title>
 <link rel="stylesheet" href="common.css">
 <style>
-  body{margin:0;font-family:var(--font-family,-apple-system,sans-serif);background:#f4f4f4;color:#1a1a1a;padding:1.5rem 1rem 3rem;}
+  body{margin:0;font-family:var(--font-family,-apple-system,sans-serif);background:var(--bg,#eef1f4);color:var(--ink,#1a1a1a);padding:1.5rem 1rem 3rem;}
   .wrapper{max-width:760px;margin:0 auto;}
-  .header{background:#fff;border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1rem;border:1px solid #d9d9d9;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
-  .header h1{font-size:17px;margin:0;}
-  .header a{font-size:12.5px;color:#1c6ea4;text-decoration:none;font-weight:600;}
-  .refresh-note{font-size:11.5px;color:#888;margin:0 0 1rem;}
+  .header{background:var(--ink,#151b24);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow-lift);}
+  .header h1{font-family:var(--font-display);font-size:17px;margin:0;color:#fff;font-weight:700;}
+  .header a{font-size:12.5px;color:#ffd84d;text-decoration:none;font-weight:600;}
+  .refresh-note{font-size:11.5px;color:var(--ink-soft,#888);margin:0 0 1rem;}
   .list{display:flex;flex-direction:column;gap:10px;}
-  .item{background:#fff;border:1px solid #d9d9d9;border-radius:12px;padding:.9rem 1.1rem;border-left:4px solid #F2C200;}
-  .item.warn{border-left-color:#c8461a;}
+  .item{background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:12px;padding:.9rem 1.1rem;border-left:5px solid #F2C200;transition:.15s;}
+  .item.warn{border-left-color:var(--warn,#c0392b);background:linear-gradient(90deg, rgba(192,57,43,.05), transparent 40%);}
   .item .row1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
-  .code{font-family:monospace;font-weight:700;background:#123a63;color:#fff;padding:3px 9px;border-radius:5px;font-size:12px;}
-  .tipo{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.3px;}
-  .tiempo{font-size:12px;font-weight:700;}
-  .tiempo.ok{color:#1d7a4c;}
-  .tiempo.warn{color:#c8461a;}
-  .meta{font-size:12px;color:#666;margin-top:6px;}
-  .empty{background:#fff;border:1px solid #d9d9d9;border-radius:14px;padding:2rem;text-align:center;color:#888;font-size:13px;}
+  .icon-type{font-size:15px;margin-right:4px;}
+  .code{font-family:var(--font-display);font-weight:700;background:var(--ink,#123a63);color:#fff;padding:3px 9px;border-radius:5px;font-size:12px;letter-spacing:.02em;}
+  .tipo{font-size:11px;color:var(--ink-soft,#888);text-transform:uppercase;letter-spacing:.3px;}
+  .tiempo{font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:20px;}
+  .tiempo.ok{color:var(--ok,#1d7a4c);background:rgba(29,122,76,.1);}
+  .tiempo.warn{color:var(--warn,#c0392b);background:rgba(192,57,43,.12);}
+  .meta{font-size:12px;color:var(--ink-soft,#666);margin-top:6px;}
+  .empty{background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:14px;padding:2rem;text-align:center;color:var(--ink-soft,#888);font-size:13px;}
   .loading{text-align:center;color:#888;font-size:13px;padding:2rem;}
 </style>
 </head>
@@ -70,6 +71,7 @@ async function cargar(){
         data.rows.filter(r=>r.status==='ABIERTO').forEach(r=>{
           items.push({
             tipo: backend.nombre,
+            icono: backend.nombre.includes('Caliente') ? '🔥' : '🧗',
             code: r.code || r.permitCode || '—',
             responsable: r.responsable || '',
             area: r.sitio || r.area || '',
@@ -91,7 +93,7 @@ async function cargar(){
       const alerta = h!==null && h >= HORAS_ALERTA;
       return `<div class="item ${alerta?'warn':''}">
         <div class="row1">
-          <span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
+          <span><span class="icon-type">${it.icono}</span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>
         </div>
         <div class="meta">${it.responsable ? 'Responsable: '+it.responsable : ''}${it.area ? ' · Área: '+it.area : ''}</div>

@@ -114,13 +114,13 @@
   .yn-label{flex:1;min-width:220px;font-size:12.5px;}
   .yn-opts{display:flex;gap:6px;}
   .yn-btn{
-    border:1px solid var(--line);border-radius:4px;background:#fafbfc;
-    font-size:11.5px;padding:5px 12px;cursor:pointer;font-weight:600;color:var(--muted);
-    transition:.12s;
+    border:1.5px solid var(--line);border-radius:5px;background:transparent;
+    font-size:11.5px;padding:5px 13px;cursor:pointer;font-weight:600;color:#aab3ba;
+    transition:.14s;
   }
-  .yn-btn.active-si{background:var(--ok);color:#fff;border-color:var(--ok);}
-  .yn-btn.active-na{background:#8a97a3;color:#fff;border-color:#8a97a3;}
-  .yn-btn.active-no{background:var(--warn);color:#fff;border-color:var(--warn);}
+  .yn-btn.active-si{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
+  .yn-btn.active-na{background:#8a97a3;color:#fff;border-color:#8a97a3;font-weight:700;}
+  .yn-btn.active-no{background:var(--warn);color:#fff;border-color:var(--warn);font-weight:700;box-shadow:0 2px 6px rgba(179,38,30,.3);}
 
   .calc-box{
     background:#f4f8fb;border:1px solid var(--line);border-radius:5px;padding:12px 14px;margin:0 14px 12px;
@@ -630,6 +630,7 @@
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
+if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#0f3a5f');
 // ---------- YES/NO/NA toggle groups ----------
 document.querySelectorAll('.yn-opts').forEach(group => {
   if(!group.hasAttribute('data-mode')){
@@ -1310,7 +1311,7 @@ btnSaveOpen.addEventListener('click', async ()=>{
     alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
   }catch(err){
     statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
-    Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token: CONFIG.API_TOKEN });
+    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token: CONFIG.API_TOKEN });
     btnSaveOpen.disabled = false;
   }
 });
@@ -1340,15 +1341,15 @@ btnSaveClose.addEventListener('click', async ()=>{
     alert('Permiso cerrado correctamente.');
   }catch(err){
     statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
-    Outbox.add(CONFIG.SCRIPT_URL, { action:'close', code: currentCode, data, token: CONFIG.API_TOKEN });
+    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'close', code: currentCode, data, token: CONFIG.API_TOKEN });
     btnSaveClose.disabled = false;
   }
 });
 </script>
 <script>
 window.addEventListener('load', ()=>{
-  UpdateManager.init();
-  Outbox.flush();
+  if (typeof UpdateManager !== 'undefined') UpdateManager.init();
+  if (typeof Outbox !== 'undefined') Outbox.flush();
 });
 </script>
 

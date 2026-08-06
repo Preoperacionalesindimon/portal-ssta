@@ -1,35 +1,69 @@
 /* ============================================================
    common.css — Sistema de diseño compartido del Portal SSTA (INDIMON)
    Usado por: index.html, permiso-trabajo-alturas.html,
-              permiso-trabajo-caliente.html
+              permiso-trabajo-caliente.html, dashboard.html
    ------------------------------------------------------------
    Cada página conserva su color de acento propio (identidad del
-   tipo de permiso), pero comparte la misma "forma": radios de
-   esquina, sombras, tipografía y espaciados.
+   tipo de permiso), pero ahora comparte también tipografía,
+   contraste de estados y un mismo componente de progreso —
+   para que las tres páginas se sientan como un solo producto.
    ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 :root{
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-family);
 
-  --radius-lg: 14px;   /* tarjetas / secciones grandes / encabezados */
-  --radius-md: 10px;   /* botones grandes / barras de estado */
-  --radius-sm: 7px;    /* inputs / botones pequeños / chips */
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 7px;
 
-  --shadow-card: 0 3px 10px rgba(0,0,0,.07);
-  --shadow-float: 0 -6px 18px rgba(0,0,0,.12);
+  --shadow-card: 0 3px 10px rgba(15,25,35,.07);
+  --shadow-float: 0 -6px 18px rgba(15,25,35,.12);
+  --shadow-lift: 0 4px 14px rgba(15,25,35,.14);
 
-  --brand-index:  #F2C200; /* amarillo INDIMON — portal */
-  --brand-alturas:#123a63; /* azul navy — trabajo en alturas */
-  --brand-caliente:#c8461a;/* rojo/naranja — trabajo en caliente */
+  --paper:#ffffff;
+  --bg:#eef1f4;
+  --ink:#151b24;
+  --ink-soft:#5c6a76;
+  --line:#dde3e8;
+  --line-soft:#eaeef1;
+  --ok:#1d7a4c;
+  --warn:#c0392b;
 
-  --offline-bg: #7a1f14;   /* aviso de sin conexión, compartido por las 3 páginas */
+  --brand-index:  #F2C200;
+  --brand-alturas:#0f3a5f;
+  --brand-caliente:#c8461a;
+
+  --offline-bg: #7a1f14;
 }
 
-/* Aviso de nueva versión disponible (creado por UpdateManager en common.js) */
+h1, .section-title, .gate-top h1, .header h1, .helper-title,
+.head .title h1, .card-title, .code, .code-tag {
+  font-family: var(--font-display);
+  letter-spacing:.01em;
+}
+
+/* ── Barra de progreso de scroll (elemento distintivo compartido) ──
+   Se activa con ScrollProgress.init(color) en common.js. Muestra cuánto
+   del formulario largo lleva recorrido el usuario — información real,
+   no decoración, en documentos de 10 secciones diligenciados en celular. */
+#scrollProgress{
+  position:fixed;
+  top:0; left:0;
+  height:3px;
+  width:0%;
+  background:var(--progress-color, var(--brand-alturas));
+  z-index:10000;
+  transition:width .08s linear;
+}
+
 #updateBanner{
   position:sticky;
   top:0;
   z-index:9999;
-  background:#123a63;
+  background:var(--ink);
   color:#fff;
   font-size:12px;
   font-weight:600;
@@ -43,7 +77,7 @@
 }
 #updateBanner button{
   background:#fff;
-  color:#123a63;
+  color:var(--ink);
   border:none;
   border-radius:var(--radius-sm,7px);
   font-size:11.5px;
@@ -51,9 +85,8 @@
   padding:5px 12px;
   cursor:pointer;
 }
-#updateBanner button:hover{background:#eef2f5;}
+#updateBanner button:hover{background:var(--bg);}
 
-/* Aviso de sin conexión (creado dinámicamente por OfflineBanner en common.js) */
 #offlineBanner{
   display:none;
   position:sticky;

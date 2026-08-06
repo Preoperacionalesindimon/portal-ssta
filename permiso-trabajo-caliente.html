@@ -351,7 +351,7 @@ canvas.pad.locked{cursor:default;}
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
-ScrollProgress.init('#c8461a');
+if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#c8461a');
 /* ================= STATE ================= */
 let MODE = null; // 'open' | 'close'
 let permitCode = null;
@@ -958,7 +958,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
     } else {
       btn.disabled=false;
       document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
-      Outbox.add(getWebAppUrl(), Object.assign({}, data, {token: API_TOKEN}));
+      if (typeof Outbox !== 'undefined') Outbox.add(getWebAppUrl(), Object.assign({}, data, {token: API_TOKEN}));
     }
   } else if(MODE==='close'){
     const openData=collectOpenData();
@@ -973,7 +973,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
     } else {
       btn.disabled=false;
       document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
-      Outbox.add(getWebAppUrl(), Object.assign({}, full, {token: API_TOKEN}));
+      if (typeof Outbox !== 'undefined') Outbox.add(getWebAppUrl(), Object.assign({}, full, {token: API_TOKEN}));
     }
   }
   btn.textContent=originalText;
@@ -1060,8 +1060,8 @@ document.getElementById('backToStartBtn').addEventListener('click', ()=>{
 </script>
 <script>
 window.addEventListener('load', ()=>{
-  UpdateManager.init();
-  Outbox.flush(); // reintenta lo pendiente si ya hay señal al abrir la página
+  if (typeof UpdateManager !== 'undefined') UpdateManager.init();
+  if (typeof Outbox !== 'undefined') Outbox.flush(); // reintenta lo pendiente si ya hay señal al abrir la página
 });
 </script>
 </body>

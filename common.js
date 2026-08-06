@@ -200,6 +200,31 @@ const Outbox = {
 };
 window.addEventListener('online', () => Outbox.flush());
 
+/**
+ * ScrollProgress: barra fina y fija arriba de la pantalla que muestra
+ * cuánto lleva recorrido el usuario del formulario — información real
+ * en un documento largo de 10 secciones diligenciado en celular, no
+ * decoración. Color configurable por página (color de marca del permiso).
+ */
+const ScrollProgress = {
+  init(color) {
+    if (document.getElementById('scrollProgress')) return;
+    const el = document.createElement('div');
+    el.id = 'scrollProgress';
+    if (color) el.style.setProperty('--progress-color', color);
+    document.body.prepend(el);
+    const update = () => {
+      const h = document.documentElement;
+      const scrollable = h.scrollHeight - h.clientHeight;
+      const pct = scrollable > 0 ? (h.scrollTop / scrollable) * 100 : 0;
+      el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+};
+
 const OfflineBanner = {
   init() {
     if (document.getElementById('offlineBanner')) return; // ya existe
