@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSTA-F-117 · Permiso para Trabajos en Espacios Confinados</title>
+<title>SSTA-F-180 · Permiso de Trabajo Eléctrico</title>
 <link rel="stylesheet" href="common.css">
 <style>
 :root{
-  --ember:#5b3a91;--ember-dark:#432a6c;--steel:#1f2a33;--steel-mid:#3a4753;
+  --ember:#b8860b;--ember-dark:#8a6408;--steel:#1f2a33;--steel-mid:#3a4753;
   --paper:#f6f3ec;--paper-panel:#ffffff;--line:#d8d2c4;--ok:#2f6b45;--warn:#b8860b;
   --ink:#20242a;--muted:#6b6459;font-family:var(--font-family, 'Segoe UI', system-ui, sans-serif);
 }
@@ -93,10 +93,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .check-item:last-child{border-bottom:none;}
 .check-item p{margin:0;font-size:13.5px;line-height:1.4;flex:1;padding-top:2px;}
 .toggle{display:flex;gap:4px;flex-shrink:0;}
-.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 10px;font-size:11px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:36px;transition:.14s;}
-.toggle button.active-si{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
-.toggle button.active-no{background:#c0392b;border-color:#c0392b;color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(192,57,43,.3);}
-.toggle button.active-na{background:#8a97a3;border-color:#8a97a3;color:#fff;font-weight:700;}
+.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 12px;font-size:11.5px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:44px;transition:.14s;}
+.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
+.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700;}
 .toggle button:disabled{opacity:.8;cursor:default;}
 .progress-pill{font-size:11px;font-weight:700;color:#fff;background:var(--steel-mid);padding:4px 10px;border-radius:20px;}
 .sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
@@ -172,17 +171,17 @@ canvas.pad.locked{cursor:default;}
   <!-- LANDING -->
   <div id="landing">
     <div class="hdr" style="margin-bottom:26px;">
-      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso para Trabajos en Espacios Confinados</h1></div></div>
-      <div class="meta">Código: <b>SSTA-F-117</b> · V2</div>
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo Eléctrico</h1></div></div>
+      <div class="meta">Código: <b>SSTA-F-180</b> · V1</div>
     </div>
     <h2>¿Qué deseas hacer?</h2>
     <p>Este permiso se guarda en una Google Sheet compartida: se abre desde un dispositivo y se cierra desde otro, buscando el permiso por su código.</p>
 
     <div class="landing-choices">
       <div class="choice-card" id="cardNew">
-        <div class="icon">🕳️</div>
+        <div class="icon">⚡</div>
         <h3>Abrir nuevo permiso</h3>
-        <p>Diligenciar mediciones de gases, EPP, controles administrativos y firmas de apertura. Se guarda directo en la hoja de cálculo.</p>
+        <p>Diligenciar descripción, tensión de trabajo, checklist de preparación, EPP, controles del área y firmas de apertura.</p>
       </div>
       <div class="choice-card" id="cardClose">
         <div class="icon">✅</div>
@@ -200,39 +199,15 @@ canvas.pad.locked{cursor:default;}
           </div>
         </div>
       </div>
-      <div class="choice-card" id="cardReading">
-        <div class="icon">📊</div>
-        <h3>Registrar lectura de gases</h3>
-        <p>Para un permiso que ya está abierto y sigue en ejecución: agrega una nueva lectura de gases sin cerrar el permiso.</p>
-        <div class="file-input-wrap">
-          <input type="text" id="readingCodeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
-          <button class="btn-secondary" id="loadReadingBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y registrar lectura</button>
-        </div>
-      </div>
     </div>
     <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
-  </div>
-
-  <!-- PANEL DE LECTURA RÁPIDA (permiso ya abierto, sin cerrar) -->
-  <div id="readingApp" style="display:none;">
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Registrar lectura — Espacios Confinados</h1></div></div>
-      <div class="meta">Código: <b id="readingPermitCode">—</b></div>
-    </div>
-    <div class="status-banner open"><span>Permiso abierto — solo se agregará la lectura, el permiso sigue activo</span></div>
-    <div class="section"><div class="section-body" id="gasTableContainerQuick"></div></div>
-    <div class="footer-actions" style="position:static;margin-top:20px;">
-      <button class="btn btn-secondary" id="readingBackBtn" type="button">← Volver al inicio</button>
-      <span class="status" id="readingStatus"></span>
-      <button class="btn" id="readingSaveBtn" type="button">Guardar lectura</button>
-    </div>
   </div>
 
   <!-- APP -->
   <div id="app">
     <div class="hdr">
-      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso para Trabajos en Espacios Confinados</h1></div></div>
-      <div class="meta">Código: <b>SSTA-F-117</b> · Versión: <b>2</b><br>Fecha doc: 24/01/2022 · Act.: 25/01/2023</div>
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Formato de Permiso de Trabajo Eléctrico</h1></div></div>
+      <div class="meta">Código: <b>SSTA-F-180</b> · Versión: <b>1</b><br>Fecha doc: 10/04/2025</div>
     </div>
     <div class="status-banner open" id="statusBanner">
       <span id="statusBannerText">Permiso nuevo — aún no guardado</span>
@@ -249,74 +224,83 @@ canvas.pad.locked{cursor:default;}
     <div class="validation-banner" id="validationBanner"></div>
 
     <div class="section">
-      <div class="section-title" id="titleSec1">1. Datos generales de la tarea</div>
+      <div class="section-title" id="titleSec1">A. Generalidades</div>
       <div class="section-body">
-        <div class="grid2">
-          <div class="field"><label>Fecha de inicio</label><input type="date" id="desdeFecha"></div>
-          <div class="field"><label>Hora de inicio</label><input type="time" id="desdeHora"></div>
-          <div class="field"><label>Fecha de finalización</label><input type="date" id="hastaFecha"></div>
-          <div class="field"><label>Hora de término</label><input type="time" id="hastaHora"></div>
-          <div class="field"><label>Área o lugar</label><input type="text" id="sitio"></div>
-          <div class="field"><label>Responsable del trabajo</label><input type="text" id="responsable"></div>
-        </div>
-        <div class="field" style="margin-top:6px;"><label>Actividad a realizar</label><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
-        <div class="grid2" style="margin-top:6px;">
-          <div class="field"><label>Herramientas y/o equipos a utilizar</label><input type="text" id="herramientas" placeholder="Llaves, destornilladores, alicates, bisturí, taladro, pulidora, martillos, flexómetro, nivel, otros"></div>
-          <div class="field"><label>¿Qué gases detecta el equipo de medición?</label><input type="text" id="gasesDetecta" placeholder="Oxígeno, LEL, H2S, CO, Metano, Cloro…"></div>
-        </div>
+        <div class="field"><label>Descripción específica del trabajo a realizar</label><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
         <div class="grid3" style="margin-top:6px;">
-          <div class="field"><label>¿Cuenta con planeación de la tarea?</label>
-            <div class="radio-row"><label><input type="radio" name="cuentaPlaneacion" value="Si"> Sí</label><label><input type="radio" name="cuentaPlaneacion" value="No" checked> No</label></div>
-          </div>
-          <div class="field"><label>¿Requiere un permiso adicional?</label>
-            <div class="radio-row"><label><input type="radio" name="permAdicional" value="No" checked> No</label><label><input type="radio" name="permAdicional" value="Si"> Sí</label></div>
-          </div>
-          <div class="field"><label>¿Cuál?</label><input type="text" id="cualPermiso" placeholder="Alturas, trabajo en caliente, otro…"></div>
+          <div class="field"><label>Duración — Desde (fecha)</label><input type="date" id="desdeFecha"></div>
+          <div class="field"><label>Hasta (fecha)</label><input type="date" id="hastaFecha"></div>
+          <div class="field"><label>Sitio exacto del trabajo</label><input type="text" id="sitio"></div>
+        </div>
+        <div class="grid2" style="margin-top:6px;">
+          <div class="field"><label>Responsable del trabajo</label><input type="text" id="responsable"></div>
+          <div class="field"><label>Herramientas y/o equipos a utilizar</label><input type="text" id="herramientas"></div>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSec2">2. Medición de gases</div>
-      <div class="section-body" id="gasTableContainer"></div>
+      <div class="section-title" id="titleSecB">B. Documentos adjuntos a este permiso</div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="docATS"> ATS</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="docCaliente"> Permiso para trabajo en caliente</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="docAltura"> Permiso para trabajo en altura</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="docConfinado"> Permiso para espacio confinado</label>
+        </div>
+        <div class="field" style="margin-top:8px;"><label>Otros</label><input type="text" id="docOtros"></div>
+
+        <div class="grid2" style="margin-top:16px;">
+          <div class="field"><label>El trabajo es de baja tensión</label>
+            <select id="bajaTension" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+              <option value="">No aplica</option><option>&lt; 50 Voltios D.C.</option><option>120 Voltios D.C.</option>
+              <option>&lt; 50 Voltios A.C.</option><option>110 Voltios A.C.</option><option>220 Voltios A.C.</option><option>480 Voltios A.C.</option>
+            </select>
+          </div>
+          <div class="field"><label>El trabajo es de media tensión</label>
+            <select id="mediaTension" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+              <option value="">No aplica</option><option>2.400 Voltios A.C.</option><option>4.160 Voltios A.C.</option>
+              <option>6.300 Voltios A.C.</option><option>6.600 Voltios A.C.</option><option>13.800 Voltios</option><option>34.500 Voltios</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSec3">3. Elementos de protección personal requeridos (EPP)</div>
-      <div class="section-body" id="eppContainer"></div>
-    </div>
-
-    <div class="section">
-      <div class="section-title" id="titleSec4">4. Inspección de medidas preventivas y condiciones de seguridad <span class="progress-pill" id="checklistProgress" style="margin-left:auto;">0/0</span></div>
+      <div class="section-title" id="titleSec3">C. Preparación para el trabajo <span class="progress-pill" id="checklistProgress" style="margin-left:auto;">0/0</span></div>
       <div class="section-body" id="checklistContainer"></div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSec5b">5. Controles administrativos <span class="progress-pill" id="equiposProgress" style="margin-left:auto;">0/0</span></div>
-      <div class="section-body">
-        <div id="equiposContainer"></div>
-      </div>
+      <div class="section-title" id="titleSec4">D. Equipos y elementos de protección personal requeridos <span class="progress-pill" id="equiposProgress" style="margin-left:auto;">0/0</span></div>
+      <div class="section-body"><div id="equiposContainer"></div></div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSec5">6. Observaciones y recomendaciones</div>
+      <div class="section-title" id="titleSecE">E. Controles del área <span class="progress-pill" id="controlesProgress" style="margin-left:auto;">0/0</span></div>
+      <div class="section-body"><div id="controlesContainer"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="titleSec5">Observaciones y recomendaciones</div>
       <div class="section-body"><div class="field"><textarea id="observaciones"></textarea></div></div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSec6">7. Firmas de emisión — término de responsabilidad</div>
+      <div class="section-title" id="titleSec6">F. Término de responsabilidades y autorización (apertura)</div>
       <div class="section-body">
-        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:0;"><b>Como ejecutor:</b> he verificado con el emisor la aplicación del permiso y los demás controles para minimizar los riesgos asociados a este trabajo. <b>Como supervisor de espacios confinados:</b> he verificado en campo la aplicación del permiso y considero seguro proceder con la ejecución del mismo.</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:0;">Declaro que me encuentro en buen estado de salud (físico y mental), libre de efectos de alcohol, medicamentos o SPA, consciente de mi responsabilidad, y me comprometo a cumplir las recomendaciones acordadas en este permiso.</p>
         <div class="grid2" id="responsablesSigs" style="gap:16px;"></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title" id="titleSecExec">Ejecutantes — firma y registro</div>
+      <div class="section-title" id="titleSecExec">Ejecutantes de la actividad</div>
       <div class="section-body">
         <div style="overflow-x:auto;">
           <table class="exec-table" id="execTable">
-            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Hora vinc.</th><th class="helper">Rol</th></tr></thead>
+            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Hora vinc.</th><th class="helper">N.° tarjeta prof.</th></tr></thead>
             <tbody id="execBody"></tbody>
           </table>
         </div>
@@ -375,7 +359,7 @@ canvas.pad.locked{cursor:default;}
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
-if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#5b3a91');
+if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#b8860b');
 /* ================= STATE ================= */
 let MODE = null; // 'open' | 'close'
 let permitCode = null;
@@ -383,72 +367,47 @@ let locked = false; // sections 1-6/exec locked (close mode)
 
 /* ================= DATA DEFINITIONS ================= */
 const checklistData = [
-  {cat:"Inspección de medidas preventivas", items:[
-    "¿Las condiciones y el estado del área de trabajo han sido revisadas antes de iniciar la tarea?",
-    "¿El medidor de gases reporta mediciones dentro de los parámetros establecidos?",
-    "¿El área está libre de gases, presión, sustancias químicas, tóxicas, combustibles e inflamables?",
-    "¿Existe una ventilación general adecuada?",
-    "¿Se requiere instalar sistemas de ventilación forzada?",
-    "¿Se realizó cálculo de ventilación?",
-    "¿Se monitorea constantemente la atmósfera en el sitio de trabajo?",
-    "¿Para el ingreso al lugar de trabajo se requiere de iluminación artificial?",
-    "¿Se realizó identificación de peligros?"
-  ]},
-  {cat:"Condiciones de seguridad", items:[
-    "Las tomas de corriente se encuentran fuera del espacio confinado y cuentan con GFCI.",
-    "¿Se cuenta con sistemas de comunicación (radios, cuerda, golpeteo)?",
-    "El equipo de rescate se encuentra disponible en sitio e inspeccionado.",
-    "¿En el área de trabajo se dispone de extintor?",
-    "¿Los equipos y/o herramientas se encuentran revisados y en buen estado?",
-    "¿El trabajador usa adecuadamente todos los elementos de protección personal requeridos?"
+  {cat:"C. Preparación para el trabajo", items:[
+    "El equipo a intervenir requiere estar desenergizado.",
+    "Se requiere que el área adyacente esté acordonada.",
+    "Se requiere la instalación de las puestas a tierra / aterrizamiento de circuitos.",
+    "Se requiere la presencia del guardia/vigía de seguridad eléctrico.",
+    "Se requiere utilizar el detector de proximidad para verificar ausencia de tensión.",
+    "Se requiere informar de los riesgos a los ejecutores del trabajo.",
+    "Líneas vivas adyacentes (energizadas).",
+    "Gases tóxicos de equipo eléctrico."
   ]}
 ];
 const equiposData = [
-  {cat:"Controles administrativos", items:[
-    "¿Se cuenta con personal suficiente para rotación?",
-    "¿Se encuentra señalizada el área?",
-    "¿Se cuenta con sistema de delimitación (conos, cinta de peligro, barrera, cadenas)?",
-    "¿Se cuenta con controles de acceso?",
-    "¿Se requiere bloqueo y etiquetado?",
-    "¿Se cuenta con análisis de trabajo seguro?",
-    "¿Al personal se le ha instruido en relación a los riesgos que puedan presentarse durante la ejecución de la tarea?",
-    "¿Se ha dispuesto de un trabajador que acompañe y apoye en caso de emergencia durante toda la actividad?",
-    "¿Permiten factores externos (condiciones atmosféricas) que el trabajo se haga con seguridad?"
-  ]},
-  {cat:"Requerimiento de documentos anexos", items:[
-    "Se han revisado los certificados de aptitud médico ocupacional de cada trabajador.",
-    "Se han elaborado los permisos adicionales requeridos por la labor programada (alturas, trabajo en caliente u otro)."
+  {cat:"D. EPP requeridos", items:[
+    "Respirador vapores orgánicos.","Respirador para polvos o humos.","Equipo de rescate.","Equipo de primeros auxilios.",
+    "Extintor.","Casco dieléctrico.","Careta especial.","Sensor de tensión por proximidad.",
+    "Respirador vapores ácidos.","Equipo de aire respirable certificado.","Equipo protección contra caídas.",
+    "Botiquín.","Manta dieléctrica.","Botas dieléctricas.","Guantes.","Otros."
   ]}
 ];
-const eppData = [
-  "Casco con barbuquejo","Guantes","Ropa de trabajo","Mascarilla con filtros","Gafas de seguridad",
-  "Botas de seguridad","Careta de corte o esmerilar","Careta de soldador","Peto, chaleco y mangas de cuero",
-  "Tapabocas - nasobuco","Arnés de espacios confinados","Eslingas de protección","Equipo respirable SCBA",
-  "Fullface","Equipo de suministro de aire","Escafandra","Línea de guía","Compresor","Equipo de rescate",
-  "Camilla y botiquín de primeros auxilios"
+const controlesData = [
+  {cat:"E. Controles del área", items:[
+    "Se identificaron, valoraron y controlaron los riesgos.",
+    "Se revisaron interferencias con otros trabajos adyacentes.",
+    "Se informó de los riesgos a los ejecutores del trabajo.",
+    "El equipo se encuentra sin tensión.",
+    "Se verificó que el área sobre la que está el equipo a intervenir esté seca.",
+    "Se aplicó el procedimiento de control de energías peligrosas.",
+    "Se utilizó el detector de proximidad para verificar ausencia de tensión.",
+    "Se instalaron puestas a tierra / aterrizamiento de circuitos.",
+    "Se acordonó el área."
+  ]}
 ];
-const gasPhases = ['Preingreso','Por difusión','Estratificada'];
-const gasTypes = [
-  {key:'oxigeno', label:'Oxígeno', unidad:'%', min:19.5, max:23.5},
-  {key:'lel', label:'Inflamabilidad LEL', unidad:'%', min:0, max:9.99},
-  {key:'h2s', label:'H2S', unidad:'ppm', min:0, max:9.99},
-  {key:'co', label:'CO', unidad:'ppm', min:0, max:24.99}
-];
-let gasState = { lecturas: [] };
-let eppState = {};
-function evaluarGas(gas, valor){
-  if(valor===''||valor===null||isNaN(valor)) return null;
-  const n = parseFloat(valor);
-  return (n>=gas.min && n<=gas.max) ? 'ok' : 'alerta';
-}
 
 let checklistState = {};
 let equiposState = {};
+let controlesState = {};
 let execRowsData = []; // {nombre,cc,hora,ayudante,sigData}
 let execCounter = 0;
 const pads = {}; // id -> {ctx,canvas,clear,setDataUrl,getDataUrl}
 
-/* ================= RENDER TOGGLE GROUPS (SI / NO / N-A) ================= */
+/* ================= RENDER TOGGLE GROUPS ================= */
 function renderToggleGroup(container, data, statePrefix, stateObj, progressElId){
   let idCounter=0;
   data.forEach(cat=>{
@@ -459,9 +418,8 @@ function renderToggleGroup(container, data, statePrefix, stateObj, progressElId)
       if(!(key in stateObj)) stateObj[key]=null;
       const row=document.createElement('div'); row.className='check-item';
       row.innerHTML=`<p>${text}</p><div class="toggle" role="group" aria-label="${text.replace(/"/g,'&quot;')}">
-        <button type="button" data-key="${key}" data-val="SI" aria-pressed="false">SÍ</button>
-        <button type="button" data-key="${key}" data-val="NO" aria-pressed="false">NO</button>
-        <button type="button" data-key="${key}" data-val="NA" aria-pressed="false">N/A</button></div>`;
+        <button type="button" data-key="${key}" data-val="C" aria-pressed="false">SÍ</button>
+        <button type="button" data-key="${key}" data-val="NA" aria-pressed="false">NO</button></div>`;
       catDiv.appendChild(row);
     });
     container.appendChild(catDiv);
@@ -471,8 +429,8 @@ function renderToggleGroup(container, data, statePrefix, stateObj, progressElId)
     const btn=e.target.closest('button[data-key]'); if(!btn) return;
     const key=btn.dataset.key, val=btn.dataset.val;
     stateObj[key]=val;
-    btn.parentElement.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-si','active-no','active-na'); b.setAttribute('aria-pressed','false'); });
-    btn.classList.add(val==='SI'?'active-si':val==='NO'?'active-no':'active-na');
+    btn.parentElement.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-c','active-na'); b.setAttribute('aria-pressed','false'); });
+    btn.classList.add(val==='C'?'active-c':'active-na');
     btn.setAttribute('aria-pressed','true');
     updateProgress(stateObj, progressElId);
   });
@@ -484,13 +442,11 @@ function updateProgress(stateObj, elId){
 function applyToggleState(stateObj){
   document.querySelectorAll('button[data-key]').forEach(btn=>{
     const key=btn.dataset.key, val=stateObj[key];
-    btn.classList.remove('active-si','active-no','active-na');
     if(val){
-      const active = btn.dataset.val===val;
-      if(active){ btn.classList.add(val==='SI'?'active-si':val==='NO'?'active-no':'active-na'); }
+      const active = val==='C' ? btn.dataset.val==='C' : btn.dataset.val==='NA';
+      btn.classList.toggle('active-c', val==='C' && btn.dataset.val==='C');
+      btn.classList.toggle('active-na', val==='NA' && btn.dataset.val==='NA');
       btn.setAttribute('aria-pressed', active ? 'true':'false');
-    } else {
-      btn.setAttribute('aria-pressed','false');
     }
   });
 }
@@ -589,144 +545,12 @@ function addExecRow(prefill){
 }
 document.getElementById('addRowBtn').addEventListener('click', ()=>{ if(!locked) addExecRow(); });
 
-/* ================= TABLA DE MEDICIÓN DE GASES ================= */
-function renderGasTable(container){
-  container.innerHTML = `
-    <div class="check-cat" style="margin-bottom:12px;">
-      <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px;">
-        Ingresa los valores medidos para cada gas.
-        🟢 Verde = Valor seguro &nbsp;|&nbsp; 🔴 Rojo = ¡Alerta! Fuera de rango
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Fase de la lectura</label>
-          <select id="gasFaseInput" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
-            ${gasPhases.map(p=>`<option>${p}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field"><label>Hora de la lectura</label><input type="time" id="gasHoraInput"></div>
-      </div>
-      <div id="gasInputsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;"></div>
-      <div id="gasAlertBanner" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;background:#fbeaea;color:#a1281c;font-size:12.5px;font-weight:700;border:1px solid #e3b3ac;">
-        ⚠ Uno o más valores están fuera de rango — no autorizar el ingreso / evacuar si ya se está trabajando.
-      </div>
-      <button type="button" id="btnAddLectura" class="btn btn-secondary" style="margin-top:10px;">+ Registrar lectura</button>
-    </div>
-    <div id="gasLog"></div>
-    <div class="radio-row" style="margin-top:8px;"><label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-right:8px;">¿Ventilación forzada instalada?</label>
-      <label><input type="radio" name="ventForzada" value="Si"> Sí</label><label><input type="radio" name="ventForzada" value="No" checked> No</label>
-      <select id="tipoVentilacion" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;"><option value="">Tipo de ventilación…</option><option>Positiva</option><option>Negativa</option><option>Mixta</option><option>Natural (airear)</option></select></div>`;
-
-  const grid = document.getElementById('gasInputsGrid');
-  grid.innerHTML = gasTypes.map(g=>`
-    <div class="field" id="gasField_${g.key}" style="border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;transition:.15s;">
-      <label style="margin-bottom:2px;">${g.label} <span style="font-weight:400;color:var(--muted);">(${g.unidad})</span></label>
-      <input type="number" step="0.01" inputmode="decimal" id="gasVal_${g.key}" placeholder="0.0">
-      <div style="font-size:10.5px;color:var(--muted);margin-top:3px;">Rango seguro: ${g.min} – ${g.max} ${g.unidad}</div>
-    </div>`).join('');
-
-  function evaluarEnVivo(){
-    let hayAlerta = false;
-    gasTypes.forEach(g=>{
-      const inp = document.getElementById('gasVal_'+g.key);
-      const field = document.getElementById('gasField_'+g.key);
-      const estado = evaluarGas(g, inp.value);
-      field.style.borderColor = estado==='ok' ? 'var(--ok)' : estado==='alerta' ? '#c0392b' : 'var(--line)';
-      field.style.background = estado==='ok' ? 'rgba(29,122,76,.06)' : estado==='alerta' ? 'rgba(192,57,43,.07)' : '';
-      if(estado==='alerta') hayAlerta = true;
-    });
-    document.getElementById('gasAlertBanner').style.display = hayAlerta ? 'block' : 'none';
-  }
-  grid.addEventListener('input', evaluarEnVivo);
-
-  document.getElementById('btnAddLectura').addEventListener('click', ()=>{
-    const valores = {};
-    let algunValor = false;
-    gasTypes.forEach(g=>{
-      const v = document.getElementById('gasVal_'+g.key).value;
-      valores[g.key] = v==='' ? null : parseFloat(v);
-      if(v!=='') algunValor = true;
-    });
-    if(!algunValor){ alert('Ingrese al menos un valor de gas antes de registrar la lectura.'); return; }
-    const lectura = {
-      fase: document.getElementById('gasFaseInput').value,
-      hora: document.getElementById('gasHoraInput').value || new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-      fecha: new Date().toISOString(),
-      valores
-    };
-    gasState.lecturas.push(lectura);
-    renderGasLog();
-    gasTypes.forEach(g=>{ document.getElementById('gasVal_'+g.key).value=''; });
-    evaluarEnVivo();
-  });
-  renderGasLog();
-}
-
-function renderGasLog(){
-  const log = document.getElementById('gasLog'); if(!log) return;
-  if(!gasState.lecturas.length){ log.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aún no hay lecturas registradas.</div>`; return; }
-  log.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px;">Lecturas registradas (${gasState.lecturas.length})</div>` +
-    gasState.lecturas.slice().reverse().map((l, revIdx)=>{
-      const idx = gasState.lecturas.length - 1 - revIdx;
-      const chips = gasTypes.map(g=>{
-        const v = l.valores[g.key];
-        if(v===null||v===undefined) return '';
-        const estado = evaluarGas(g, v);
-        const color = estado==='ok' ? '#1d7a4c' : '#c0392b';
-        const bg = estado==='ok' ? 'rgba(29,122,76,.1)' : 'rgba(192,57,43,.12)';
-        return `<span style="display:inline-block;font-size:11px;font-weight:700;color:${color};background:${bg};border-radius:20px;padding:3px 9px;margin:2px 4px 2px 0;">${estado==='ok'?'🟢':'🔴'} ${g.label}: ${v}${g.unidad}</span>`;
-      }).join('');
-      return `<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;">
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:5px;">
-          <span><b style="color:var(--ink,#151b24);">${l.fase}</b> · ${l.hora}</span>
-          <button type="button" data-del-lectura="${idx}" style="border:none;background:none;color:#c0392b;font-size:11px;cursor:pointer;">Eliminar</button>
-        </div>
-        <div>${chips}</div>
-      </div>`;
-    }).join('');
-  log.querySelectorAll('button[data-del-lectura]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(locked) return;
-      gasState.lecturas.splice(parseInt(btn.dataset.delLectura,10),1);
-      renderGasLog();
-    });
-  });
-}
-
-function collectGasState(){
-  return { lecturas: gasState.lecturas, ventForzada:(document.querySelector('input[name=ventForzada]:checked')||{}).value||'No', tipoVentilacion:(document.getElementById('tipoVentilacion')||{}).value||'' };
-}
-function restoreGasState(data){
-  if(!data) return;
-  gasState.lecturas = data.lecturas || [];
-  renderGasLog();
-  if(data.ventForzada){ const r=document.querySelector(`input[name=ventForzada][value="${data.ventForzada}"]`); if(r) r.checked=true; }
-  if(data.tipoVentilacion && document.getElementById('tipoVentilacion')) document.getElementById('tipoVentilacion').value = data.tipoVentilacion;
-}
-
-/* ================= EPP (checkboxes) ================= */
-function renderEpp(container){
-  container.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">` +
-    eppData.map((label,i)=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;">
-      <input type="checkbox" data-epp="epp_${i}"> ${label}</label>`).join('') + `</div>`;
-  container.addEventListener('change', e=>{
-    const cb = e.target.closest('input[data-epp]'); if(!cb) return;
-    eppState[cb.dataset.epp] = cb.checked;
-  });
-}
-function collectEppState(){ return Object.assign({}, eppState); }
-function restoreEppState(data){
-  if(!data) return;
-  Object.assign(eppState, data);
-  document.querySelectorAll('input[data-epp]').forEach(cb=>{ cb.checked = !!eppState[cb.dataset.epp]; });
-}
-
 /* ================= INIT RENDER ================= */
 function initRender(){
   renderToggleGroup(document.getElementById('checklistContainer'), checklistData, 'chk', checklistState, 'checklistProgress');
   renderToggleGroup(document.getElementById('equiposContainer'), equiposData, 'eq', equiposState, 'equiposProgress');
-  renderGasTable(document.getElementById('gasTableContainer'));
-  renderEpp(document.getElementById('eppContainer'));
-  updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
+  renderToggleGroup(document.getElementById('controlesContainer'), controlesData, 'ctl', controlesState, 'controlesProgress');
+  updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress'); updateProgress(controlesState,'controlesProgress');
   buildResponsablesUI();
   document.querySelectorAll('canvas.pad').forEach(c=> setupPad(c));
   for(let i=0;i<3;i++) addExecRow();
@@ -746,17 +570,16 @@ document.addEventListener('click', e=>{
 /* ================= LOCK / UNLOCK OPEN SECTIONS ================= */
 function setFieldValues(vals){
   document.getElementById('descripcion').value=vals.descripcion||'';
-  document.getElementById('cualPermiso').value=vals.cualPermiso||'';
-  document.querySelectorAll('input[name=permAdicional]').forEach(r=>{ r.checked = (r.value===vals.permAdicional); });
   document.getElementById('desdeFecha').value=vals.desdeFecha||'';
-  document.getElementById('desdeHora').value=vals.desdeHora||'';
   document.getElementById('hastaFecha').value=vals.hastaFecha||'';
-  document.getElementById('hastaHora').value=vals.hastaHora||'';
   document.getElementById('sitio').value=vals.sitio||'';
   document.getElementById('responsable').value=vals.responsable||'';
+  document.getElementById('herramientas').value=vals.herramientas||'';
   document.getElementById('observaciones').value=vals.observaciones||'';
-  document.getElementById('herramientas').value=vals.herramientas||''; document.getElementById('gasesDetecta').value=vals.gasesDetecta||'';
-  document.querySelectorAll('input[name=cuentaPlaneacion]').forEach(r=>{ r.checked = (r.value===vals.cuentaPlaneacion); });
+  document.getElementById('docATS').checked=!!vals.docATS; document.getElementById('docCaliente').checked=!!vals.docCaliente;
+  document.getElementById('docAltura').checked=!!vals.docAltura; document.getElementById('docConfinado').checked=!!vals.docConfinado;
+  document.getElementById('docOtros').value=vals.docOtros||'';
+  document.getElementById('bajaTension').value=vals.bajaTension||''; document.getElementById('mediaTension').value=vals.mediaTension||'';
 }
 function lockOpenSections(){
   locked=true;
@@ -798,15 +621,15 @@ function collectOpenData(){
   return {
     permitCode, status:'ABIERTO', createdAt:new Date().toISOString(),
     descripcion:document.getElementById('descripcion').value,
-    cualPermiso:document.getElementById('cualPermiso').value,
-    permAdicional:(document.querySelector('input[name=permAdicional]:checked')||{}).value||'No',
-    desdeFecha:document.getElementById('desdeFecha').value, desdeHora:document.getElementById('desdeHora').value,
-    hastaFecha:document.getElementById('hastaFecha').value, hastaHora:document.getElementById('hastaHora').value,
+    desdeFecha:document.getElementById('desdeFecha').value,
+    hastaFecha:document.getElementById('hastaFecha').value,
     sitio:document.getElementById('sitio').value, responsable:document.getElementById('responsable').value,
-    herramientas:document.getElementById('herramientas').value, gasesDetecta:document.getElementById('gasesDetecta').value,
-    cuentaPlaneacion:(document.querySelector('input[name=cuentaPlaneacion]:checked')||{}).value||'No',
-    gases: collectGasState(), epp: collectEppState(),
-    checklist:checklistState, equipos:equiposState,
+    herramientas:document.getElementById('herramientas').value,
+    docATS:document.getElementById('docATS').checked, docCaliente:document.getElementById('docCaliente').checked,
+    docAltura:document.getElementById('docAltura').checked, docConfinado:document.getElementById('docConfinado').checked,
+    docOtros:document.getElementById('docOtros').value,
+    bajaTension:document.getElementById('bajaTension').value, mediaTension:document.getElementById('mediaTension').value,
+    checklist:checklistState, equipos:equiposState, controles:controlesState,
     observaciones:document.getElementById('observaciones').value,
     responsablesSigs: collectResponsables(),
     ejecutantes: collectExecRows()
@@ -835,9 +658,9 @@ function loadOpenDataIntoForm(data){
   permitCode=data.permitCode;
   Object.assign(checklistState, data.checklist||{});
   Object.assign(equiposState, data.equipos||{});
+  Object.assign(controlesState, data.controles||{});
   setFieldValues(data);
-  restoreGasState(data.gases); restoreEppState(data.epp);
-  applyToggleState(checklistState); applyToggleState(equiposState);
+  applyToggleState(checklistState); applyToggleState(equiposState); applyToggleState(controlesState);
   updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
   (data.responsablesSigs||[]).forEach((r,i)=>{
     const id='resp'+i;
@@ -851,8 +674,8 @@ function loadOpenDataIntoForm(data){
 }
 
 /* ================= WEB APP URL (Google Apps Script) ================= */
-// URL fija del backend en Google Apps Script (Permisos SSTA-F-117)
-const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyxhxDkj4TUgrzK0tF8vrB74CMwT4QfI5N8-7y51m9GwPf4nS3wpjW7pfzdPIO9SqZz/exec';
+// URL fija del backend en Google Apps Script (Permisos SSTA-F-180)
+const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwJp5pxDrDqV-FTGwmXGvf-6TohvzKd8inARM1McSDV-ChWU3YMQV70RVqf9tZmnajd/exec';
 const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
@@ -896,24 +719,21 @@ function scrollToEl(el){ if(el) el.scrollIntoView({behavior:'smooth', block:'cen
 function validateOpenData(){
   const missing=[];
   const descripcion=document.getElementById('descripcion');
-  if(!descripcion.value.trim()) missing.push({msg:'Descripción del trabajo (sección 1)', el:descripcion});
-  const permAdicional=(document.querySelector('input[name=permAdicional]:checked')||{}).value;
-  if(permAdicional==='Si' && !document.getElementById('cualPermiso').value.trim()) missing.push({msg:'¿Cuál permiso adicional? (sección 1)', el:document.getElementById('cualPermiso')});
+  if(!descripcion.value.trim()) missing.push({msg:'Descripción del trabajo (sección A)', el:descripcion});
 
-  const desdeFecha=document.getElementById('desdeFecha'), desdeHora=document.getElementById('desdeHora');
-  const hastaFecha=document.getElementById('hastaFecha'), hastaHora=document.getElementById('hastaHora');
+  const desdeFecha=document.getElementById('desdeFecha'), hastaFecha=document.getElementById('hastaFecha');
   const sitio=document.getElementById('sitio'), responsable=document.getElementById('responsable');
-  if(!desdeFecha.value) missing.push({msg:'Fecha "Desde" (sección 2)', el:desdeFecha});
-  if(!desdeHora.value) missing.push({msg:'Hora "Desde" (sección 2)', el:desdeHora});
-  if(!hastaFecha.value) missing.push({msg:'Fecha "Hasta" (sección 2)', el:hastaFecha});
-  if(!hastaHora.value) missing.push({msg:'Hora "Hasta" (sección 2)', el:hastaHora});
-  if(!sitio.value.trim()) missing.push({msg:'Sitio exacto del trabajo (sección 2)', el:sitio});
-  if(!responsable.value.trim()) missing.push({msg:'Responsable del trabajo (sección 2)', el:responsable});
+  if(!desdeFecha.value) missing.push({msg:'Fecha "Desde" (sección A)', el:desdeFecha});
+  if(!hastaFecha.value) missing.push({msg:'Fecha "Hasta" (sección A)', el:hastaFecha});
+  if(!sitio.value.trim()) missing.push({msg:'Sitio exacto del trabajo (sección A)', el:sitio});
+  if(!responsable.value.trim()) missing.push({msg:'Responsable del trabajo (sección A)', el:responsable});
 
   const chkPending=Object.values(checklistState).filter(v=>v===null).length;
-  if(chkPending>0) missing.push({msg:`${chkPending} ítem(s) sin marcar en la Lista de verificación (sección 3)`, el:document.getElementById('checklistContainer')});
+  if(chkPending>0) missing.push({msg:`${chkPending} ítem(s) sin marcar en Preparación para el trabajo (sección C)`, el:document.getElementById('checklistContainer')});
   const eqPending=Object.values(equiposState).filter(v=>v===null).length;
-  if(eqPending>0) missing.push({msg:`${eqPending} ítem(s) sin marcar en Verificación de equipos (sección 4)`, el:document.getElementById('equiposContainer')});
+  if(eqPending>0) missing.push({msg:`${eqPending} ítem(s) sin marcar en EPP requeridos (sección D)`, el:document.getElementById('equiposContainer')});
+  const ctlPending=Object.values(controlesState).filter(v=>v===null).length;
+  if(ctlPending>0) missing.push({msg:`${ctlPending} ítem(s) sin marcar en Controles del área (sección E)`, el:document.getElementById('controlesContainer')});
 
   responsables.forEach((label,i)=>{
     const id='resp'+i;
@@ -1051,49 +871,6 @@ document.getElementById('loadCodeBtn').addEventListener('click', ()=>{
   if(!code){ alert('Escribe el código del permiso.'); return; }
   openCloseModeWithCode(code);
 });
-
-/* ================= REGISTRAR LECTURA SIN CERRAR EL PERMISO ================= */
-let quickReadingData = null;
-document.getElementById('loadReadingBtn').addEventListener('click', async ()=>{
-  const code = document.getElementById('readingCodeInput').value.trim();
-  if(!code){ alert('Escribe el código del permiso.'); return; }
-  const btn = document.getElementById('loadReadingBtn');
-  btn.disabled = true; btn.textContent = 'Buscando…';
-  const data = await fetchFromSheet(code);
-  btn.disabled = false; btn.textContent = 'Cargar permiso y registrar lectura';
-  if(!data) return;
-  if(data.status !== 'ABIERTO'){
-    alert('Este permiso no está abierto actualmente (estado: ' + (data.status||'desconocido') + '), no se pueden agregar lecturas.');
-    return;
-  }
-  quickReadingData = data;
-  document.getElementById('landing').style.display='none';
-  document.getElementById('readingApp').style.display='block';
-  document.getElementById('readingPermitCode').textContent = data.permitCode;
-  gasState.lecturas = [];
-  renderGasTable(document.getElementById('gasTableContainerQuick'));
-  restoreGasState(data.gases);
-});
-document.getElementById('readingBackBtn').addEventListener('click', ()=>{
-  document.getElementById('readingApp').style.display='none';
-  document.getElementById('landing').style.display='block';
-  document.getElementById('readingCodeInput').value='';
-  document.getElementById('readingStatus').textContent='';
-});
-document.getElementById('readingSaveBtn').addEventListener('click', async ()=>{
-  if(!quickReadingData) return;
-  const statusEl = document.getElementById('readingStatus');
-  const btn = document.getElementById('readingSaveBtn');
-  btn.disabled = true; statusEl.textContent = 'Guardando…';
-  quickReadingData.gases = collectGasState();
-  const res = await sendToSheet(quickReadingData);
-  btn.disabled = false;
-  if(res.ok){
-    statusEl.textContent = '✓ Lectura guardada — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-  } else {
-    statusEl.textContent = res.error || 'No se pudo guardar. Verifique su conexión e intente de nuevo.';
-  }
-});
 document.getElementById('listOpenBtn').addEventListener('click', async ()=>{
   const listEl=document.getElementById('openList');
   listEl.innerHTML='Buscando…';
@@ -1190,8 +967,8 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
 });
 
 // ---------- Borrador local (autosave) ----------
-const DRAFT_KEY_OPEN = 'indimon-draft-confinados-open';
-const draftKeyClose = code => `indimon-draft-confinados-close-${code}`;
+const DRAFT_KEY_OPEN = 'indimon-draft-electrico-open';
+const draftKeyClose = code => `indimon-draft-electrico-close-${code}`;
 
 const saveOpenDraft = debounce(()=>{
   if(MODE!=='open') return;

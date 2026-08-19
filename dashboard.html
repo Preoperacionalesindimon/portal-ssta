@@ -47,7 +47,8 @@ const PERMIT_BACKENDS = [
   { nombre: 'Trabajo en Caliente', url: 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
   { nombre: 'Trabajo en Alturas',  url: 'https://script.google.com/macros/s/AKfycbz9GGsiiN1vQCtbGv6DNbbIuuvnZzQtkdnyvTRRKCz-5DpCcf1FLabYsmwzR_MErX4Y/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
   { nombre: 'Espacios Confinados', url: 'https://script.google.com/macros/s/AKfycbyxhxDkj4TUgrzK0tF8vrB74CMwT4QfI5N8-7y51m9GwPf4nS3wpjW7pfzdPIO9SqZz/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
-  { nombre: 'Izajes de Cargas',    url: 'https://script.google.com/macros/s/AKfycbwXXba-BzG5ucD8luaszHG7zg2XVAeLucUuHyi_ENmh5Os82mjkoB9Yfp3j2vwd_Onw_A/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' }
+  { nombre: 'Izajes de Cargas',    url: 'https://script.google.com/macros/s/AKfycbwXXba-BzG5ucD8luaszHG7zg2XVAeLucUuHyi_ENmh5Os82mjkoB9Yfp3j2vwd_Onw_A/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
+  { nombre: 'Trabajo Eléctrico',   url: 'https://script.google.com/macros/s/AKfycbwJp5pxDrDqV-FTGwmXGvf-6TohvzKd8inARM1McSDV-ChWU3YMQV70RVqf9tZmnajd/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' }
 ];
 
 function horasDesde(fechaStr){
@@ -73,7 +74,7 @@ async function cargar(){
         data.rows.filter(r=>r.status==='ABIERTO').forEach(r=>{
           items.push({
             tipo: backend.nombre,
-            icono: backend.nombre.includes('Caliente') ? '🔥' : backend.nombre.includes('Confinados') ? '🕳️' : backend.nombre.includes('Izajes') ? '🏗️' : '🧗',
+            icono: backend.nombre.includes('Caliente') ? '🔥' : backend.nombre.includes('Confinados') ? '🕳️' : backend.nombre.includes('Izajes') ? '🏗️' : backend.nombre.includes('Eléctrico') ? '⚡' : '🧗',
             code: r.code || r.permitCode || '—',
             responsable: r.responsable || '',
             area: r.sitio || r.area || '',

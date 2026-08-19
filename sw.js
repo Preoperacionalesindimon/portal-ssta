@@ -26,6 +26,7 @@ const PAGES = [
   './permiso-trabajo-caliente.html',
   './permiso-espacios-confinados.html',
   './permiso-izajes-cargas.html',
+  './permiso-trabajo-electrico.html',
   './dashboard.html'
 ];
 const STATIC_ASSETS = [
