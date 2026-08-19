@@ -23,7 +23,10 @@ const PAGES = [
   './',
   './index.html',
   './permiso-trabajo-alturas.html',
-  './permiso-trabajo-caliente.html'
+  './permiso-trabajo-caliente.html',
+  './permiso-espacios-confinados.html',
+  './permiso-izajes-cargas.html',
+  './dashboard.html'
 ];
 const STATIC_ASSETS = [
   './common.css',
