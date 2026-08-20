@@ -662,6 +662,7 @@ function loadOpenDataIntoForm(data){
   setFieldValues(data);
   applyToggleState(checklistState); applyToggleState(equiposState); applyToggleState(controlesState);
   updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
+  refreshPadsIn(document.getElementById('responsablesSigs')); // asegura tamaño correcto del lienzo antes de dibujar la firma guardada
   (data.responsablesSigs||[]).forEach((r,i)=>{
     const id='resp'+i;
     const nEl=document.getElementById(id+'nombre'), cEl=document.getElementById(id+'cc');

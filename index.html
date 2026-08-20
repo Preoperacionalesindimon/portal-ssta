@@ -991,19 +991,24 @@
 
   async function contarPermisosAbiertos() {
     let total = 0;
+    const detalle = [];
     for (const backend of PERMIT_BACKENDS) {
       if (!backend.url) continue;
       try {
         const res = await fetchWithRetry(backend.url + '?list=1&token=' + encodeURIComponent(backend.token || ''));
         const data = await res.json();
         if (data.ok && Array.isArray(data.rows)) {
-          total += data.rows.filter(r => r.status === 'ABIERTO').length;
+          const abiertos = data.rows.filter(r => r.status === 'ABIERTO').length;
+          if (abiertos > 0) { total += abiertos; detalle.push(abiertos + ' ' + backend.nombre); }
         }
       } catch (err) { /* backend no disponible, se omite silenciosamente */ }
     }
     const badge = document.getElementById('openPermitsBadge');
     if (total > 0) {
-      badge.textContent = total + (total === 1 ? ' abierto' : ' abiertos');
+      const resumen = detalle.length <= 3 ? ' (' + detalle.join(', ') + ')' : '';
+      badge.textContent = total + (total === 1 ? ' abierto' : ' abiertos') + resumen;
+      badge.title = detalle.join(' · ');
+      badge.setAttribute('aria-label', total + ' permisos abiertos: ' + detalle.join(', '));
       badge.style.display = 'inline-block';
     }
   }

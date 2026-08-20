@@ -905,10 +905,11 @@ function collectSig(canvas){ return canvas.toDataURL('image/png'); }
 function applySig(canvas, dataUrl){
   if(!dataUrl) return;
   const ctx = canvas.getContext('2d');
+  const ratio = Math.max(window.devicePixelRatio||1,1);
   const img = new Image();
   img.onload = ()=>{
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width/ratio,canvas.height/ratio);
     const statusEl = canvas.parentElement.querySelector('.sig-status');
     if(statusEl){ statusEl.textContent='Firmado'; statusEl.classList.add('signed'); }
   };

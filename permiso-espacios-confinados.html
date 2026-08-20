@@ -839,6 +839,7 @@ function loadOpenDataIntoForm(data){
   restoreGasState(data.gases); restoreEppState(data.epp);
   applyToggleState(checklistState); applyToggleState(equiposState);
   updateProgress(checklistState,'checklistProgress'); updateProgress(equiposState,'equiposProgress');
+  refreshPadsIn(document.getElementById('responsablesSigs')); // asegura tamaño correcto del lienzo antes de dibujar la firma guardada
   (data.responsablesSigs||[]).forEach((r,i)=>{
     const id='resp'+i;
     const nEl=document.getElementById(id+'nombre'), cEl=document.getElementById(id+'cc');
