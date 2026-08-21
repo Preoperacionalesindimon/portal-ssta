@@ -87,7 +87,30 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
 }
 #updateBanner button:hover{background:var(--bg);}
 
-#offlineBanner{
+/* ── Modo horizontal para firmar ──
+   Al girar el celular, se libera espacio vertical (encabezados/títulos más
+   compactos) y el lienzo de firma queda más bajo pero se estira a todo el
+   ancho de la pantalla — más cómodo para firmar con el dedo que en vertical. */
+@media (orientation: landscape) and (max-height: 500px){
+  .hdr, .header{padding:10px 16px !important;}
+  .hdr h1, .header h1{font-size:15px !important;}
+  .section-title{padding:8px 14px !important;font-size:11px !important;}
+  .section-body{padding:14px 16px !important;}
+  canvas.pad, canvas.sigpad, canvas.mini-pad{height:150px !important;}
+  #scrollProgress{height:2px;}
+}
+
+/* En vertical, sugiere girar el celular antes de firmar — desaparece solo al girar. */
+@media (orientation: portrait) and (max-width: 600px){
+  .sig-pad-wrap label::after, .sig-block h5::after{
+    content:" · 💡 gira el celular para firmar con más espacio";
+    font-weight:400;
+    text-transform:none;
+    color:var(--ink-soft, #8a97a3);
+    letter-spacing:0;
+    font-size:11px;
+  }
+}
   display:none;
   position:sticky;
   top:0;
