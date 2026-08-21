@@ -87,24 +87,25 @@
   .grid{padding:12px 14px;display:grid;gap:10px;}
   .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
   .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;}
-  .field label{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:600;}
   .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],.field textarea,.field select{
-    border:1px solid var(--line);
-    border-radius:4px;
-    padding:7px 9px;
-    font-size:13px;
+    border:1.5px solid var(--line);
+    border-radius:7px;
+    padding:13px 14px;
+    font-size:16px;
+    min-height:48px;
     font-family:inherit;
     background:#fafbfc;
     color:var(--text);
   }
-  .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
+  .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:48px;line-height:1.3;}
   .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:3px;padding:2px;cursor:pointer;}
   .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:4px;}
   .yn-opts.field-invalid .yn-btn{border-color:#c0392b;}
   .yn-row.field-invalid .yn-label{color:#c0392b;font-weight:700;}
   .sig-pad-wrap.field-invalid canvas.sigpad{border-color:#c0392b;border-width:2px;}
   .sig-pad-wrap.field-invalid label{color:#c0392b;}
-  .field textarea{resize:vertical;min-height:44px;}
+  .field textarea{resize:vertical;min-height:100px;line-height:1.5;}
   .field input:focus,.field textarea:focus,.field select:focus{
     outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(28,110,164,.15);
   }
@@ -236,7 +237,6 @@
     /* Apilar los campos de cada fila en una sola columna, evita amontonamiento */
     .row{flex-direction:column;gap:12px;}
     .row .field{min-width:0;width:100%;max-width:none !important;}
-    .field input,.field select,.field textarea{font-size:13.5px;}
 
     .yn-row{gap:8px;padding:9px 0;}
     .yn-label{min-width:100%;font-size:12.5px;line-height:1.4;}

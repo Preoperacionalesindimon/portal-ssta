@@ -75,23 +75,23 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
      el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
   input,select,textarea{font-size:16px !important;}
 }
-.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
-.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;background:#fcfbf8;color:var(--ink);}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
+.field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:#fcfbf8;color:var(--ink);}
 .field input.field-invalid,.field textarea.field-invalid,.field select.field-invalid{border-color:#c0392b;border-width:2px;background:#fdecea;}
 .field.field-invalid{box-shadow:inset 3px 0 0 #c0392b;padding-left:8px;}
 .section-body.field-invalid{box-shadow:inset 0 0 0 2px #c0392b;border-radius:0 0 var(--radius-lg,14px) var(--radius-lg,14px);}
 .field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
 .field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:4px;padding:2px;cursor:pointer;}
 .field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:6px;}
-.field textarea{min-height:64px;resize:vertical;}
+.field textarea{min-height:110px;resize:vertical;line-height:1.5;}
 .field input:disabled,.field textarea:disabled,.field select:disabled{background:#f0ede4;color:#7a7466;}
 .radio-row{display:flex;gap:18px;align-items:center;margin-top:4px;flex-wrap:wrap;}
-.radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;}
+.radio-row label{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;padding:4px 0;}
 .check-cat{margin-bottom:16px;}
 .check-cat h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--steel);border-bottom:2px solid var(--line);padding-bottom:6px;text-transform:uppercase;}
 .check-item{display:flex;align-items:flex-start;gap:12px;padding:9px 4px;border-bottom:1px dashed var(--line);}
 .check-item:last-child{border-bottom:none;}
-.check-item p{margin:0;font-size:13.5px;line-height:1.4;flex:1;padding-top:2px;}
+.check-item p{margin:0;font-size:14.5px;line-height:1.5;flex:1;padding-top:2px;}
 .toggle{display:flex;gap:4px;flex-shrink:0;}
 .toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 10px;font-size:11px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:36px;transition:.14s;}
 .toggle button.active-si{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
@@ -102,7 +102,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
 .sig-block h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:var(--steel);}
 .sig-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.sig-fields input{width:100%;border:1px solid var(--line);border-radius:5px;padding:7px 9px;font-size:13px;}
+.sig-fields input{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:11px 12px;font-size:15px;min-height:44px;}
 canvas.pad{width:100%;height:130px;border:1.5px dashed #b9b2a2;border-radius:6px;background:#fff;touch-action:none;cursor:crosshair;}
 canvas.pad.locked{cursor:default;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
@@ -112,7 +112,7 @@ canvas.pad.locked{cursor:default;}
 .exec-table{width:100%;border-collapse:collapse;margin-top:10px;}
 .exec-table th{background:var(--steel);color:#fff;font-size:10.5px;text-transform:uppercase;padding:8px 6px;text-align:left;}
 .exec-table td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle;}
-.exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:13px;}
+.exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
 .exec-table canvas.mini-pad{width:100%;height:90px;border:1px dashed #b9b2a2;border-radius:5px;background:#fff;touch-action:none;cursor:crosshair;}
 .mini-clear-btn{margin-top:4px;background:none;border:none;color:var(--ember-dark);font-size:10.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;}
 .mini-clear-btn:disabled{color:#b9b2a2;cursor:default;text-decoration:none;}
@@ -120,7 +120,7 @@ canvas.pad.locked{cursor:default;}
 .exec-table .helper{text-align:center;width:60px;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
-.close-q p{margin:0;font-size:13.5px;flex:1;}
+.close-q p{margin:0;font-size:14.5px;line-height:1.5;flex:1;}
 .footer-actions{margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-card);}
 .footer-actions .status{color:#e2b79c;font-size:11px;font-weight:600;line-height:1.3;}
 .btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm, 7px);font-size:12.5px;font-weight:700;cursor:pointer;}

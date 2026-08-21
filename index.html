@@ -1005,7 +1005,7 @@
     }
     const badge = document.getElementById('openPermitsBadge');
     if (total > 0) {
-      const resumen = detalle.length <= 3 ? ' (' + detalle.join(', ') + ')' : '';
+      const resumen = detalle.length ? ' (' + detalle.join(', ') + ')' : '';
       badge.textContent = total + (total === 1 ? ' abierto' : ' abiertos') + resumen;
       badge.title = detalle.join(' · ');
       badge.setAttribute('aria-label', total + ' permisos abiertos: ' + detalle.join(', '));
