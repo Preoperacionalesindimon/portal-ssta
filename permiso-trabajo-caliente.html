@@ -506,6 +506,25 @@ function setupPad(canvas){
 function refreshPadsIn(container){
   container.querySelectorAll('canvas.pad, canvas.mini-pad').forEach(c=>{ if(pads[c.id]) pads[c.id].refreshSize(); });
 }
+// Al girar el celular el lienzo cambia de tamaño en pantalla (ver CSS de modo
+// horizontal); sin este reajuste, el mapeo de coordenadas del dibujo queda
+// desfasado y el trazo aparece en un punto distinto de donde toca el dedo.
+// Se guarda la firma ya hecha, se reajusta el lienzo al nuevo tamaño y se
+// vuelve a dibujar, para no perder lo firmado.
+let _rotateTimer=null;
+function handleOrientationChange(){
+  clearTimeout(_rotateTimer);
+  _rotateTimer=setTimeout(()=>{
+    Object.keys(pads).forEach(id=>{
+      const pad=pads[id];
+      const saved=pad.hasInk()?pad.getDataUrl():null;
+      pad.refreshSize();
+      if(saved) pad.setDataUrl(saved);
+    });
+  },120); // pequeño margen para que el navegador termine de recalcular el layout
+}
+window.addEventListener('orientationchange', handleOrientationChange);
+window.addEventListener('resize', handleOrientationChange);
 function findStatusFor(id){
   if(id.startsWith('padCierre')) return document.getElementById('status'+id.replace('pad',''));
   if(id.startsWith('pad_resp')) return document.getElementById('status_'+id);

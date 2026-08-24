@@ -832,6 +832,27 @@ function resizeAllSigPads(){
 }
 document.querySelectorAll('canvas.sigpad').forEach(initSigPad);
 
+// Al girar el celular el lienzo cambia de tamaño en pantalla (ver CSS de modo
+// horizontal). Cambiar canvas.width/height borra el dibujo y desfasa el mapeo
+// de coordenadas del trazo respecto a donde toca el dedo. Por eso aquí se
+// guarda cada firma ya hecha, se reajusta el lienzo, y se vuelve a dibujar.
+let _rotateTimer=null;
+function handleOrientationChange(){
+  clearTimeout(_rotateTimer);
+  _rotateTimer=setTimeout(()=>{
+    const saved=[];
+    document.querySelectorAll('canvas.sigpad').forEach(c=>{
+      const statusEl=c.parentElement.querySelector('.sig-status');
+      const yaFirmado = statusEl && statusEl.classList.contains('signed');
+      saved.push([c, yaFirmado ? collectSig(c) : null]);
+    });
+    resizeAllSigPads();
+    saved.forEach(([c,url])=>{ if(url) applySig(c,url); });
+  },120); // pequeño margen para que el navegador termine de recalcular el layout
+}
+window.addEventListener('orientationchange', handleOrientationChange);
+window.addEventListener('resize', handleOrientationChange);
+
 // ---------- Workers (dynamic rows) ----------
 let workerCount = 0;
 const workersWrap = document.getElementById('workersWrap');
