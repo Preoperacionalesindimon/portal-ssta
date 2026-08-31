@@ -365,7 +365,7 @@ function buscarEnPersonal(valorInput){
   const match = valorInput.match(/^(.*)\s\(([^)]+)\)$/);
   if(match){
     const [,nombre,cedula] = match;
-    return personalCache.find(p=>p.cedula===cedula) || personalCache.find(p=>p.nombre===nombre);
+    return personalCache.find(p=>String(p.cedula)===String(cedula)) || personalCache.find(p=>p.nombre===nombre);
   }
   return personalCache.find(p=>p.nombre===valorInput);
 }
