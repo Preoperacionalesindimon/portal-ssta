@@ -790,7 +790,7 @@ roles.forEach(r=>{
   div.innerHTML = `
     <div class="field"><label>${r} — Nombre</label><input type="text"></div>
     <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>
-    <div class="field" style="min-width:220px;">
+    <div class="field" style="width:100%;">
       <label>Firma</label>
       <canvas class="sigpad" width="600" height="150"></canvas>
       <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
