@@ -1373,6 +1373,16 @@ document.getElementById('backToStartBtn').addEventListener('click', ()=>{
   location.href='index.html';
 });
 
+// Si se llega desde un enlace con ?code=XXX (ej. desde el dashboard de permisos),
+// abre ese permiso directamente en modo consulta/cierre, sin pasar por la pantalla de inicio.
+(function(){
+  const codeFromUrl = new URLSearchParams(location.search).get('code');
+  if(codeFromUrl){
+    document.getElementById('codeInput').value = codeFromUrl;
+    openCloseModeWithCode(codeFromUrl);
+  }
+})();
+
 </script>
 <script>
 window.addEventListener('load', ()=>{

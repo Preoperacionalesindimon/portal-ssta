@@ -1286,11 +1286,15 @@ function renderClosedPermits(rows){
   listEl.innerHTML = '';
   rows.slice().sort((a,b)=> new Date(b.closedAt||0) - new Date(a.closedAt||0)).forEach(r=>{
     const div = document.createElement('div');
-    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;background:#f7f9fb;';
+    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;background:#f7f9fb;cursor:pointer;';
     const closedTxt = r.closedAt ? new Date(r.closedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     div.innerHTML = `<b>${r.code}</b> <span style="color:#2f6b45;float:right;font-weight:600;">CERRADO</span>
       <div style="margin-top:3px;">Responsable: ${r.responsable || '<em>sin dato</em>'}</div>
       <div style="color:#888;">Cerrado: ${closedTxt}</div>`;
+    div.addEventListener('click', ()=>{
+      document.getElementById('closeCodeInput').value = r.code;
+      document.getElementById('btnFetchPermit').click();
+    });
     listEl.appendChild(div);
   });
 }
@@ -1312,26 +1316,35 @@ document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
     const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
     const json = await res.json();
     if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
-    if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado previamente.'; msg.className='err'; return; }
-    // Success: load into form
+    // Success: load into form (funciona tanto para permisos abiertos como cerrados)
     currentMode = 'close-view';
     currentCode = json.code;
     gateScreen.style.display='none';
     sheetEl.style.display='block';
     statusBar.style.display='flex';
     codeTag.textContent = currentCode;
-    statusPill.textContent = 'ABIERTO — completando cierre';
-    statusPill.className = 'status-pill abierto';
     openPhaseEl.style.display='block';
     openPhaseEl.disabled = true; // read-only reference
     closePhaseEl.style.display='block';
-    closePhaseEl.disabled = false;
     resizeAllSigPads();
     applyOpenData(json.openData||{});
-    btnSaveOpen.style.display='none';
-    btnSaveClose.style.display='inline-block';
-    statusMsg.textContent = 'Permiso cargado. Complete la sección 10 (Cierre) y guarde.';
-    checkForCloseDraft(currentCode);
+    if(json.status === 'CERRADO'){
+      statusPill.textContent = 'CERRADO — modo consulta';
+      statusPill.className = 'status-pill cerrado';
+      closePhaseEl.disabled = true; // también de solo lectura
+      applyCloseData(json.closeData||{});
+      btnSaveOpen.style.display='none';
+      btnSaveClose.style.display='none';
+      statusMsg.textContent = 'Permiso cerrado — mostrando la información completa en modo consulta (no se puede editar).';
+    } else {
+      statusPill.textContent = 'ABIERTO — completando cierre';
+      statusPill.className = 'status-pill abierto';
+      closePhaseEl.disabled = false;
+      btnSaveOpen.style.display='none';
+      btnSaveClose.style.display='inline-block';
+      statusMsg.textContent = 'Permiso cargado. Complete la sección 10 (Cierre) y guarde.';
+      checkForCloseDraft(currentCode);
+    }
   }catch(err){
     msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
   }
@@ -1460,6 +1473,16 @@ btnSaveClose.addEventListener('click', async ()=>{
     btnSaveClose.disabled = false;
   }
 });
+
+// Si se llega desde un enlace con ?code=XXX (ej. desde el dashboard de permisos),
+// abre ese permiso directamente en modo consulta/cierre, sin pasar por la pantalla de inicio.
+(function(){
+  const codeFromUrl = new URLSearchParams(location.search).get('code');
+  if(codeFromUrl){
+    document.getElementById('closeCodeInput').value = codeFromUrl;
+    document.getElementById('btnFetchPermit').click();
+  }
+})();
 </script>
 <script>
 window.addEventListener('load', ()=>{

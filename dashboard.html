@@ -157,7 +157,7 @@ function render(){
     listEl.innerHTML = items.map(it=>{
       const h = horasDesde(it.fechaApertura);
       const alerta = h!==null && h >= HORAS_ALERTA;
-      return `<a class="item ${alerta?'warn':''}" href="${it.archivo}">
+      return `<a class="item ${alerta?'warn':''}" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
         <div class="row1">
           <span><span class="icon-type">${it.icono}</span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>
@@ -168,12 +168,13 @@ function render(){
     }).join('');
   } else {
     listEl.innerHTML = items.map(it=>{
-      return `<a class="item closed" href="${it.archivo}">
+      return `<a class="item closed" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
         <div class="row1">
           <span><span class="icon-type">${it.icono}</span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo closed">Cerrado</span>
         </div>
         <div class="meta">${it.responsable ? 'Responsable: '+it.responsable : ''}${it.area ? ' · Área: '+it.area : ''}${it.fechaCierre ? ' · Cerrado: '+formatFecha(it.fechaCierre) : ''}</div>
+        <div class="chevron">Toca para ver el detalle completo →</div>
       </a>`;
     }).join('');
   }
