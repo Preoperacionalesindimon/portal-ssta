@@ -911,7 +911,6 @@ function addWorker(){
 }
 document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
 addWorker(); addWorker();
-cargarPersonalCompartido();
 
 // ==================================================================
 // CONFIGURACIÓN — pega aquí la URL de tu Apps Script (termina en /exec)
@@ -936,6 +935,7 @@ async function cargarPersonalCompartido(){
     personalCache = (data.ok && data.personal) ? data.personal : [];
   }catch(err){ /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */ }
 }
+cargarPersonalCompartido();
 
 /* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
    el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */

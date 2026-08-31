@@ -117,7 +117,7 @@ canvas.pad.locked{cursor:default;}
 .exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
 .exec-table canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;}
 .exec-table .idx{text-align:center;color:var(--muted);font-weight:700;width:26px;}
-.exec-table .helper{text-align:center;width:60px;}
+.exec-table .helper{text-align:left;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
 .close-q p{margin:0;font-size:14.5px;line-height:1.5;flex:1;}
@@ -311,7 +311,7 @@ canvas.pad.locked{cursor:default;}
       <div class="section-body">
         <div style="overflow-x:auto;">
           <table class="exec-table" id="execTable">
-            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Cargo</th><th class="helper">N.° tarjeta prof. <span style="font-weight:400;text-transform:none;">(opcional)</span></th><th class="idx"></th></tr></thead>
+            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th style="min-width:140px;">Cargo</th><th class="helper" style="min-width:140px;">N.° tarjeta prof. <span style="font-weight:400;text-transform:none;">(opcional)</span></th><th class="idx"></th></tr></thead>
             <tbody id="execBody"></tbody>
           </table>
         </div>
@@ -731,7 +731,7 @@ function loadOpenDataIntoForm(data){
 // SSTA-F-149 "Personal Autorizado". Solo lectura desde aquí: el
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
-const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbwJp5pxDrDqV-FTGwmXGvf-6TohvzKd8inARM1McSDV-ChWU3YMQV70RVqf9tZmnajd/exec';
+const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbwRGuUWavjJLM66lY3JdVPPmCop9Bl_VjoXRilvYhSLDUt_UveHtBnryJfgZFS0qE0pyQ/exec';
 const PERSONAL_DB_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026';
 let personalCache = [];
 async function cargarPersonalCompartido(){
@@ -776,7 +776,7 @@ function attachPersonalAutocomplete(inputEl, onSelect){
   window.addEventListener('scroll', cerrar, true);
 }
 
-const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwJp5pxDrDqV-FTGwmXGvf-6TohvzKd8inARM1McSDV-ChWU3YMQV70RVqf9tZmnajd/exec';
+const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzu2Q8h_Au-8KsbwNWnc_TdPK8wrcqDaLu5b-CJoCI3tdmFih06Uw5PKUK2OTwwt3WQ/exec';
 const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
