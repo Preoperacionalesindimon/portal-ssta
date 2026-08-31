@@ -106,6 +106,8 @@ canvas.pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px
 canvas.pad.locked{cursor:default;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
 .sig-actions button{background:none;border:none;color:var(--ember-dark);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;}
+.remove-exec-btn{background:none;border:1.5px solid var(--warn);color:var(--warn);font-size:12px;font-weight:700;border-radius:6px;padding:6px 12px;cursor:pointer;width:100%;}
+.remove-exec-btn:disabled{opacity:.4;cursor:default;}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.done{color:var(--ok);font-weight:700;}
 .exec-table{width:100%;border-collapse:collapse;margin-top:10px;}
@@ -290,7 +292,7 @@ canvas.pad.locked{cursor:default;}
       <div class="section-body">
         <div style="overflow-x:auto;">
           <table class="exec-table" id="execTable">
-            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Cargo</th></tr></thead>
+            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Cargo</th><th class="idx"></th></tr></thead>
             <tbody id="execBody"></tbody>
           </table>
         </div>
@@ -463,6 +465,8 @@ function applyToggleState(stateObj){
 
 /* ================= SIGNATURE PAD ================= */
 function setupPad(canvas){
+  if(canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners — evita doble "escucha" (firma errática)
+  canvas.dataset.sigInit = '1';
   const ctx=canvas.getContext('2d');
   let history=[];
   function resize(){
@@ -556,7 +560,7 @@ function addExecRow(prefill){
   execCounter++; const n=execCounter;
   const tr=document.createElement('tr');
   tr.innerHTML=`<td class="idx" data-label="#">${n}</td>
-    <td data-label="Nombre completo"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="execNombre${n}" list="personalDatalist"></td>
+    <td data-label="Nombre completo"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="execNombre${n}" autocomplete="off"></td>
     <td data-label="Documento"><input type="text" placeholder="C.C." id="execCC${n}"></td>
     <td data-label="Firma">
       <canvas class="mini-pad" id="execPad${n}"></canvas>
@@ -566,7 +570,8 @@ function addExecRow(prefill){
         <span class="sig-status" id="status_execPad${n}">Sin firmar</span>
       </div>
     </td>
-    <td data-label="Cargo"><input type="text" placeholder="Cargo" id="execCargo${n}"></td>`;
+    <td data-label="Cargo"><input type="text" placeholder="Cargo" id="execCargo${n}"></td>
+    <td class="idx"><button type="button" class="remove-exec-btn" data-remove-row="${n}" title="Quitar">✕</button></td>`;
   execBody.appendChild(tr);
   const c=document.getElementById('execPad'+n); setupPad(c);
   if(prefill){
@@ -575,14 +580,12 @@ function addExecRow(prefill){
     document.getElementById('execCargo'+n).value=prefill.cargo||'';
     if(prefill.sig) pads[c.id].setDataUrl(prefill.sig);
   }
-  document.getElementById('execNombre'+n).addEventListener('input', e=>{
-    const persona = buscarEnPersonal(e.target.value.trim());
-    if(persona){
-      e.target.value = persona.nombre;
-      document.getElementById('execCC'+n).value = persona.cedula;
-      document.getElementById('execCargo'+n).value = persona.cargo || '';
-    }
+  attachPersonalAutocomplete(document.getElementById('execNombre'+n), persona=>{
+    document.getElementById('execNombre'+n).value = persona.nombre;
+    document.getElementById('execCC'+n).value = persona.cedula;
+    document.getElementById('execCargo'+n).value = persona.cargo || '';
   });
+  tr.querySelector('[data-remove-row]').addEventListener('click', ()=>{ if(locked) return; delete pads['execPad'+n]; tr.remove(); });
   return n;
 }
 document.getElementById('addRowBtn').addEventListener('click', ()=>{ if(!locked) addExecRow(); });
@@ -630,6 +633,7 @@ function lockOpenSections(){
   document.querySelectorAll('#app button[data-key]').forEach(b=> b.disabled=true);
   document.querySelectorAll('#app canvas.pad, #app canvas.mini-pad').forEach(c=>{ if(!c.closest('#closeFields')) lockPad(c); });
   document.querySelectorAll('#app .sig-actions button').forEach(b=>{ if(!b.closest('#closeFields')) b.disabled=true; });
+  document.querySelectorAll('#app .remove-exec-btn').forEach(b=> b.disabled=true);
   document.getElementById('addRowBtn').style.display='none';
   ['titleSec1','titleSec2','titleSec3','titleSec4','titleSec5','titleSec6','titleSecExec'].forEach(id=> document.getElementById(id).classList.add('locked'));
 }
@@ -729,21 +733,42 @@ async function cargarPersonalCompartido(){
     const res = await fetchWithRetry(PERSONAL_DB_URL + '?action=listPersonal&token=' + encodeURIComponent(PERSONAL_DB_TOKEN));
     const data = await res.json();
     personalCache = (data.ok && data.personal) ? data.personal : [];
-    let dl = document.getElementById('personalDatalist');
-    if(!dl){ dl = document.createElement('datalist'); dl.id = 'personalDatalist'; document.body.appendChild(dl); }
-    const nombres = personalCache.map(p=>p.nombre);
-    dl.innerHTML = personalCache.map(p=>{
-      const repetido = nombres.filter(n=>n===p.nombre).length > 1;
-      return `<option value="${repetido ? p.nombre+' ('+p.cedula+')' : p.nombre}">`;
-    }).join('');
   }catch(err){ /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */ }
 }
-function buscarEnPersonal(valorInput){
-  const match = valorInput.match(/^(.*)\s\(([^)]+)\)$/);
-  if(match){ const [,nombre,cedula] = match; return personalCache.find(p=>String(p.cedula)===String(cedula)) || personalCache.find(p=>p.nombre===nombre); }
-  return personalCache.find(p=>p.nombre===valorInput);
-}
 cargarPersonalCompartido();
+
+/* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
+   el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
+function attachPersonalAutocomplete(inputEl, onSelect){
+  let box = null;
+  function cerrar(){ if(box){ box.remove(); box=null; } }
+  function abrir(){
+    cerrar();
+    const q = inputEl.value.trim().toLowerCase();
+    if(!q) return;
+    const matches = personalCache.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,6);
+    if(!matches.length) return;
+    box = document.createElement('div');
+    box.className = 'autocomplete-box';
+    const rect = inputEl.getBoundingClientRect();
+    box.style.position = 'absolute';
+    box.style.left = (rect.left + window.scrollX) + 'px';
+    box.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+    box.style.width = rect.width + 'px';
+    matches.forEach(p=>{
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.innerHTML = `<b>${p.nombre}</b><span>CC ${p.cedula}${p.cargo?' · '+p.cargo:''}</span>`;
+      item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
+      box.appendChild(item);
+    });
+    document.body.appendChild(box);
+  }
+  inputEl.addEventListener('input', abrir);
+  inputEl.addEventListener('focus', abrir);
+  inputEl.addEventListener('blur', ()=> setTimeout(cerrar, 150));
+  window.addEventListener('scroll', cerrar, true);
+}
 
 const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxUZGYywr8lScnlIzhy498ALZ5nODJGvsatNgz4oqMzbf5fzFZMsO6X3eyOPvt9VN9FUw/exec';
 const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script

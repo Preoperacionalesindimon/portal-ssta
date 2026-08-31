@@ -186,7 +186,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 
   <div class="card" style="margin-top:16px;">
     <div class="k" style="margin-bottom:8px;">Verificado y aprobado por</div>
-    <div class="field"><label>Nombre</label><input type="text" id="verifNombre" list="personalDatalist"></div>
+    <div class="field"><label>Nombre</label><input type="text" id="verifNombre" autocomplete="off"></div>
     <div class="field"><label>Cédula</label><input type="text" id="verifCedula"></div>
     <div class="field"><label>Firma del verificador</label>
       <canvas class="mini-pad" id="padVerificador"></canvas>
@@ -300,7 +300,6 @@ async function cargarPersonal(){
     const data = await res.json();
     personalCache = (data.ok && data.personal) ? data.personal : [];
     renderPersonalList();
-    renderPersonalDatalist();
   }catch(err){
     listEl.innerHTML = '<div class="empty">No se pudo cargar. Verifique su conexión.</div>';
   }
@@ -348,26 +347,37 @@ document.getElementById('btnGuardarPersona').addEventListener('click', async ()=
   }
 });
 
-/* Autocompletar de las filas de trabajadores del día, usando la base de datos */
-function renderPersonalDatalist(){
-  let dl = document.getElementById('personalDatalist');
-  if(!dl){ dl = document.createElement('datalist'); dl.id = 'personalDatalist'; document.body.appendChild(dl); }
-  // Si dos personas comparten nombre, se distinguen mostrando la cédula entre paréntesis.
-  const nombres = personalCache.map(p=>p.nombre);
-  dl.innerHTML = personalCache.map(p=>{
-    const repetido = nombres.filter(n=>n===p.nombre).length > 1;
-    const etiqueta = repetido ? `${p.nombre} (${p.cedula})` : p.nombre;
-    return `<option value="${etiqueta}">`;
-  }).join('');
-}
-function buscarEnPersonal(valorInput){
-  // Coincide tanto si el texto es "Nombre" como "Nombre (cédula)".
-  const match = valorInput.match(/^(.*)\s\(([^)]+)\)$/);
-  if(match){
-    const [,nombre,cedula] = match;
-    return personalCache.find(p=>String(p.cedula)===String(cedula)) || personalCache.find(p=>p.nombre===nombre);
+/* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
+   el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
+function attachPersonalAutocomplete(inputEl, onSelect){
+  let box = null;
+  function cerrar(){ if(box){ box.remove(); box=null; } }
+  function abrir(){
+    cerrar();
+    const q = inputEl.value.trim().toLowerCase();
+    if(!q) return;
+    const matches = personalCache.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,6);
+    if(!matches.length) return;
+    box = document.createElement('div');
+    box.className = 'autocomplete-box';
+    const rect = inputEl.getBoundingClientRect();
+    box.style.position = 'absolute';
+    box.style.left = (rect.left + window.scrollX) + 'px';
+    box.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+    box.style.width = rect.width + 'px';
+    matches.forEach(p=>{
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.innerHTML = `<b>${p.nombre}</b><span>CC ${p.cedula}${p.cargo?' · '+p.cargo:''}</span>`;
+      item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
+      box.appendChild(item);
+    });
+    document.body.appendChild(box);
   }
-  return personalCache.find(p=>p.nombre===valorInput);
+  inputEl.addEventListener('input', abrir);
+  inputEl.addEventListener('focus', abrir);
+  inputEl.addEventListener('blur', ()=> setTimeout(cerrar, 150));
+  window.addEventListener('scroll', cerrar, true);
 }
 
 /* ================= NAVEGACIÓN ================= */
@@ -554,10 +564,10 @@ document.getElementById('btnRegistrarHoy').addEventListener('click', async ()=>{
   trabajadorCounter = 0;
   agregarTrabajadorRow();
   document.getElementById('verifNombre').value=''; document.getElementById('verifCedula').value='';
-  document.getElementById('verifNombre').oninput = e=>{
-    const persona = buscarEnPersonal(e.target.value.trim());
-    if(persona){ e.target.value = persona.nombre; document.getElementById('verifCedula').value = persona.cedula; }
-  };
+  attachPersonalAutocomplete(document.getElementById('verifNombre'), persona=>{
+    document.getElementById('verifNombre').value = persona.nombre;
+    document.getElementById('verifCedula').value = persona.cedula;
+  });
   document.getElementById('registroStatus').textContent='';
   showScreen('screenRegistro');
   setTimeout(()=>{ document.querySelectorAll('#screenRegistro canvas.mini-pad').forEach(c=>{ if(pads[c.id]) pads[c.id].refreshSize(); }); }, 50);
@@ -579,7 +589,7 @@ function agregarTrabajadorRow(prefill){
   div.innerHTML = `
     <span class="num">${n}</span>
     <button type="button" class="remove-worker" data-remove="${n}">Quitar</button>
-    <input type="text" placeholder="Nombre completo (escribe para buscar)" id="trNombre${n}" list="personalDatalist" value="${prefill?prefill.nombre||'':''}">
+    <input type="text" placeholder="Nombre completo (escribe para buscar)" id="trNombre${n}" autocomplete="off" value="${prefill?prefill.nombre||'':''}">
     <input type="text" placeholder="Cédula" id="trCedula${n}" value="${prefill?prefill.cedula||'':''}">
     <input type="text" placeholder="Cargo" id="trCargo${n}" value="${prefill?prefill.cargo||'':''}">
     <canvas class="mini-pad" id="padTr${n}"></canvas>
@@ -592,13 +602,10 @@ function agregarTrabajadorRow(prefill){
   setupPad(document.getElementById('padTr'+n));
   div.querySelector('[data-remove]').addEventListener('click', ()=>{ delete pads['padTr'+n]; div.remove(); });
   // Autocompletar cédula/cargo cuando se elige (o se escribe exacto) un nombre de la base de datos.
-  document.getElementById('trNombre'+n).addEventListener('input', e=>{
-    const persona = buscarEnPersonal(e.target.value.trim());
-    if(persona){
-      e.target.value = persona.nombre;
-      document.getElementById('trCedula'+n).value = persona.cedula;
-      document.getElementById('trCargo'+n).value = persona.cargo || '';
-    }
+  attachPersonalAutocomplete(document.getElementById('trNombre'+n), persona=>{
+    document.getElementById('trNombre'+n).value = persona.nombre;
+    document.getElementById('trCedula'+n).value = persona.cedula;
+    document.getElementById('trCargo'+n).value = persona.cargo || '';
   });
 }
 document.getElementById('btnAgregarTrabajador').addEventListener('click', ()=> agregarTrabajadorRow());

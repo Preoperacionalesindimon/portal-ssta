@@ -118,6 +118,21 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
     margin-top:3px;
   }
 }
+/* Cuadro de sugerencias del autocompletar de personal (reemplaza al datalist
+   nativo, que casi no funciona en Safari de iPhone) */
+.autocomplete-box{
+  background:#fff; border:1.5px solid var(--line,#dde3e8); border-radius:8px;
+  box-shadow:0 6px 18px rgba(15,25,35,.18); z-index:10001; max-height:220px; overflow-y:auto;
+}
+.autocomplete-item{
+  padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--line-soft,#eaeef1);
+  display:flex; flex-direction:column; gap:1px;
+}
+.autocomplete-item:last-child{border-bottom:none;}
+.autocomplete-item:hover, .autocomplete-item:active{background:var(--bg,#eef1f4);}
+.autocomplete-item b{font-size:13px;color:var(--ink,#151b24);}
+.autocomplete-item span{font-size:11px;color:var(--ink-soft,#8a97a3);}
+
 #offlineBanner{
   display:none;
   position:sticky;

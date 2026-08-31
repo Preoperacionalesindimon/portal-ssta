@@ -76,7 +76,9 @@
     font-weight:600;
     padding:7px 14px;
     letter-spacing:.2px;
+    display:flex;align-items:center;gap:8px;
   }
+  .progress-pill{font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:20px;margin-left:auto;}
   .section-note{
     background:#fff7e0;
     color:#7a5b00;
@@ -655,9 +657,26 @@ document.querySelectorAll('.yn-opts').forEach(group => {
       else if(v==='NO') btn.classList.add('active-no');
       else btn.classList.add('active-na');
       btn.setAttribute('aria-pressed','true');
+      updateSectionPills();
     });
   });
 });
+
+// ---------- Contador "X/Y" por sección (cuántas preguntas SI/NO/NA ya están respondidas) ----------
+function updateSectionPills(){
+  document.querySelectorAll('.section').forEach(section=>{
+    const groups = section.querySelectorAll('.yn-opts');
+    if(!groups.length) return; // secciones sin preguntas SI/NO/NA (ej. cálculos, firmas) no llevan contador
+    const title = section.querySelector('.section-title');
+    if(!title) return;
+    let pill = title.querySelector('.progress-pill');
+    if(!pill){ pill = document.createElement('span'); pill.className='progress-pill'; title.appendChild(pill); }
+    let respondidas = 0;
+    groups.forEach(g=>{ if(g.querySelector('.active-si,.active-no,.active-na')) respondidas++; });
+    pill.textContent = `${respondidas}/${groups.length}`;
+  });
+}
+updateSectionPills();
 
 // ---------- EPCC table ----------
 const epccItems = [
@@ -868,7 +887,7 @@ function addWorker(){
     <button type="button" class="remove-worker">Eliminar</button>
     <h4>Trabajador ${workerCount}</h4>
     <div class="worker-grid">
-      <input type="text" placeholder="Nombre completo (escribe para buscar)" class="w-nombre" list="personalDatalist">
+      <input type="text" placeholder="Nombre completo (escribe para buscar)" class="w-nombre" autocomplete="off">
       <input type="text" placeholder="Cédula" class="w-cedula">
       <input type="text" placeholder="Cargo" class="w-cargo">
       <select><option value="">Verificación seguridad social</option><option>Verificada</option><option>Pendiente</option></select>
@@ -884,13 +903,10 @@ function addWorker(){
   card.querySelector('.remove-worker').addEventListener('click', ()=>{
     card.remove();
   });
-  card.querySelector('.w-nombre').addEventListener('input', e=>{
-    const persona = buscarEnPersonal(e.target.value.trim());
-    if(persona){
-      e.target.value = persona.nombre;
-      card.querySelector('.w-cedula').value = persona.cedula;
-      card.querySelector('.w-cargo').value = persona.cargo || '';
-    }
+  attachPersonalAutocomplete(card.querySelector('.w-nombre'), persona=>{
+    card.querySelector('.w-nombre').value = persona.nombre;
+    card.querySelector('.w-cedula').value = persona.cedula;
+    card.querySelector('.w-cargo').value = persona.cargo || '';
   });
 }
 document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
@@ -918,19 +934,40 @@ async function cargarPersonalCompartido(){
     const res = await fetchWithRetry(PERSONAL_DB_URL + '?action=listPersonal&token=' + encodeURIComponent(PERSONAL_DB_TOKEN));
     const data = await res.json();
     personalCache = (data.ok && data.personal) ? data.personal : [];
-    let dl = document.getElementById('personalDatalist');
-    if(!dl){ dl = document.createElement('datalist'); dl.id = 'personalDatalist'; document.body.appendChild(dl); }
-    const nombres = personalCache.map(p=>p.nombre);
-    dl.innerHTML = personalCache.map(p=>{
-      const repetido = nombres.filter(n=>n===p.nombre).length > 1;
-      return `<option value="${repetido ? p.nombre+' ('+p.cedula+')' : p.nombre}">`;
-    }).join('');
   }catch(err){ /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */ }
 }
-function buscarEnPersonal(valorInput){
-  const match = valorInput.match(/^(.*)\s\(([^)]+)\)$/);
-  if(match){ const [,nombre,cedula] = match; return personalCache.find(p=>String(p.cedula)===String(cedula)) || personalCache.find(p=>p.nombre===nombre); }
-  return personalCache.find(p=>p.nombre===valorInput);
+
+/* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
+   el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
+function attachPersonalAutocomplete(inputEl, onSelect){
+  let box = null;
+  function cerrar(){ if(box){ box.remove(); box=null; } }
+  function abrir(){
+    cerrar();
+    const q = inputEl.value.trim().toLowerCase();
+    if(!q) return;
+    const matches = personalCache.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,6);
+    if(!matches.length) return;
+    box = document.createElement('div');
+    box.className = 'autocomplete-box';
+    const rect = inputEl.getBoundingClientRect();
+    box.style.position = 'absolute';
+    box.style.left = (rect.left + window.scrollX) + 'px';
+    box.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+    box.style.width = rect.width + 'px';
+    matches.forEach(p=>{
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.innerHTML = `<b>${p.nombre}</b><span>CC ${p.cedula}${p.cargo?' · '+p.cargo:''}</span>`;
+      item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
+      box.appendChild(item);
+    });
+    document.body.appendChild(box);
+  }
+  inputEl.addEventListener('input', abrir);
+  inputEl.addEventListener('focus', abrir);
+  inputEl.addEventListener('blur', ()=> setTimeout(cerrar, 150));
+  window.addEventListener('scroll', cerrar, true);
 }
 
 const statusMsg = document.getElementById('status-msg');
@@ -1050,6 +1087,7 @@ function applyOpenData(data){
   const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
   if(accessSigCanvas) applySig(accessSigCanvas, data.accessInspectorSig);
   updateCalc();
+  updateSectionPills();
 }
 function collectCloseData(){
   const closePhase = document.getElementById('closePhase');
@@ -1060,6 +1098,7 @@ function applyCloseData(data){
   const closePhase = document.getElementById('closePhase');
   applyYN(closePhase, data.yn||[]);
   applyTextFields(closePhase, data.text||[]);
+  updateSectionPills();
   const canvases = [...closePhase.querySelectorAll('canvas.sigpad')];
   canvases.forEach((c,i)=> applySig(c, (data.sigs||[])[i]));
 }
