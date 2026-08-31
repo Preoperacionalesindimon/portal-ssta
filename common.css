@@ -1,0 +1,133 @@
+/* ============================================================
+   common.css — Sistema de diseño compartido del Portal SSTA (INDIMON)
+   Usado por: index.html, permiso-trabajo-alturas.html,
+              permiso-trabajo-caliente.html, dashboard.html
+   ------------------------------------------------------------
+   Cada página conserva su color de acento propio (identidad del
+   tipo de permiso), pero ahora comparte también tipografía,
+   contraste de estados y un mismo componente de progreso —
+   para que las tres páginas se sientan como un solo producto.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-family);
+
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 7px;
+
+  --shadow-card: 0 3px 10px rgba(15,25,35,.07);
+  --shadow-float: 0 -6px 18px rgba(15,25,35,.12);
+  --shadow-lift: 0 4px 14px rgba(15,25,35,.14);
+
+  --paper:#ffffff;
+  --bg:#eef1f4;
+  --ink:#151b24;
+  --ink-soft:#5c6a76;
+  --line:#dde3e8;
+  --line-soft:#eaeef1;
+  --ok:#1d7a4c;
+  --warn:#c0392b;
+
+  --brand-index:  #F2C200;
+  --brand-alturas:#0f3a5f;
+  --brand-caliente:#c8461a;
+
+  --offline-bg: #7a1f14;
+}
+
+/* Evita el rebote/scroll accidental del navegador mientras se firma —
+   en algunos celulares eso hace que el trazo se desvíe de donde toca el dedo. */
+html, body{ overscroll-behavior: none; }
+canvas.pad, canvas.sigpad, canvas.mini-pad{ touch-action: none; }
+
+h1, .section-title, .gate-top h1, .header h1, .helper-title,
+.head .title h1, .card-title, .code, .code-tag {
+  font-family: var(--font-display);
+  letter-spacing:.01em;
+}
+
+/* ── Barra de progreso de scroll (elemento distintivo compartido) ──
+   Se activa con ScrollProgress.init(color) en common.js. Muestra cuánto
+   del formulario largo lleva recorrido el usuario — información real,
+   no decoración, en documentos de 10 secciones diligenciados en celular. */
+#scrollProgress{
+  position:fixed;
+  top:0; left:0;
+  height:3px;
+  width:0%;
+  background:var(--progress-color, var(--brand-alturas));
+  z-index:10000;
+  transition:width .08s linear;
+}
+
+#updateBanner{
+  position:sticky;
+  top:0;
+  z-index:9999;
+  background:var(--ink);
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#updateBanner button{
+  background:#fff;
+  color:var(--ink);
+  border:none;
+  border-radius:var(--radius-sm,7px);
+  font-size:11.5px;
+  font-weight:700;
+  padding:5px 12px;
+  cursor:pointer;
+}
+#updateBanner button:hover{background:var(--bg);}
+
+/* ── Modo horizontal para firmar ──
+   Al girar el celular, se libera espacio vertical (encabezados/títulos más
+   compactos) y el lienzo de firma queda más bajo pero se estira a todo el
+   ancho de la pantalla — más cómodo para firmar con el dedo que en vertical. */
+@media (orientation: landscape) and (max-height: 500px){
+  .hdr, .header{padding:10px 16px !important;}
+  .hdr h1, .header h1{font-size:15px !important;}
+  .section-title{padding:8px 14px !important;font-size:11px !important;}
+  .section-body{padding:14px 16px !important;}
+  canvas.pad, canvas.sigpad, canvas.mini-pad{height:150px !important;}
+  #scrollProgress{height:2px;}
+}
+
+/* En vertical, sugiere girar el celular antes de firmar — desaparece solo al girar. */
+@media (orientation: portrait) and (max-width: 600px){
+  .sig-pad-wrap label::after, .sig-block h5::after{
+    content:"💡 gira el celular para firmar con más espacio";
+    display:block;
+    font-weight:400;
+    text-transform:none;
+    color:var(--ink-soft, #8a97a3);
+    letter-spacing:0;
+    font-size:10.5px;
+    margin-top:3px;
+  }
+}
+#offlineBanner{
+  display:none;
+  position:sticky;
+  top:0;
+  z-index:9999;
+  background:var(--offline-bg);
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+  padding:7px 10px;
+  letter-spacing:.2px;
+}
