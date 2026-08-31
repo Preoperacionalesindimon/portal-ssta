@@ -550,6 +550,20 @@ function buildResponsablesUI(){
       <canvas class="pad" id="pad_${id}"></canvas>
       <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><button type="button" data-undo="pad_${id}">Deshacer trazo</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
     cont.appendChild(div);
+    attachPersonalAutocomplete(document.getElementById(id+'nombre'), persona=>{
+      document.getElementById(id+'nombre').value = persona.nombre;
+      document.getElementById(id+'cc').value = persona.cedula;
+    });
+  });
+  attachPersonalAutocomplete(document.getElementById('cierre1nombre'), persona=>{
+    document.getElementById('cierre1nombre').value = persona.nombre;
+    document.getElementById('cierre1cc').value = persona.cedula;
+    document.getElementById('cierre1cargo').value = persona.cargo || '';
+  });
+  attachPersonalAutocomplete(document.getElementById('cierre2nombre'), persona=>{
+    document.getElementById('cierre2nombre').value = persona.nombre;
+    document.getElementById('cierre2cc').value = persona.cedula;
+    document.getElementById('cierre2cargo').value = persona.cargo || '';
   });
 }
 
@@ -746,6 +760,8 @@ cargarPersonalCompartido();
 /* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
    el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
 function attachPersonalAutocomplete(inputEl, onSelect){
+  if(inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
+  inputEl.dataset.autocompleteInit = '1';
   let box = null;
   function cerrar(){ if(box){ box.remove(); box=null; } }
   function abrir(){

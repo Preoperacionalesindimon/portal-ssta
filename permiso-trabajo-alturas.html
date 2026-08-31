@@ -599,7 +599,7 @@
       <div class="field"><label>Observaciones</label><textarea placeholder="Observaciones finales del cierre"></textarea></div>
 
       <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text"></div>
+        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text" id="coordCierreNombre"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma coordinador — VoBo antes de archivar</label>
@@ -608,7 +608,7 @@
       </div>
 
       <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text"></div>
+        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text" id="supCierreNombre"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma supervisor de proyecto</label>
@@ -797,6 +797,12 @@ roles.forEach(r=>{
     </div>`;
   rolesWrap.appendChild(div);
   initSigPad(div.querySelector('canvas.sigpad'));
+  const nombreEl = div.querySelector('.field input[type=text]');
+  const cedulaEl = div.querySelectorAll('.field input[type=text]')[1];
+  attachPersonalAutocomplete(nombreEl, persona=>{
+    nombreEl.value = persona.nombre;
+    cedulaEl.value = persona.cedula;
+  });
 });
 
 // ---------- Calculo DTR ----------
@@ -850,6 +856,12 @@ function resizeAllSigPads(){
   sigPadResizers.forEach(fn=>fn());
 }
 document.querySelectorAll('canvas.sigpad').forEach(initSigPad);
+attachPersonalAutocomplete(document.getElementById('coordCierreNombre'), persona=>{
+  document.getElementById('coordCierreNombre').value = persona.nombre + ' — ' + persona.cedula;
+});
+attachPersonalAutocomplete(document.getElementById('supCierreNombre'), persona=>{
+  document.getElementById('supCierreNombre').value = persona.nombre + ' — ' + persona.cedula;
+});
 
 // Al girar el celular el lienzo cambia de tamaño en pantalla (ver CSS de modo
 // horizontal). Cambiar canvas.width/height borra el dibujo y desfasa el mapeo
@@ -940,6 +952,8 @@ cargarPersonalCompartido();
 /* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
    el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
 function attachPersonalAutocomplete(inputEl, onSelect){
+  if(inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
+  inputEl.dataset.autocompleteInit = '1';
   let box = null;
   function cerrar(){ if(box){ box.remove(); box=null; } }
   function abrir(){
