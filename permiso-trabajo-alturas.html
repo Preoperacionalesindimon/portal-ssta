@@ -360,6 +360,8 @@
     <div class="file-input-wrap" onclick="event.stopPropagation()">
       <input type="text" id="addPeopleCodeInputAlt" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
       <button class="gate-btn-secondary" id="loadAddPeopleBtnAlt" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Cargar permiso y agregar personal</button>
+      <button class="gate-btn-secondary" id="listOpenForAddBtnAlt" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver permisos abiertos</button>
+      <div id="openListForAddAlt" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
       <div id="addPeopleMsgAlt"></div>
     </div>
   </div>
@@ -1511,8 +1513,8 @@ btnSaveClose.addEventListener('click', async ()=>{
 })();
 
 /* ================= AGREGAR PERSONAL SIN CERRAR EL PERMISO ================= */
-document.getElementById('loadAddPeopleBtnAlt').addEventListener('click', async ()=>{
-  const code = document.getElementById('addPeopleCodeInputAlt').value.trim().toUpperCase();
+async function cargarParaAgregarPersonalAlt(code){
+  code = (code||'').trim().toUpperCase();
   const msg = document.getElementById('addPeopleMsgAlt');
   if(!code){ msg.textContent='Ingrese un código.'; msg.className='err'; return; }
   msg.textContent='Buscando...'; msg.className='';
@@ -1537,6 +1539,31 @@ document.getElementById('loadAddPeopleBtnAlt').addEventListener('click', async (
     document.getElementById('addPeopleMsgAlt2').textContent = '';
   }catch(err){
     msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
+  }
+}
+document.getElementById('loadAddPeopleBtnAlt').addEventListener('click', ()=>{
+  cargarParaAgregarPersonalAlt(document.getElementById('addPeopleCodeInputAlt').value);
+});
+document.getElementById('listOpenForAddBtnAlt').addEventListener('click', async ()=>{
+  const listEl = document.getElementById('openListForAddAlt');
+  listEl.innerHTML = 'Buscando…';
+  try{
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
+    const json = await res.json();
+    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
+    const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
+    if(abiertos.length===0){ listEl.innerHTML = '<em>No hay permisos abiertos.</em>'; return; }
+    listEl.innerHTML = '';
+    abiertos.forEach(r=>{
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
+      div.innerHTML = `<b>${r.code}</b> <span style="color:#888;float:right;">${r.status}</span>
+        <div style="margin-top:3px;">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>`;
+      div.addEventListener('click', ()=> cargarParaAgregarPersonalAlt(r.code));
+      listEl.appendChild(div);
+    });
+  }catch(err){
+    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
   }
 });
 document.getElementById('backFromAddPeopleBtnAlt').addEventListener('click', ()=>{

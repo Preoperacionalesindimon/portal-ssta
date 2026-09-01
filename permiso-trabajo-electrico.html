@@ -217,6 +217,8 @@ canvas.pad.locked{cursor:default;}
         <div class="file-input-wrap">
           <input type="text" id="addPeopleCodeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
           <button class="btn-secondary" id="loadAddPeopleBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y agregar personal</button>
+          <button class="btn-secondary" id="listOpenForAddBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <div id="openListForAdd" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
         </div>
       </div>
     </div>
@@ -1025,8 +1027,7 @@ document.getElementById('loadCodeBtn').addEventListener('click', ()=>{
 
 /* ================= AGREGAR PERSONAL SIN CERRAR EL PERMISO ================= */
 let addPeopleData = null;
-document.getElementById('loadAddPeopleBtn').addEventListener('click', async ()=>{
-  const code = document.getElementById('addPeopleCodeInput').value.trim();
+async function cargarParaAgregarPersonal(code){
   if(!code){ alert('Escribe el código del permiso.'); return; }
   const btn = document.getElementById('loadAddPeopleBtn');
   btn.disabled = true; btn.textContent = 'Buscando…';
@@ -1048,6 +1049,25 @@ document.getElementById('loadAddPeopleBtn').addEventListener('click', async ()=>
   (data.ejecutantes||[]).forEach(row=> addExecRow(row));
   addExecRow(); // fila extra en blanco lista para la persona nueva
   document.getElementById('addPeopleStatus').textContent = '';
+}
+document.getElementById('loadAddPeopleBtn').addEventListener('click', ()=>{
+  cargarParaAgregarPersonal(document.getElementById('addPeopleCodeInput').value.trim());
+});
+document.getElementById('listOpenForAddBtn').addEventListener('click', async ()=>{
+  const listEl = document.getElementById('openListForAdd');
+  listEl.innerHTML = 'Buscando…';
+  const rows = await fetchOpenList();
+  if(rows.length===0){ listEl.innerHTML = '<em>No hay permisos abiertos.</em>'; return; }
+  listEl.innerHTML = '';
+  rows.forEach(r=>{
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
+    div.innerHTML = `<b>${r.permitCode}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
+      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}`;
+    div.addEventListener('click', ()=> cargarParaAgregarPersonal(r.permitCode));
+    listEl.appendChild(div);
+  });
 });
 document.getElementById('backFromAddPeopleBtn').addEventListener('click', ()=>{
   document.getElementById('app').classList.remove('modo-agregar-personal');
