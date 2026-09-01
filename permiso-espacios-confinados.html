@@ -29,7 +29,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
 .section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
 /* Modo "agregar personal": solo se ve la sección de ejecutantes y un pie propio con Guardar. */
-#app.modo-agregar-personal .section:not(#execSection){display:none;}
+#app.modo-agregar-personal .section:not(#execSection),
+#app.modo-agregar-personal #draftBanner,
+#app.modo-agregar-personal #validationBanner{display:none !important;}
 #app.modo-agregar-personal .footer-actions{display:none;}
 #app.modo-agregar-personal #footerAddPeople{display:flex;}
 #footerAddPeople{
