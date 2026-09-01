@@ -29,11 +29,11 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
 .section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
 /* Modo "agregar personal": solo se ve la sección de ejecutantes y un pie propio con Guardar. */
-#app.modo-agregar-personal .section:not(#execSection),
-#app.modo-agregar-personal #draftBanner,
-#app.modo-agregar-personal #validationBanner{display:none !important;}
-#app.modo-agregar-personal .footer-actions{display:none;}
-#app.modo-agregar-personal #footerAddPeople{display:flex;}
+body.modo-agregar-personal #app .section:not(#execSection),
+body.modo-agregar-personal #draftBanner,
+body.modo-agregar-personal #validationBanner,
+body.modo-agregar-personal .footer-actions{display:none !important;}
+body.modo-agregar-personal #footerAddPeople{display:flex !important;}
 #footerAddPeople{
   display:none;position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;
   background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;
@@ -1041,6 +1041,7 @@ async function cargarParaAgregarPersonal(code){
   document.getElementById('landing').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('app').classList.add('modo-agregar-personal');
+  document.body.classList.add('modo-agregar-personal');
   document.getElementById('statusBanner').className = 'status-banner open';
   document.getElementById('statusBannerText').textContent = 'Permiso abierto — agregando personal sin cerrarlo';
   document.getElementById('permitCodeDisplay').textContent = data.permitCode;
@@ -1070,6 +1071,7 @@ document.getElementById('listOpenForAddBtn').addEventListener('click', async ()=
 });
 document.getElementById('backFromAddPeopleBtn').addEventListener('click', ()=>{
   document.getElementById('app').classList.remove('modo-agregar-personal');
+  document.body.classList.remove('modo-agregar-personal');
   document.getElementById('app').style.display='none';
   document.getElementById('landing').style.display='block';
   document.getElementById('addPeopleCodeInput').value='';
