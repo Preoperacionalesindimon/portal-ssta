@@ -39,10 +39,10 @@
   --offline-bg: #7a1f14;
 }
 
-/* Evita el rebote/scroll accidental del navegador mientras se firma —
-   en algunos celulares eso hace que el trazo se desvíe de donde toca el dedo. */
-html, body{ overscroll-behavior: none; }
-canvas.pad, canvas.sigpad, canvas.mini-pad{ touch-action: none; }
+/* Solo en el lienzo de firma (no en toda la página, que puede bloquear
+   la rueda del mouse en algunos navegadores) — evita el rebote/scroll
+   accidental mientras se firma. */
+canvas.pad, canvas.sigpad, canvas.mini-pad{ overscroll-behavior: contain; touch-action: none; }
 
 h1, .section-title, .gate-top h1, .header h1, .helper-title,
 .head .title h1, .card-title, .code, .code-tag {
