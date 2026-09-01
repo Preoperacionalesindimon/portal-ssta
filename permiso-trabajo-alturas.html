@@ -1585,9 +1585,13 @@ document.getElementById('saveAddPeopleBtnAlt').addEventListener('click', async (
     const json = await res.json();
     btn.disabled = false;
     if(json.ok){
-      statusEl.textContent = '✓ Personal guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      const nombres = (data.workers||[]).filter(w=> w.fields && w.fields[0] && w.fields[0].trim()).length;
+      statusEl.textContent = '✓ Guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('backFromAddPeopleBtnAlt').style.cssText = 'background:#1d7a4c;color:#fff;border-color:#1d7a4c;font-weight:700;';
+      alert(`✓ Personal guardado correctamente.\n\nEste permiso ahora tiene ${nombres} trabajador(es) registrado(s) en total.\n\nPuedes seguir agregando más gente, o tocar "Volver al inicio" cuando termines.`);
     } else {
       statusEl.textContent = json.error || 'No se pudo guardar.';
+      alert('No se pudo guardar: ' + (json.error || 'intente de nuevo.'));
     }
   }catch(err){
     btn.disabled = false;

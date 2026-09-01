@@ -1077,13 +1077,18 @@ document.getElementById('saveAddPeopleBtn').addEventListener('click', async ()=>
   const statusEl = document.getElementById('addPeopleStatus');
   const btn = document.getElementById('saveAddPeopleBtn');
   btn.disabled = true; statusEl.textContent = 'Guardando…';
-  addPeopleData.ejecutantes = collectExecRows();
+  const filas = collectExecRows();
+  addPeopleData.ejecutantes = filas;
   const res = await sendToSheet(addPeopleData);
   btn.disabled = false;
   if(res.ok){
-    statusEl.textContent = '✓ Personal guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const nombres = filas.filter(f=>f.nombre && f.nombre.trim()).length;
+    statusEl.textContent = '✓ Guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('backFromAddPeopleBtn').style.cssText = 'background:var(--ok,#1d7a4c);color:#fff;border-color:var(--ok,#1d7a4c);font-weight:700;';
+    alert(`✓ Personal guardado correctamente.\n\nEste permiso ahora tiene ${nombres} ejecutante(s) registrado(s) en total.\n\nPuedes seguir agregando más gente, o tocar "Volver al inicio" cuando termines.`);
   } else {
     statusEl.textContent = res.error || 'No se pudo guardar. Verifique su conexión e intente de nuevo.';
+    alert('No se pudo guardar: ' + (res.error || 'verifique su conexión e intente de nuevo.'));
   }
 });
 document.getElementById('listOpenBtn').addEventListener('click', async ()=>{
