@@ -70,10 +70,10 @@
 
   .section{border-top:1px solid var(--line);}
   /* Modo "agregar personal": solo se ve la sección de trabajadores y un pie propio con Guardar. */
-  #permitForm.modo-agregar-personal #openPhase > .section:not(#section10Workers),
-  #permitForm.modo-agregar-personal #closePhase,
-  #permitForm.modo-agregar-personal .footer-actions{display:none !important;}
-  #permitForm.modo-agregar-personal #footerAddPeopleAlt{display:flex;}
+  body.modo-agregar-personal #openPhase > .section:not(#section10Workers),
+  body.modo-agregar-personal #closePhase,
+  body.modo-agregar-personal .footer-actions{display:none !important;}
+  body.modo-agregar-personal #footerAddPeopleAlt{display:flex;}
   #footerAddPeopleAlt{
     display:none;position:sticky;bottom:0;margin-top:24px;background:#fff;border-top:2px solid var(--navy);
     padding:14px 20px;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
@@ -1527,6 +1527,7 @@ async function cargarParaAgregarPersonalAlt(code){
     gateScreen.style.display='none';
     sheetEl.style.display='block';
     sheetEl.classList.add('modo-agregar-personal');
+    document.body.classList.add('modo-agregar-personal');
     statusBar.style.display='flex';
     codeTag.textContent = currentCode;
     statusPill.textContent = 'ABIERTO — agregando personal';
@@ -1568,6 +1569,7 @@ document.getElementById('listOpenForAddBtnAlt').addEventListener('click', async 
 });
 document.getElementById('backFromAddPeopleBtnAlt').addEventListener('click', ()=>{
   sheetEl.classList.remove('modo-agregar-personal');
+  document.body.classList.remove('modo-agregar-personal');
   sheetEl.style.display='none';
   gateScreen.style.display='block';
   document.getElementById('addPeopleCodeInputAlt').value='';
