@@ -28,6 +28,15 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .status-banner.closed{background:#e9f5ec;color:var(--ok);border:1px solid #b9dcc2;}
 .status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
 .section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
+/* Modo "agregar personal": solo se ve la sección de ejecutantes y un pie propio con Guardar. */
+#app.modo-agregar-personal .section:not(#execSection){display:none;}
+#app.modo-agregar-personal .footer-actions{display:none;}
+#app.modo-agregar-personal #footerAddPeople{display:flex;}
+#footerAddPeople{
+  display:none;position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;
+  background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;
+  justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);
+}
 .section-title{background:linear-gradient(90deg, var(--ember), var(--ember-dark));color:#fff;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
 .section-title.locked{background:linear-gradient(90deg, var(--steel-mid), var(--steel));}
 .section-body{padding:18px 20px;}
@@ -209,6 +218,16 @@ canvas.pad.locked{cursor:default;}
           <button class="btn-secondary" id="loadReadingBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y registrar lectura</button>
         </div>
       </div>
+
+      <div class="choice-card" id="cardAddPeople">
+        <div class="icon">👥</div>
+        <h3>Agregar personal</h3>
+        <p>Para un permiso ya abierto en ejecución: suma más ejecutantes que se van uniendo al trabajo, sin cerrar el permiso.</p>
+        <div class="file-input-wrap">
+          <input type="text" id="addPeopleCodeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+          <button class="btn-secondary" id="loadAddPeopleBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y agregar personal</button>
+        </div>
+      </div>
     </div>
     <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
   </div>
@@ -311,7 +330,7 @@ canvas.pad.locked{cursor:default;}
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="execSection">
       <div class="section-title" id="titleSecExec">Ejecutantes — firma y registro</div>
       <div class="section-body">
         <div style="overflow-x:auto;">
@@ -371,6 +390,16 @@ canvas.pad.locked{cursor:default;}
     <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
   </div>
 </div>
+
+<div id="footerAddPeople">
+  <span class="status" id="addPeopleStatus">—</span>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn-secondary" id="backFromAddPeopleBtn" type="button">Volver al inicio</button>
+    <button class="btn-main" id="saveAddPeopleBtn" type="button">Guardar personal agregado</button>
+  </div>
+</div>
+
+</div><!-- /wrap -->
 
 <script src="common.js"></script>
 <script>
@@ -1156,6 +1185,53 @@ document.getElementById('loadCodeBtn').addEventListener('click', ()=>{
   const code=document.getElementById('codeInput').value.trim();
   if(!code){ alert('Escribe el código del permiso.'); return; }
   openCloseModeWithCode(code);
+});
+
+/* ================= AGREGAR PERSONAL SIN CERRAR EL PERMISO ================= */
+let addPeopleData = null;
+document.getElementById('loadAddPeopleBtn').addEventListener('click', async ()=>{
+  const code = document.getElementById('addPeopleCodeInput').value.trim();
+  if(!code){ alert('Escribe el código del permiso.'); return; }
+  const btn = document.getElementById('loadAddPeopleBtn');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  const data = await fetchFromSheet(code);
+  btn.disabled = false; btn.textContent = 'Cargar permiso y agregar personal';
+  if(!data) return;
+  if(data.status !== 'ABIERTO'){
+    alert('Este permiso no está abierto actualmente (estado: ' + (data.status||'desconocido') + '), no se puede agregar personal.');
+    return;
+  }
+  addPeopleData = data;
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('app').classList.add('modo-agregar-personal');
+  document.getElementById('statusBanner').className = 'status-banner open';
+  document.getElementById('statusBannerText').textContent = 'Permiso abierto — agregando personal sin cerrarlo';
+  document.getElementById('permitCodeDisplay').textContent = data.permitCode;
+  execCounter = 0; document.getElementById('execBody').innerHTML='';
+  (data.ejecutantes||[]).forEach(row=> addExecRow(row));
+  addExecRow(); // fila extra en blanco lista para la persona nueva
+  document.getElementById('addPeopleStatus').textContent = '';
+});
+document.getElementById('backFromAddPeopleBtn').addEventListener('click', ()=>{
+  document.getElementById('app').classList.remove('modo-agregar-personal');
+  document.getElementById('app').style.display='none';
+  document.getElementById('landing').style.display='block';
+  document.getElementById('addPeopleCodeInput').value='';
+});
+document.getElementById('saveAddPeopleBtn').addEventListener('click', async ()=>{
+  if(!addPeopleData) return;
+  const statusEl = document.getElementById('addPeopleStatus');
+  const btn = document.getElementById('saveAddPeopleBtn');
+  btn.disabled = true; statusEl.textContent = 'Guardando…';
+  addPeopleData.ejecutantes = collectExecRows();
+  const res = await sendToSheet(addPeopleData);
+  btn.disabled = false;
+  if(res.ok){
+    statusEl.textContent = '✓ Personal guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  } else {
+    statusEl.textContent = res.error || 'No se pudo guardar. Verifique su conexión e intente de nuevo.';
+  }
 });
 
 /* ================= REGISTRAR LECTURA SIN CERRAR EL PERMISO ================= */

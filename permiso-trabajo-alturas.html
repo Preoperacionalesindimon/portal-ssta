@@ -69,6 +69,15 @@
   .head .meta b{color:var(--text);font-weight:600;}
 
   .section{border-top:1px solid var(--line);}
+  /* Modo "agregar personal": solo se ve la sección de trabajadores y un pie propio con Guardar. */
+  #permitForm.modo-agregar-personal #openPhase > .section:not(#section10Workers),
+  #permitForm.modo-agregar-personal #closePhase,
+  #permitForm.modo-agregar-personal .footer-actions{display:none !important;}
+  #permitForm.modo-agregar-personal #footerAddPeopleAlt{display:flex;}
+  #footerAddPeopleAlt{
+    display:none;position:sticky;bottom:0;margin-top:24px;background:#fff;border-top:2px solid var(--navy);
+    padding:14px 20px;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  }
   .section-title{
     background:var(--navy);
     color:#fff;
@@ -343,6 +352,17 @@
       </div>
     </div>
   </div>
+
+  <div class="choice-card" id="cardAddPeopleAlturas">
+    <div class="icon">👥</div>
+    <h3>Agregar personal</h3>
+    <p>Para un permiso ya abierto en ejecución: suma más trabajadores que se van uniendo, sin cerrar el permiso.</p>
+    <div class="file-input-wrap" onclick="event.stopPropagation()">
+      <input type="text" id="addPeopleCodeInputAlt" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+      <button class="gate-btn-secondary" id="loadAddPeopleBtnAlt" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Cargar permiso y agregar personal</button>
+      <div id="addPeopleMsgAlt"></div>
+    </div>
+  </div>
   <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
 </div>
 
@@ -560,7 +580,7 @@
   </div>
 
   <!-- 10. TRABAJADORES -->
-  <div class="section">
+  <div class="section" id="section10Workers">
     <div class="section-title">Trabajadores autorizados — declaración y firma</div>
     <div class="section-note">Al firmar, cada trabajador declara estar en plena capacidad física y mental, capacitado con certificación vigente (18 meses), con EPP inspeccionado en perfectas condiciones, afiliación vigente a seguridad social y apto para trabajar en alturas.</div>
     <div class="workers-wrap" id="workersWrap"></div>
@@ -627,6 +647,12 @@
   <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
   <button class="btn btn-primary" id="btnSaveOpen">Guardar y generar código</button>
   <button class="btn btn-primary" id="btnSaveClose" style="display:none;">Guardar cierre del permiso</button>
+</div>
+
+<div id="footerAddPeopleAlt">
+  <span id="addPeopleMsgAlt2">—</span>
+  <button class="btn btn-secondary" id="backFromAddPeopleBtnAlt" type="button">Volver al inicio</button>
+  <button class="btn btn-primary" id="saveAddPeopleBtnAlt" type="button">Guardar personal agregado</button>
 </div>
 
 <script src="common.js"></script>
@@ -1483,6 +1509,65 @@ btnSaveClose.addEventListener('click', async ()=>{
     document.getElementById('btnFetchPermit').click();
   }
 })();
+
+/* ================= AGREGAR PERSONAL SIN CERRAR EL PERMISO ================= */
+document.getElementById('loadAddPeopleBtnAlt').addEventListener('click', async ()=>{
+  const code = document.getElementById('addPeopleCodeInputAlt').value.trim().toUpperCase();
+  const msg = document.getElementById('addPeopleMsgAlt');
+  if(!code){ msg.textContent='Ingrese un código.'; msg.className='err'; return; }
+  msg.textContent='Buscando...'; msg.className='';
+  try{
+    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
+    const json = await res.json();
+    if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
+    if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado, no se puede agregar personal.'; msg.className='err'; return; }
+    currentCode = json.code;
+    gateScreen.style.display='none';
+    sheetEl.style.display='block';
+    sheetEl.classList.add('modo-agregar-personal');
+    statusBar.style.display='flex';
+    codeTag.textContent = currentCode;
+    statusPill.textContent = 'ABIERTO — agregando personal';
+    statusPill.className = 'status-pill abierto';
+    openPhaseEl.style.display='block';
+    openPhaseEl.disabled = false; // sección de trabajadores debe quedar editable
+    resizeAllSigPads();
+    applyWorkers((json.openData||{}).workers || []);
+    addWorker(); // fila extra en blanco lista para la persona nueva
+    document.getElementById('addPeopleMsgAlt2').textContent = '';
+  }catch(err){
+    msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
+  }
+});
+document.getElementById('backFromAddPeopleBtnAlt').addEventListener('click', ()=>{
+  sheetEl.classList.remove('modo-agregar-personal');
+  sheetEl.style.display='none';
+  gateScreen.style.display='block';
+  document.getElementById('addPeopleCodeInputAlt').value='';
+});
+document.getElementById('saveAddPeopleBtnAlt').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('addPeopleMsgAlt2');
+  const btn = document.getElementById('saveAddPeopleBtnAlt');
+  btn.disabled = true; statusEl.textContent = 'Guardando…';
+  const data = collectOpenData();
+  try{
+    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'open', code: currentCode, data, token: CONFIG.API_TOKEN })
+    });
+    const json = await res.json();
+    btn.disabled = false;
+    if(json.ok){
+      statusEl.textContent = '✓ Personal guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    } else {
+      statusEl.textContent = json.error || 'No se pudo guardar.';
+    }
+  }catch(err){
+    btn.disabled = false;
+    statusEl.textContent = 'Sin conexión — se reintentará solo.';
+    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code: currentCode, data, token: CONFIG.API_TOKEN });
+  }
+});
 </script>
 <script>
 window.addEventListener('load', ()=>{
