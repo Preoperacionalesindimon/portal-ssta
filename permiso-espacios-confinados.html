@@ -86,6 +86,32 @@ body.modo-agregar-personal #footerAddPeople{display:flex !important;}
      el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
   input,select,textarea{font-size:16px !important;}
 }
+
+/* La tabla de ejecutantes también debe apilarse en tarjetas al girar el celular
+   a horizontal — de lo contrario, el ancho de pantalla supera los 600px y la
+   tabla vuelve a columnas angostas justo cuando se buscaba más espacio para
+   firmar. Se repiten aquí solo las reglas de la tabla (no todo el bloque móvil,
+   para no apilar innecesariamente el resto de secciones que sí caben side-by-side
+   en horizontal). */
+@media (orientation:landscape) and (max-width:960px){
+  .exec-table thead{display:none;}
+  .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
+  .exec-table{border:none;}
+  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .exec-table td{border:none;padding:9px 0;}
+  .exec-table td[data-label]::before{
+    content: attr(data-label);
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    color:var(--muted);
+    letter-spacing:.04em;
+    margin-bottom:6px;
+  }
+  .exec-table td.idx{display:none;}
+  canvas.mini-pad{height:170px !important;}
+}
 .field label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
 .field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:#fcfbf8;color:var(--ink);}
 .field input.field-invalid,.field textarea.field-invalid,.field select.field-invalid{border-color:#c0392b;border-width:2px;background:#fdecea;}
