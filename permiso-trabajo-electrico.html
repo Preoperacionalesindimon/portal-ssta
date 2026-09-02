@@ -554,7 +554,7 @@ function setupPad(canvas){
       if(history.length===0){ hasInk=false; markUnsigned(canvas.id); }
     },
     getDataUrl:()=> hasInk? canvas.toDataURL('image/png') : null,
-    setDataUrl:(url)=>{ if(!url) return; const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); hasInk=true; markSigned(canvas.id); }; img.src=url; },
+    setDataUrl:(url)=>{ if(!url) return; hasInk=true; markSigned(canvas.id); const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); }; img.src=url; },
     hasInk:()=>hasInk,
     refreshSize:resize
   };
