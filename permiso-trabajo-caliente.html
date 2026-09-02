@@ -147,7 +147,12 @@ canvas.pad.locked{cursor:default;}
 .remove-exec-btn:disabled{opacity:.4;cursor:default;}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.done{color:var(--ok);font-weight:700;}
-.exec-table{width:100%;border-collapse:collapse;margin-top:10px;}
+.exec-table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed;}
+.exec-table th.idx, .exec-table td.idx{width:34px;}
+.exec-table th:nth-child(2), .exec-table td:nth-child(2){width:22%;}
+.exec-table th:nth-child(3), .exec-table td:nth-child(3){width:16%;}
+.exec-table th:nth-child(4), .exec-table td:nth-child(4){width:38%;}
+.exec-table th:nth-child(5), .exec-table td:nth-child(5){width:18%;}
 .exec-table th{background:var(--steel);color:#fff;font-size:10.5px;text-transform:uppercase;padding:8px 6px;text-align:left;}
 .exec-table td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle;}
 .exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
