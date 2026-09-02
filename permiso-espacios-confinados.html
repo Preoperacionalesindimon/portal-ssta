@@ -939,7 +939,7 @@ function loadOpenDataIntoForm(data){
 // SSTA-F-149 "Personal Autorizado". Solo lectura desde aquí: el
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
-const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbwRGuUWavjJLM66lY3JdVPPmCop9Bl_VjoXRilvYhSLDUt_UveHtBnryJfgZFS0qE0pyQ/exec';
+const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
 const PERSONAL_DB_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026';
 let personalCache = [];
 async function cargarPersonalCompartido(){
@@ -986,7 +986,7 @@ function attachPersonalAutocomplete(inputEl, onSelect){
   window.addEventListener('scroll', cerrar, true);
 }
 
-const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyxhxDkj4TUgrzK0tF8vrB74CMwT4QfI5N8-7y51m9GwPf4nS3wpjW7pfzdPIO9SqZz/exec';
+const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec';
 const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
