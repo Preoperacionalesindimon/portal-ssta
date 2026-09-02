@@ -147,18 +147,14 @@ canvas.pad.locked{cursor:default;}
 .remove-exec-btn:disabled{opacity:.4;cursor:default;}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.done{color:var(--ok);font-weight:700;}
-.exec-table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed;}
-.exec-table th.idx, .exec-table td.idx{width:34px;}
-.exec-table th:nth-child(2), .exec-table td:nth-child(2){width:22%;}
-.exec-table th:nth-child(3), .exec-table td:nth-child(3){width:16%;}
-.exec-table th:nth-child(4), .exec-table td:nth-child(4){width:38%;}
-.exec-table th:nth-child(5), .exec-table td:nth-child(5){width:18%;}
-.exec-table th{background:var(--steel);color:#fff;font-size:10.5px;text-transform:uppercase;padding:8px 6px;text-align:left;}
-.exec-table td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle;}
-.exec-table input[type=text],.exec-table input[type=time]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
-.exec-table canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;}
-.exec-table .idx{text-align:center;color:var(--muted);font-weight:700;width:26px;}
-.exec-table .helper{text-align:center;width:60px;}
+.exec-cards{margin-top:10px;}
+.exec-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative;}
+.exec-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.exec-card-top .exec-num{font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border-radius:20px;padding:2px 10px;}
+.exec-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;}
+.exec-fields input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
+.exec-card .sig-pad-wrap label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;}
+.exec-card canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
 .add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
 .close-q p{margin:0;font-size:14.5px;line-height:1.5;flex:1;}
@@ -344,12 +340,7 @@ canvas.pad.locked{cursor:default;}
     <div class="section" id="execSection">
       <div class="section-title" id="titleSecExec">Ejecutante de la actividad</div>
       <div class="section-body">
-        <div style="overflow-x:auto;">
-          <table class="exec-table" id="execTable">
-            <thead><tr><th class="idx">#</th><th>Nombre completo</th><th>Documento</th><th style="min-width:200px;">Firma</th><th>Cargo</th><th class="idx"></th></tr></thead>
-            <tbody id="execBody"></tbody>
-          </table>
-        </div>
+        <div class="exec-cards" id="execBody"></div>
         <button class="add-row-btn" id="addRowBtn" type="button">+ Agregar ejecutante</button>
       </div>
     </div>
@@ -623,21 +614,28 @@ function buildResponsablesUI(){
 const execBody=document.getElementById('execBody');
 function addExecRow(prefill){
   execCounter++; const n=execCounter;
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td class="idx" data-label="#">${n}</td>
-    <td data-label="Nombre completo"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="execNombre${n}" autocomplete="off"></td>
-    <td data-label="Documento"><input type="text" placeholder="C.C." id="execCC${n}"></td>
-    <td data-label="Firma">
+  const card=document.createElement('div');
+  card.className = 'exec-card';
+  card.innerHTML=`
+    <div class="exec-card-top">
+      <span class="exec-num">Ejecutante ${n}</span>
+      <button type="button" class="remove-exec-btn" data-remove-row="${n}" title="Quitar">✕ Quitar</button>
+    </div>
+    <div class="exec-fields">
+      <input type="text" placeholder="Nombre completo (escribe para buscar)" id="execNombre${n}" autocomplete="off">
+      <input type="text" placeholder="Documento (C.C.)" id="execCC${n}">
+      <input type="text" placeholder="Cargo" id="execCargo${n}">
+    </div>
+    <div class="sig-pad-wrap">
+      <label>Firma</label>
       <canvas class="mini-pad" id="execPad${n}"></canvas>
       <div class="sig-actions">
         <button type="button" data-clear="execPad${n}">Borrar firma</button>
         <button type="button" data-undo="execPad${n}">Deshacer trazo</button>
         <span class="sig-status" id="status_execPad${n}">Sin firmar</span>
       </div>
-    </td>
-    <td data-label="Cargo"><input type="text" placeholder="Cargo" id="execCargo${n}"></td>
-    <td class="idx"><button type="button" class="remove-exec-btn" data-remove-row="${n}" title="Quitar">✕</button></td>`;
-  execBody.appendChild(tr);
+    </div>`;
+  execBody.appendChild(card);
   const c=document.getElementById('execPad'+n); setupPad(c);
   if(prefill){
     document.getElementById('execNombre'+n).value=prefill.nombre||'';
@@ -650,7 +648,7 @@ function addExecRow(prefill){
     document.getElementById('execCC'+n).value = persona.cedula;
     document.getElementById('execCargo'+n).value = persona.cargo || '';
   });
-  tr.querySelector('[data-remove-row]').addEventListener('click', ()=>{ if(locked) return; delete pads['execPad'+n]; tr.remove(); });
+  card.querySelector('[data-remove-row]').addEventListener('click', ()=>{ if(locked) return; delete pads['execPad'+n]; card.remove(); });
   return n;
 }
 document.getElementById('addRowBtn').addEventListener('click', ()=>{ if(!locked) addExecRow(); });
@@ -928,7 +926,7 @@ function validateOpenData(){
       } else { execValid++; }
     }
   }
-  if(execValid===0) missing.push({msg:'Debe registrarse al menos un ejecutante completo (nombre, documento y firma)', el:document.getElementById('execTable')});
+  if(execValid===0) missing.push({msg:'Debe registrarse al menos un ejecutante completo (nombre, documento y firma)', el:document.getElementById('execSection')});
 
   return missing;
 }
