@@ -143,7 +143,7 @@ canvas.pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px
 canvas.pad.locked{cursor:default;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
 .sig-actions button{background:none;border:none;color:var(--ember-dark);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;}
-.remove-exec-btn{background:none;border:1.5px solid var(--warn);color:var(--warn);font-size:12px;font-weight:700;border-radius:6px;padding:6px 12px;cursor:pointer;width:100%;}
+.remove-exec-btn{background:none;border:1.5px solid var(--warn);color:var(--warn);font-size:11px;font-weight:700;border-radius:20px;padding:4px 12px;cursor:pointer;white-space:nowrap;}
 .remove-exec-btn:disabled{opacity:.4;cursor:default;}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.done{color:var(--ok);font-weight:700;}
@@ -367,13 +367,13 @@ canvas.pad.locked{cursor:default;}
           <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
             <div class="sig-block">
               <h5>Trabajador autorizado responsable del trabajo</h5>
-              <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
               <canvas class="pad" id="padCierre1"></canvas>
               <div class="sig-actions"><button type="button" data-clear="padCierre1">Borrar firma</button><button type="button" data-undo="padCierre1">Deshacer trazo</button><span class="sig-status" id="statusCierre1">Sin firmar</span></div>
             </div>
             <div class="sig-block">
               <h5>Supervisor SSTA</h5>
-              <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
               <canvas class="pad" id="padCierre2"></canvas>
               <div class="sig-actions"><button type="button" data-clear="padCierre2">Borrar firma</button><button type="button" data-undo="padCierre2">Deshacer trazo</button><span class="sig-status" id="statusCierre2">Sin firmar</span></div>
             </div>
@@ -602,7 +602,7 @@ function buildResponsablesUI(){
     const id='resp'+i;
     const div=document.createElement('div'); div.className='sig-block';
     div.innerHTML=`<h5>${label}</h5>
-      <div class="sig-fields"><input type="text" placeholder="Nombre completo" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc"></div>
+      <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc"></div>
       <canvas class="pad" id="pad_${id}"></canvas>
       <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><button type="button" data-undo="pad_${id}">Deshacer trazo</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
     cont.appendChild(div);

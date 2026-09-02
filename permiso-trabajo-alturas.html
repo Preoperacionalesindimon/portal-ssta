@@ -621,7 +621,7 @@
       <div class="field"><label>Observaciones</label><textarea placeholder="Observaciones finales del cierre"></textarea></div>
 
       <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text" id="coordCierreNombre"></div>
+        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text" id="coordCierreNombre" placeholder="Nombre completo (escribe para buscar)"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma coordinador — VoBo antes de archivar</label>
@@ -630,7 +630,7 @@
       </div>
 
       <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text" id="supCierreNombre"></div>
+        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text" id="supCierreNombre" placeholder="Nombre completo (escribe para buscar)"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma supervisor de proyecto</label>
@@ -816,7 +816,7 @@ roles.forEach(r=>{
   const div = document.createElement('div');
   div.className = 'row';
   div.innerHTML = `
-    <div class="field"><label>${r} — Nombre</label><input type="text"></div>
+    <div class="field"><label>${r} — Nombre</label><input type="text" placeholder="Nombre completo (escribe para buscar)"></div>
     <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>
     <div class="field" style="flex:1 1 100%;">
       <label>Firma</label>
