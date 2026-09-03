@@ -697,7 +697,7 @@ function setFieldValues(vals){
   document.getElementById('desdeFecha').value=vals.desdeFecha||'';
   document.getElementById('hastaFecha').value=vals.hastaFecha||'';
   document.getElementById('sitio').value=vals.sitio||'';
-  document.getElementById('responsable').value=vals.responsable||'';
+  document.getElementById('responsable').value = (vals.responsableTrabajo!==undefined ? vals.responsableTrabajo : vals.responsable) || '';
   document.getElementById('herramientas').value=vals.herramientas||'';
   document.getElementById('observaciones').value=vals.observaciones||'';
   document.getElementById('docATS').checked=!!vals.docATS; document.getElementById('docCaliente').checked=!!vals.docCaliente;
@@ -750,7 +750,12 @@ function collectOpenData(){
     descripcion:document.getElementById('descripcion').value,
     desdeFecha:document.getElementById('desdeFecha').value,
     hastaFecha:document.getElementById('hastaFecha').value,
-    sitio:document.getElementById('sitio').value, responsable:document.getElementById('responsable').value,
+    sitio:document.getElementById('sitio').value,
+    // "responsable" es lo que se muestra en el dashboard como "quién abrió el permiso" —
+    // se usa el Supervisor SSTA (uno de los 4 responsables firmantes) en vez del campo
+    // libre "Responsable del trabajo", que queda guardado aparte por si se necesita.
+    responsableTrabajo: document.getElementById('responsable').value,
+    responsable: (document.getElementById('resp2nombre')||{}).value || document.getElementById('responsable').value,
     herramientas:document.getElementById('herramientas').value,
     docATS:document.getElementById('docATS').checked, docCaliente:document.getElementById('docCaliente').checked,
     docAltura:document.getElementById('docAltura').checked, docConfinado:document.getElementById('docConfinado').checked,

@@ -1111,6 +1111,12 @@ function collectOpenData(){
   const openPhase = document.getElementById('openPhase');
   const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
   const inspectorNombreEl = document.getElementById('inspectorNombreInput');
+  const areaEl = document.getElementById('areaAlt');
+  // "responsable" es lo que se muestra en el dashboard como "quién abrió el permiso" —
+  // se usa el Coordinador trabajo en alturas (primer rol de la lista de responsables),
+  // ya que en Alturas no existe un rol llamado literalmente "Supervisor SSTA".
+  const coordinadorRow = document.querySelector('#rolesWrap .row');
+  const coordinadorNombre = coordinadorRow ? (coordinadorRow.querySelector('input[type=text]')||{}).value : '';
   return {
     yn: collectYN(openPhase),
     text: collectTextFields(openPhase),
@@ -1118,7 +1124,9 @@ function collectOpenData(){
     roles: collectRoles(),
     workers: collectWorkers(),
     accessInspectorSig: accessSigCanvas ? collectSig(accessSigCanvas) : null,
-    responsable: inspectorNombreEl ? inspectorNombreEl.value : ''
+    inspectorAcceso: inspectorNombreEl ? inspectorNombreEl.value : '', // quien hizo la inspección del equipo (dato aparte, no es "el responsable" del permiso)
+    responsable: coordinadorNombre || (inspectorNombreEl ? inspectorNombreEl.value : ''),
+    area: areaEl ? areaEl.value : ''
   };
 }
 function applyOpenData(data){

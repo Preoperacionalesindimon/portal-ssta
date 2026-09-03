@@ -699,7 +699,7 @@ function setFieldValues(vals){
   document.getElementById('hastaFecha').value=vals.hastaFecha||'';
   document.getElementById('hastaHora').value=vals.hastaHora||'';
   document.getElementById('sitio').value=vals.sitio||'';
-  document.getElementById('responsable').value=vals.responsable||'';
+  document.getElementById('responsable').value = (vals.responsableTrabajo!==undefined ? vals.responsableTrabajo : vals.responsable) || '';
   document.getElementById('observaciones').value=vals.observaciones||'';
   document.getElementById('mantDia').value=vals.mantDia||''; document.getElementById('mantMes').value=vals.mantMes||''; document.getElementById('mantAnio').value=vals.mantAnio||'';
   document.getElementById('extDia').value=vals.extDia||''; document.getElementById('extMes').value=vals.extMes||''; document.getElementById('extAnio').value=vals.extAnio||'';
@@ -749,7 +749,12 @@ function collectOpenData(){
     permAdicional:(document.querySelector('input[name=permAdicional]:checked')||{}).value||'No',
     desdeFecha:document.getElementById('desdeFecha').value, desdeHora:document.getElementById('desdeHora').value,
     hastaFecha:document.getElementById('hastaFecha').value, hastaHora:document.getElementById('hastaHora').value,
-    sitio:document.getElementById('sitio').value, responsable:document.getElementById('responsable').value,
+    sitio:document.getElementById('sitio').value,
+    // "responsable" es lo que se muestra en el dashboard como "quién abrió el permiso" —
+    // se usa el Supervisor SSTA (uno de los 4 responsables firmantes) en vez del campo
+    // libre "Responsable del trabajo", que queda guardado aparte por si se necesita.
+    responsableTrabajo: document.getElementById('responsable').value,
+    responsable: (document.getElementById('resp2nombre')||{}).value || document.getElementById('responsable').value,
     checklist:checklistState, equipos:equiposState,
     mantDia:document.getElementById('mantDia').value, mantMes:document.getElementById('mantMes').value, mantAnio:document.getElementById('mantAnio').value,
     extDia:document.getElementById('extDia').value, extMes:document.getElementById('extMes').value, extAnio:document.getElementById('extAnio').value,
