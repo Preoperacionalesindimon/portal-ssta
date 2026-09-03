@@ -802,7 +802,7 @@ function loadOpenDataIntoForm(data){
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
 const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
-const PERSONAL_DB_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026';
+const PERSONAL_DB_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1';
 let personalCache = [];
 async function cargarPersonalCompartido(){
   try{
@@ -836,7 +836,7 @@ function attachPersonalAutocomplete(inputEl, onSelect){
     matches.forEach(p=>{
       const item = document.createElement('div');
       item.className = 'autocomplete-item';
-      item.innerHTML = `<b>${p.nombre}</b><span>CC ${p.cedula}${p.cargo?' · '+p.cargo:''}</span>`;
+      item.innerHTML = `<b>${esc(p.nombre)}</b><span>CC ${esc(p.cedula)}${p.cargo?' · '+esc(p.cargo):''}</span>`;
       item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
       box.appendChild(item);
     });
@@ -849,7 +849,7 @@ function attachPersonalAutocomplete(inputEl, onSelect){
 }
 
 const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec';
-const API_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026'; // debe coincidir con API_TOKEN en el Apps Script
+const API_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1'; // debe coincidir con API_TOKEN en el Apps Script
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
 }
@@ -1091,9 +1091,9 @@ document.getElementById('listOpenForAddBtn').addEventListener('click', async ()=
   rows.forEach(r=>{
     const div = document.createElement('div');
     div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-    div.innerHTML = `<b>${r.permitCode}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
-      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>
-      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}`;
+    div.innerHTML = `<b>${esc(r.permitCode)}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
+      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}`;
     div.addEventListener('click', ()=> cargarParaAgregarPersonal(r.permitCode));
     listEl.appendChild(div);
   });
@@ -1133,9 +1133,9 @@ document.getElementById('listOpenBtn').addEventListener('click', async ()=>{
   rows.forEach(r=>{
     const div=document.createElement('div');
     div.style.cssText='padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-    div.innerHTML=`<b>${r.permitCode}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
-      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>
-      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}`;
+    div.innerHTML=`<b>${esc(r.permitCode)}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
+      <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}`;
     div.addEventListener('click', ()=> openCloseModeWithCode(r.permitCode));
     listEl.appendChild(div);
   });
@@ -1160,9 +1160,9 @@ function renderClosedPermits(rows){
     const div = document.createElement('div');
     div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#f7f6f2;';
     const updTxt = r.updatedAt ? new Date(r.updatedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-    div.innerHTML = `<b>${r.permitCode}</b> <span style="color:var(--ok);float:right;font-weight:700;">CERRADO</span>
-      <div style="margin-top:3px;color:var(--steel);">Responsable: ${r.responsable || '<em>sin dato</em>'}</div>
-      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${r.sitio}</div>` : ''}
+    div.innerHTML = `<b>${esc(r.permitCode)}</b> <span style="color:var(--ok);float:right;font-weight:700;">CERRADO</span>
+      <div style="margin-top:3px;color:var(--steel);">Responsable: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
+      ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}
       <div style="color:var(--muted);font-size:11.5px;">Actualizado: ${updTxt}</div>`;
     listEl.appendChild(div);
   });

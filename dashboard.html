@@ -67,11 +67,11 @@ OfflineBanner.init();
 // Umbral (horas) a partir del cual un permiso abierto se marca en rojo.
 const HORAS_ALERTA = 8;
 const PERMIT_BACKENDS = [
-  { nombre: 'Trabajo en Caliente', archivo: 'permiso-trabajo-caliente.html', url: 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
-  { nombre: 'Trabajo en Alturas',  archivo: 'permiso-trabajo-alturas.html', url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026', listQuery: 'action=list' },
-  { nombre: 'Espacios Confinados', archivo: 'permiso-espacios-confinados.html', url: 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
-  { nombre: 'Izajes de Cargas',    archivo: 'permiso-izajes-cargas.html', url: 'https://script.google.com/macros/s/AKfycbxVk8a4N164NqBHitHpGt8BXd8GVVKLwWqUAZzIwecsJPbNAtGihRrquKcMSvUX_2n1tw/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' },
-  { nombre: 'Trabajo Eléctrico',   archivo: 'permiso-trabajo-electrico.html', url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec', token: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' }
+  { nombre: 'Trabajo en Caliente', archivo: 'permiso-trabajo-caliente.html', url: 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
+  { nombre: 'Trabajo en Alturas',  archivo: 'permiso-trabajo-alturas.html', url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', listQuery: 'action=list' },
+  { nombre: 'Espacios Confinados', archivo: 'permiso-espacios-confinados.html', url: 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
+  { nombre: 'Izajes de Cargas',    archivo: 'permiso-izajes-cargas.html', url: 'https://script.google.com/macros/s/AKfycbxVk8a4N164NqBHitHpGt8BXd8GVVKLwWqUAZzIwecsJPbNAtGihRrquKcMSvUX_2n1tw/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
+  { nombre: 'Trabajo Eléctrico',   archivo: 'permiso-trabajo-electrico.html', url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' }
 ];
 
 function iconoPara(nombre){
@@ -159,10 +159,10 @@ function render(){
       const alerta = h!==null && h >= HORAS_ALERTA;
       return `<a class="item ${alerta?'warn':''}" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
         <div class="row1">
-          <span><span class="icon-type">${it.icono}</span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
+          <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>
         </div>
-        <div class="meta">${it.responsable ? 'Responsable: '+it.responsable : ''}${it.area ? ' · Área: '+it.area : ''}</div>
+        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}</div>
         <div class="chevron">Toca para abrir el permiso y cerrarlo →</div>
       </a>`;
     }).join('');
@@ -170,10 +170,10 @@ function render(){
     listEl.innerHTML = items.map(it=>{
       return `<a class="item closed" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
         <div class="row1">
-          <span><span class="icon-type">${it.icono}</span><span class="code">${it.code}</span> <span class="tipo">${it.tipo}</span></span>
+          <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo closed">Cerrado</span>
         </div>
-        <div class="meta">${it.responsable ? 'Responsable: '+it.responsable : ''}${it.area ? ' · Área: '+it.area : ''}${it.fechaCierre ? ' · Cerrado: '+formatFecha(it.fechaCierre) : ''}</div>
+        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}${it.fechaCierre ? ' · Cerrado: '+formatFecha(it.fechaCierre) : ''}</div>
         <div class="chevron">Toca para ver el detalle completo →</div>
       </a>`;
     }).join('');

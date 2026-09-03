@@ -957,7 +957,7 @@ addWorker(); addWorker();
 // ==================================================================
 const CONFIG = {
   SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec',
-  API_TOKEN: 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026' // debe coincidir con API_TOKEN en el Apps Script
+  API_TOKEN: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' // debe coincidir con API_TOKEN en el Apps Script
 };
 
 // ==================================================================
@@ -966,7 +966,7 @@ const CONFIG = {
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
 const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
-const PERSONAL_DB_TOKEN = 'CAMBIA-ESTO-POR-UN-TEXTO-SECRETO-LARGO-2026';
+const PERSONAL_DB_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1';
 let personalCache = [];
 async function cargarPersonalCompartido(){
   try{
@@ -1000,7 +1000,7 @@ function attachPersonalAutocomplete(inputEl, onSelect){
     matches.forEach(p=>{
       const item = document.createElement('div');
       item.className = 'autocomplete-item';
-      item.innerHTML = `<b>${p.nombre}</b><span>CC ${p.cedula}${p.cargo?' · '+p.cargo:''}</span>`;
+      item.innerHTML = `<b>${esc(p.nombre)}</b><span>CC ${esc(p.cedula)}${p.cargo?' · '+esc(p.cargo):''}</span>`;
       item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
       box.appendChild(item);
     });
@@ -1277,8 +1277,8 @@ document.getElementById('btnListOpen').addEventListener('click', async ()=>{
     abiertos.forEach(r=>{
       const div = document.createElement('div');
       div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-      div.innerHTML = `<b>${r.code}</b> <span style="color:#888;float:right;">${r.status}</span>
-        <div style="margin-top:3px;">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>`;
+      div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#888;float:right;">${r.status}</span>
+        <div style="margin-top:3px;">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>`;
       div.addEventListener('click', ()=>{
         document.getElementById('closeCodeInput').value = r.code;
         document.getElementById('btnFetchPermit').click();
@@ -1316,8 +1316,8 @@ function renderClosedPermits(rows){
     const div = document.createElement('div');
     div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;background:#f7f9fb;cursor:pointer;';
     const closedTxt = r.closedAt ? new Date(r.closedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-    div.innerHTML = `<b>${r.code}</b> <span style="color:#2f6b45;float:right;font-weight:600;">CERRADO</span>
-      <div style="margin-top:3px;">Responsable: ${r.responsable || '<em>sin dato</em>'}</div>
+    div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#2f6b45;float:right;font-weight:600;">CERRADO</span>
+      <div style="margin-top:3px;">Responsable: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
       <div style="color:#888;">Cerrado: ${closedTxt}</div>`;
     div.addEventListener('click', ()=>{
       document.getElementById('closeCodeInput').value = r.code;
@@ -1558,8 +1558,8 @@ document.getElementById('listOpenForAddBtnAlt').addEventListener('click', async 
     abiertos.forEach(r=>{
       const div = document.createElement('div');
       div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-      div.innerHTML = `<b>${r.code}</b> <span style="color:#888;float:right;">${r.status}</span>
-        <div style="margin-top:3px;">Abierto por: ${r.responsable || '<em>sin dato</em>'}</div>`;
+      div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#888;float:right;">${r.status}</span>
+        <div style="margin-top:3px;">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>`;
       div.addEventListener('click', ()=> cargarParaAgregarPersonalAlt(r.code));
       listEl.appendChild(div);
     });

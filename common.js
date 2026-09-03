@@ -4,6 +4,17 @@
    ============================================================ */
 
 /**
+ * esc: escapa texto antes de insertarlo con innerHTML. Los datos que
+ * vienen de la hoja de cálculo (nombres, sitios, responsables, cédulas)
+ * los escribe cualquier persona con acceso al formulario — sin escapar,
+ * un valor como <img src=x onerror=...> se ejecutaría en el navegador
+ * de quien lo vea después (dashboard, listas de permisos abiertos, etc).
+ */
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/**
  * fetchWithRetry: como fetch(), pero reintenta automáticamente si hay
  * un fallo de red (típico en zonas de planta con señal débil), con
  * espera creciente entre intentos.
