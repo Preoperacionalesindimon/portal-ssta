@@ -6,6 +6,7 @@
 <title>Portal SSTA – INDIMON S.A.S.</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="common.css">
+<script src="config.js"></script>
 <script src="common.js"></script>
 <meta name="theme-color" content="#F2C200">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1195,28 +1196,26 @@
   // ── Contador de permisos abiertos (Google Sheets vía Apps Script) ──
   // Pega aquí la URL /exec de cada backend y su token (debe coincidir con el
   // API_TOKEN de ese Apps Script — los backends ya validan el token).
-  const PERMIT_BACKENDS = [
-    { nombre: 'Trabajo en Caliente', url: 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-    { nombre: 'Trabajo en Alturas', url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', listQuery: 'action=list' },
-    { nombre: 'Espacios Confinados', url: 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-    { nombre: 'Izajes de Cargas', url: 'https://script.google.com/macros/s/AKfycbxVk8a4N164NqBHitHpGt8BXd8GVVKLwWqUAZzIwecsJPbNAtGihRrquKcMSvUX_2n1tw/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-    { nombre: 'Trabajo Eléctrico', url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' }
-  ];
+  const PERMIT_BACKENDS = getPermitBackends(false);
 
   async function contarPermisosAbiertos() {
     let total = 0;
     const detalle = [];
-    for (const backend of PERMIT_BACKENDS) {
-      if (!backend.url) continue;
-      try {
-        const res = await fetchWithRetry(backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(backend.token || ''));
-        const data = await res.json();
-        if (data.ok && Array.isArray(data.rows)) {
-          const abiertos = data.rows.filter(r => r.status === 'ABIERTO').length;
-          if (abiertos > 0) { total += abiertos; detalle.push(abiertos + ' ' + backend.nombre); }
-        }
-      } catch (err) { /* backend no disponible, se omite silenciosamente */ }
-    }
+    // Consultas en paralelo — Promise.allSettled conserva el orden de PERMIT_BACKENDS
+    // aunque las respuestas lleguen en otro orden, así el resumen sale igual que antes.
+    const resultados = await Promise.allSettled(PERMIT_BACKENDS.filter(b => b.url).map(backend =>
+      fetchWithRetry(backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(backend.token || ''))
+        .then(res => res.json())
+        .then(data => ({ backend, data }))
+    ));
+    resultados.forEach(r => {
+      if (r.status !== 'fulfilled') return; // backend no disponible, se omite silenciosamente
+      const { backend, data } = r.value;
+      if (data.ok && Array.isArray(data.rows)) {
+        const abiertos = data.rows.filter(row => row.status === 'ABIERTO').length;
+        if (abiertos > 0) { total += abiertos; detalle.push(abiertos + ' ' + backend.nombre); }
+      }
+    });
     const badge = document.getElementById('openPermitsBadge');
     if (total > 0) {
       const resumen = detalle.length ? ' (' + detalle.join(', ') + ')' : '';

@@ -106,7 +106,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div class="card">
     <div class="k" style="margin-bottom:8px;">Agregar / actualizar persona</div>
     <div class="field"><label>Nombre completo</label><input type="text" id="perNombre"></div>
-    <div class="field"><label>Cédula</label><input type="text" id="perCedula"></div>
+    <div class="field"><label>Cédula</label><input type="text" id="perCedula" inputmode="numeric"></div>
     <div class="field"><label>Cargo</label><input type="text" id="perCargo"></div>
     <button class="btn amber" id="btnGuardarPersona">Guardar en la base de datos</button>
     <div class="status-msg" id="personalStatus"></div>
@@ -187,7 +187,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div class="card" style="margin-top:16px;">
     <div class="k" style="margin-bottom:8px;">Verificado y aprobado por</div>
     <div class="field"><label>Nombre</label><input type="text" id="verifNombre" autocomplete="off" placeholder="Nombre completo (escribe para buscar)"></div>
-    <div class="field"><label>Cédula</label><input type="text" id="verifCedula"></div>
+    <div class="field"><label>Cédula</label><input type="text" id="verifCedula" inputmode="numeric"></div>
     <div class="field"><label>Firma del verificador</label>
       <canvas class="mini-pad" id="padVerificador"></canvas>
       <div class="sig-actions">
@@ -215,24 +215,20 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 
 </div>
 
+<script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
+OutboxBadge.init();
 if (typeof UpdateManager !== 'undefined') UpdateManager.init();
 
-// URL fija del backend en Google Apps Script (Anexo SSTA-F-149)
-const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
-const API_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1'; // debe coincidir con el Apps Script
+// URL fija del backend en Google Apps Script (Anexo SSTA-F-149) — centralizada en config.js
+const FIXED_WEBAPP_URL = PORTAL_CONFIG.BACKENDS.personal.url;
+const API_TOKEN = PORTAL_CONFIG.API_TOKEN;
 function getWebAppUrl(){ return FIXED_WEBAPP_URL; }
 
 // Mismos backends usados en el dashboard, para el buscador de permisos abiertos.
-const PERMIT_BACKENDS = [
-  { nombre: 'Trabajo en Caliente', icono:'🔥', archivo: 'permiso-trabajo-caliente.html', url: 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec', token: API_TOKEN, listQuery:'list=1' },
-  { nombre: 'Trabajo en Alturas',  icono:'🧗', archivo: 'permiso-trabajo-alturas.html', url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec', token: API_TOKEN, listQuery:'action=list' },
-  { nombre: 'Espacios Confinados', icono:'🕳️', archivo: 'permiso-espacios-confinados.html', url: 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec', token: API_TOKEN, listQuery:'list=1' },
-  { nombre: 'Izajes de Cargas',    icono:'🏗️', archivo: 'permiso-izajes-cargas.html', url: 'https://script.google.com/macros/s/AKfycbxVk8a4N164NqBHitHpGt8BXd8GVVKLwWqUAZzIwecsJPbNAtGihRrquKcMSvUX_2n1tw/exec', token: API_TOKEN, listQuery:'list=1' },
-  { nombre: 'Trabajo Eléctrico',   icono:'⚡', archivo: 'permiso-trabajo-electrico.html', url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec', token: API_TOKEN, listQuery:'list=1' }
-];
+const PERMIT_BACKENDS = getPermitBackends(false);
 
 /* ================= PADS DE FIRMA (misma lógica probada de los permisos) ================= */
 const pads = {};
@@ -590,7 +586,7 @@ function agregarTrabajadorRow(prefill){
     <span class="num">${n}</span>
     <button type="button" class="remove-worker" data-remove="${n}">Quitar</button>
     <input type="text" placeholder="Nombre completo (escribe para buscar)" id="trNombre${n}" autocomplete="off" value="${prefill?esc(prefill.nombre||''):''}">
-    <input type="text" placeholder="Cédula" id="trCedula${n}" value="${prefill?esc(prefill.cedula||''):''}">
+    <input type="text" placeholder="Cédula" id="trCedula${n}" inputmode="numeric" value="${prefill?esc(prefill.cedula||''):''}">
     <input type="text" placeholder="Cargo" id="trCargo${n}" value="${prefill?esc(prefill.cargo||''):''}">
     <canvas class="mini-pad" id="padTr${n}"></canvas>
     <div class="sig-actions">

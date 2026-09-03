@@ -435,15 +435,15 @@
     <div class="section-title">2. Autorización del trabajo seguro en alturas</div>
     <div class="grid">
       <div class="row">
-        <div class="field"><label>Fecha inicio</label><input type="date"></div>
-        <div class="field"><label>Hora inicio</label><input type="time"></div>
-        <div class="field"><label>Fecha culminación</label><input type="date"></div>
-        <div class="field"><label>Hora culminación</label><input type="time"></div>
+        <div class="field"><label>Fecha inicio</label><input type="date" id="fechaInicioAlt"></div>
+        <div class="field"><label>Hora inicio</label><input type="time" id="horaInicioAlt"></div>
+        <div class="field"><label>Fecha culminación</label><input type="date" id="fechaCulminacionAlt"></div>
+        <div class="field"><label>Hora culminación</label><input type="time" id="horaCulminacionAlt"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Área(s)</label><input type="text" placeholder="Área donde se realiza el trabajo"></div>
+        <div class="field"><label>Área(s)</label><input type="text" id="areaAlt" placeholder="Área donde se realiza el trabajo"></div>
       </div>
-      <div class="field"><label>Descripción de la actividad</label><textarea placeholder="Describa la actividad a realizar"></textarea></div>
+      <div class="field"><label>Descripción de la actividad</label><textarea id="descripcionAlt" placeholder="Describa la actividad a realizar"></textarea></div>
     </div>
   </div>
 
@@ -480,7 +480,7 @@
       <div class="yn-row"><div class="yn-label">Trabajadores capacitados sobre uso y cuidado de los sistemas de acceso</div><div class="yn-opts" data-yn></div></div>
       <div class="row">
         <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text" id="inspectorNombreInput"></div>
-        <div class="field"><label>Cédula</label><input type="text"></div>
+        <div class="field"><label>Cédula</label><input type="text" inputmode="numeric"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma inspector de acceso</label>
@@ -657,9 +657,11 @@
   <button class="btn btn-primary" id="saveAddPeopleBtnAlt" type="button">Guardar personal agregado</button>
 </div>
 
+<script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
+OutboxBadge.init();
 if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#0f3a5f');
 // ---------- YES/NO/NA toggle groups ----------
 document.querySelectorAll('.yn-opts').forEach(group => {
@@ -817,7 +819,7 @@ roles.forEach(r=>{
   div.className = 'row';
   div.innerHTML = `
     <div class="field"><label>${r} — Nombre</label><input type="text" placeholder="Nombre completo (escribe para buscar)"></div>
-    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text"></div>
+    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text" inputmode="numeric"></div>
     <div class="field" style="flex:1 1 100%;">
       <label>Firma</label>
       <canvas class="sigpad" width="600" height="150"></canvas>
@@ -928,7 +930,7 @@ function addWorker(){
     <h4>Trabajador ${workerCount}</h4>
     <div class="worker-grid">
       <input type="text" placeholder="Nombre completo (escribe para buscar)" class="w-nombre" autocomplete="off">
-      <input type="text" placeholder="Cédula" class="w-cedula">
+      <input type="text" placeholder="Cédula" class="w-cedula" inputmode="numeric">
       <input type="text" placeholder="Cargo" class="w-cargo">
       <select><option value="">Verificación seguridad social</option><option>Verificada</option><option>Pendiente</option></select>
       <select><option value="">Estado</option><option>Trabajador autorizado y apto</option><option>No apto</option></select>
@@ -953,11 +955,11 @@ document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
 addWorker(); addWorker();
 
 // ==================================================================
-// CONFIGURACIÓN — pega aquí la URL de tu Apps Script (termina en /exec)
+// CONFIGURACIÓN — centralizada en config.js, no se edita aquí
 // ==================================================================
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec',
-  API_TOKEN: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' // debe coincidir con API_TOKEN en el Apps Script
+  SCRIPT_URL: PORTAL_CONFIG.BACKENDS.alturas.url,
+  API_TOKEN: PORTAL_CONFIG.API_TOKEN
 };
 
 // ==================================================================
@@ -965,8 +967,8 @@ const CONFIG = {
 // SSTA-F-149 "Personal Autorizado". Solo lectura desde aquí: el
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
-const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
-const PERSONAL_DB_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1';
+const PERSONAL_DB_URL = PORTAL_CONFIG.BACKENDS.personal.url;
+const PERSONAL_DB_TOKEN = PORTAL_CONFIG.API_TOKEN;
 let personalCache = [];
 async function cargarPersonalCompartido(){
   try{
@@ -1180,6 +1182,70 @@ function validatePhase(container){
       missing.push('Justificación obligatoria: el cálculo de distancias (sección 6) no cumple (AMT ≤ DTR)');
     }
   }
+
+  // Estos campos generales (fecha, hora, área, descripción) solo existen dentro
+  // de la sección de apertura — al validar el cierre, querySelector no los
+  // encuentra y estas líneas simplemente no aplican, sin necesidad de revisar
+  // en qué fase estamos.
+  const camposGenerales = [
+    ['#fechaInicioAlt', 'Fecha inicio (sección 2)'],
+    ['#horaInicioAlt', 'Hora inicio (sección 2)'],
+    ['#fechaCulminacionAlt', 'Fecha culminación (sección 2)'],
+    ['#horaCulminacionAlt', 'Hora culminación (sección 2)'],
+    ['#areaAlt', 'Área(s) donde se realiza el trabajo (sección 2)'],
+    ['#descripcionAlt', 'Descripción de la actividad (sección 2)'],
+  ];
+  camposGenerales.forEach(([sel, msg])=>{
+    const el = container.querySelector(sel);
+    if(el && !el.value.trim()){ el.classList.add('field-invalid'); missing.push(msg); }
+  });
+  const fInicio = container.querySelector('#fechaInicioAlt'), hInicio = container.querySelector('#horaInicioAlt');
+  const fFin = container.querySelector('#fechaCulminacionAlt'), hFin = container.querySelector('#horaCulminacionAlt');
+  if(fInicio && fInicio.value && hInicio.value && fFin.value && hFin.value){
+    const inicio = new Date(fInicio.value+'T'+hInicio.value);
+    const fin = new Date(fFin.value+'T'+hFin.value);
+    if(fin <= inicio){
+      fFin.classList.add('field-invalid');
+      missing.push('La fecha/hora de culminación debe ser posterior al inicio (sección 2)');
+    }
+  }
+
+  // Nombre y cédula de los roles responsables — misma excepción que en los
+  // otros 4 permisos: los encargados de turno quedan opcionales porque no
+  // siempre hay alguien asignado a ese rol al momento de abrir el permiso.
+  if(container.id === 'openPhase'){
+    const ROLES_OPCIONALES = ['Encargado del área enterado turno 1','Encargado del área enterado turno 2'];
+    [...container.querySelectorAll('#rolesWrap .row')].forEach((row, i)=>{
+      const nombreRol = roles[i];
+      if(!nombreRol || ROLES_OPCIONALES.includes(nombreRol)) return;
+      const inputs = row.querySelectorAll('input[type=text]');
+      const nombre = inputs[0] ? inputs[0].value.trim() : '';
+      const cedula = inputs[1] ? inputs[1].value.trim() : '';
+      if(!nombre || !cedula){
+        row.classList.add('field-invalid');
+        missing.push(`Nombre y cédula de "${nombreRol}" (sección de roles responsables)`);
+      }
+    });
+  }
+
+  // Al menos un trabajador con nombre, cédula y firma completos — antes se
+  // podía guardar un permiso de alturas sin ningún trabajador registrado.
+  if(container.id === 'openPhase'){
+    const workerCards = [...container.querySelectorAll('.worker-card')];
+    const algunoCompleto = workerCards.some(card=>{
+      const inputs = card.querySelectorAll('.worker-grid input');
+      const nombre = inputs[0] ? inputs[0].value.trim() : '';
+      const cedula = inputs[1] ? inputs[1].value.trim() : '';
+      const canvas = card.querySelector('canvas.sigpad');
+      const statusEl = canvas ? card.querySelector('.sig-status') : null;
+      const firmado = statusEl && statusEl.classList.contains('signed');
+      return nombre && cedula && firmado;
+    });
+    if(!algunoCompleto){
+      missing.push('Debe registrarse al menos un trabajador con nombre, cédula y firma completos (sección 10)');
+    }
+  }
+
   return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
 }
 // Quita la marca roja de un campo en tiempo real apenas el usuario lo completa,
@@ -1229,8 +1295,8 @@ function generateCode(){
   const y = now.getFullYear();
   const m = String(now.getMonth()+1).padStart(2,'0');
   const d = String(now.getDate()).padStart(2,'0');
-  const rand = String(Math.floor(Math.random()*900)+100);
-  return `ALT-${y}${m}${d}-${rand}`;
+  const rand = String(Math.floor(Math.random()*900000)+100000);
+  return `PTA-${y}${m}${d}-${rand}`;
 }
 
 // ---------- Mode / navigation ----------
@@ -1466,7 +1532,7 @@ btnSaveOpen.addEventListener('click', async ()=>{
     DraftStore.clear(DRAFT_KEY_OPEN);
     alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
   }catch(err){
-    statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
+    statusMsg.textContent = 'Sin conexión — quedó guardado y se reintentará solo. Puedes seguir usando el celular; verás un aviso abajo mientras esté pendiente.';
     if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token: CONFIG.API_TOKEN });
     btnSaveOpen.disabled = false;
   }
@@ -1496,7 +1562,7 @@ btnSaveClose.addEventListener('click', async ()=>{
     DraftStore.clear(draftKeyClose(currentCode));
     alert('Permiso cerrado correctamente.');
   }catch(err){
-    statusMsg.textContent = 'No se pudo conectar con el backend. Sus respuestas quedaron guardadas localmente; intente guardar de nuevo cuando tenga señal.';
+    statusMsg.textContent = 'Sin conexión — quedó guardado y se reintentará solo. Puedes seguir usando el celular; verás un aviso abajo mientras esté pendiente.';
     if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'close', code: currentCode, data, token: CONFIG.API_TOKEN });
     btnSaveClose.disabled = false;
   }

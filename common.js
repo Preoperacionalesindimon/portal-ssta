@@ -144,6 +144,8 @@ const UpdateManager = {
  */
 const Outbox = {
   _dbPromise: null,
+  _flushing: false, // evita que dos disparos simultáneos (carga de página + evento 'online'
+                     // + mensaje del Service Worker) reenvíen el mismo permiso dos veces
   _db() {
     if (this._dbPromise) return this._dbPromise;
     this._dbPromise = new Promise((resolve, reject) => {
@@ -160,7 +162,7 @@ const Outbox = {
     const db = await this._db();
     return new Promise((resolve) => {
       const tx = db.transaction('pending', 'readwrite');
-      tx.objectStore('pending').add({ url, body, savedAt: new Date().toISOString() });
+      tx.objectStore('pending').add({ url, body, savedAt: new Date().toISOString(), intentos: 0 });
       tx.oncomplete = async () => {
         // Registra el Background Sync si el navegador lo soporta; si no,
         // igual queda guardado y se reintentará la próxima vez que la
@@ -171,6 +173,7 @@ const Outbox = {
             await reg.sync.register('sync-outbox');
           } catch (e) { /* sin soporte o permiso denegado; no es crítico */ }
         }
+        Outbox._avisar();
         resolve();
       };
     });
@@ -192,24 +195,109 @@ const Outbox = {
       tx.oncomplete = () => resolve();
     });
   },
+  async _incrementarIntentos(id) {
+    const db = await this._db();
+    return new Promise((resolve) => {
+      const tx = db.transaction('pending', 'readwrite');
+      const store = tx.objectStore('pending');
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (item) { item.intentos = (item.intentos || 0) + 1; store.put(item); }
+        resolve(item ? item.intentos : 0);
+      };
+      getReq.onerror = () => resolve(0);
+    });
+  },
   /** Reintenta enviar todo lo pendiente. Llamar al cargar la página y al volver la señal. */
   async flush() {
     if (!navigator.onLine) return;
-    const items = await this.list();
-    for (const item of items) {
-      try {
-        const res = await fetch(item.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(item.body)
-        });
-        const json = await res.json();
-        if (json.ok) await this.remove(item.id);
-      } catch (e) { /* sigue sin señal; se reintenta después */ }
+    if (this._flushing) return;
+    this._flushing = true;
+    try {
+      const items = await this.list();
+      for (const item of items) {
+        try {
+          const res = await fetch(item.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(item.body)
+          });
+          const json = await res.json();
+          if (json.ok) {
+            await this.remove(item.id);
+            Outbox._avisarEnviado(item);
+          } else {
+            // El servidor respondió pero con error (token inválido, permiso ya
+            // cerrado, etc.) — no es un problema de señal, así que reintentar
+            // sin límite nunca lo resolvería solo. Tras 5 intentos fallidos se
+            // saca de la cola y se avisa, en vez de reintentar para siempre.
+            const intentos = await this._incrementarIntentos(item.id);
+            if (intentos >= 5) {
+              await this.remove(item.id);
+              Outbox._avisarFallidoDefinitivo(item, json.error);
+            }
+          }
+        } catch (e) { /* sigue sin señal; se reintenta después, sin contar como intento fallido */ }
+      }
+    } finally {
+      this._flushing = false;
+      Outbox._avisar();
     }
+  },
+  async count() {
+    return (await this.list()).length;
+  },
+  _avisar() {
+    window.dispatchEvent(new CustomEvent('outbox-cambio'));
+  },
+  _avisarEnviado(item) {
+    window.dispatchEvent(new CustomEvent('outbox-enviado', { detail: item }));
+  },
+  _avisarFallidoDefinitivo(item, error) {
+    window.dispatchEvent(new CustomEvent('outbox-fallido', { detail: { item, error } }));
   }
 };
 window.addEventListener('online', () => Outbox.flush());
+
+/**
+ * OutboxBadge: indicador visible ("N permisos pendientes de enviar") para que
+ * el usuario sepa en todo momento si algo quedó en cola sin salir — antes,
+ * un permiso podía quedar guardándose en segundo plano sin ningún aviso.
+ * Se actualiza solo con los eventos que dispara Outbox.
+ */
+const OutboxBadge = {
+  init() {
+    if (document.getElementById('outboxBadge')) return;
+    const el = document.createElement('div');
+    el.id = 'outboxBadge';
+    el.style.cssText = 'display:none;position:fixed;left:12px;bottom:12px;z-index:9997;background:#c9a227;color:#151b24;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    document.body.appendChild(el);
+    const actualizar = async () => {
+      const n = await Outbox.count();
+      if (n > 0) {
+        el.textContent = '⏳ ' + n + (n===1 ? ' permiso pendiente de enviar' : ' permisos pendientes de enviar');
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    };
+    window.addEventListener('outbox-cambio', actualizar);
+    window.addEventListener('outbox-enviado', () => {
+      actualizar();
+      const aviso = document.createElement('div');
+      aviso.textContent = '✓ Un permiso pendiente se envió correctamente.';
+      aviso.style.cssText = 'position:fixed;left:12px;bottom:52px;z-index:9998;background:#1d7a4c;color:#fff;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
+      document.body.appendChild(aviso);
+      setTimeout(()=> aviso.remove(), 5000);
+    });
+    window.addEventListener('outbox-fallido', (e) => {
+      actualizar();
+      alert('No se pudo enviar un permiso guardado en cola, incluso con señal (' + (e.detail.error || 'error del servidor') + '). Revisa ese permiso manualmente — puede que haya que volver a intentarlo desde el formulario.');
+    });
+    actualizar();
+  }
+};
 
 /**
  * ScrollProgress: barra fina y fija arriba de la pantalla que muestra

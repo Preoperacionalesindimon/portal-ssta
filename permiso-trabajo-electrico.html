@@ -386,13 +386,13 @@ canvas.pad.locked{cursor:default;}
           <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
             <div class="sig-block">
               <h5>Trabajador autorizado responsable del trabajo</h5>
-              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre1nombre"><input type="text" placeholder="Cédula" id="cierre1cc" inputmode="numeric"><input type="text" placeholder="Cargo" id="cierre1cargo"></div>
               <canvas class="pad" id="padCierre1"></canvas>
               <div class="sig-actions"><button type="button" data-clear="padCierre1">Borrar firma</button><button type="button" data-undo="padCierre1">Deshacer trazo</button><span class="sig-status" id="statusCierre1">Sin firmar</span></div>
             </div>
             <div class="sig-block">
               <h5>Supervisor SSTA</h5>
-              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
+              <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="cierre2nombre"><input type="text" placeholder="Cédula" id="cierre2cc" inputmode="numeric"><input type="text" placeholder="Cargo" id="cierre2cargo"></div>
               <canvas class="pad" id="padCierre2"></canvas>
               <div class="sig-actions"><button type="button" data-clear="padCierre2">Borrar firma</button><button type="button" data-undo="padCierre2">Deshacer trazo</button><span class="sig-status" id="statusCierre2">Sin firmar</span></div>
             </div>
@@ -422,9 +422,11 @@ canvas.pad.locked{cursor:default;}
 
 </div><!-- /wrap -->
 
+<script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
+OutboxBadge.init();
 if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#b8860b');
 /* ================= STATE ================= */
 let MODE = null; // 'open' | 'close'
@@ -601,7 +603,7 @@ function buildResponsablesUI(){
     const id='resp'+i;
     const div=document.createElement('div'); div.className='sig-block';
     div.innerHTML=`<h5>${label}</h5>
-      <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc"></div>
+      <div class="sig-fields"><input type="text" placeholder="Nombre completo (escribe para buscar)" id="${id}nombre"><input type="text" placeholder="Cédula" id="${id}cc" inputmode="numeric"></div>
       <canvas class="pad" id="pad_${id}"></canvas>
       <div class="sig-actions"><button type="button" data-clear="pad_${id}">Borrar firma</button><button type="button" data-undo="pad_${id}">Deshacer trazo</button><span class="sig-status" id="status_pad_${id}">Sin firmar</span></div>`;
     cont.appendChild(div);
@@ -635,7 +637,7 @@ function addExecRow(prefill){
     </div>
     <div class="exec-fields">
       <input type="text" placeholder="Nombre completo (escribe para buscar)" id="execNombre${n}" autocomplete="off">
-      <input type="text" placeholder="Documento (C.C.)" id="execCC${n}">
+      <input type="text" placeholder="Documento (C.C.)" id="execCC${n}" inputmode="numeric">
       <input type="text" placeholder="Cargo" id="execCargo${n}">
       <input type="text" placeholder="N.° tarjeta profesional (opcional)" id="execTarjeta${n}">
     </div>
@@ -720,7 +722,7 @@ function lockOpenSections(){
 /* ================= EXPORT / COLLECT ================= */
 function genCode(){
   const d=new Date();
-  return 'PT-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(Math.floor(Math.random()*9000)+1000);
+  return 'PTE-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(Math.floor(Math.random()*900000)+100000);
 }
 function collectExecRows(){
   const rows=[];
@@ -807,8 +809,8 @@ function loadOpenDataIntoForm(data){
 // SSTA-F-149 "Personal Autorizado". Solo lectura desde aquí: el
 // personal se agrega/edita/elimina en ese anexo, no en los permisos.
 // ==================================================================
-const PERSONAL_DB_URL = 'https://script.google.com/macros/s/AKfycbxP2vfEKymzbSzg_doXTm7KDQme55Ego_b_Mvstuetwo1Y1W6j6cnQuYJJETTTmaoNx/exec';
-const PERSONAL_DB_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1';
+const PERSONAL_DB_URL = PORTAL_CONFIG.BACKENDS.personal.url;
+const PERSONAL_DB_TOKEN = PORTAL_CONFIG.API_TOKEN;
 let personalCache = [];
 async function cargarPersonalCompartido(){
   try{
@@ -854,8 +856,8 @@ function attachPersonalAutocomplete(inputEl, onSelect){
   window.addEventListener('scroll', cerrar, true);
 }
 
-const FIXED_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec';
-const API_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1'; // debe coincidir con API_TOKEN en el Apps Script
+const FIXED_WEBAPP_URL = PORTAL_CONFIG.BACKENDS.electrico.url;
+const API_TOKEN = PORTAL_CONFIG.API_TOKEN;
 function getWebAppUrl(){
   return FIXED_WEBAPP_URL;
 }
@@ -904,6 +906,9 @@ function validateOpenData(){
   const sitio=document.getElementById('sitio'), responsable=document.getElementById('responsable');
   if(!desdeFecha.value) missing.push({msg:'Fecha "Desde" (sección A)', el:desdeFecha});
   if(!hastaFecha.value) missing.push({msg:'Fecha "Hasta" (sección A)', el:hastaFecha});
+  if(desdeFecha.value && hastaFecha.value && new Date(hastaFecha.value) < new Date(desdeFecha.value)){
+    missing.push({msg:'La fecha "Hasta" debe ser posterior o igual a "Desde" (sección A)', el:hastaFecha});
+  }
   if(!sitio.value.trim()) missing.push({msg:'Sitio exacto del trabajo (sección A)', el:sitio});
   if(!responsable.value.trim()) missing.push({msg:'Responsable del trabajo (sección A)', el:responsable});
 
@@ -1200,7 +1205,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
       DraftStore.clear(DRAFT_KEY_OPEN);
     } else {
       btn.disabled=false;
-      document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
+      document.getElementById('footerStatus').textContent = res.error || 'Sin conexión — quedó guardado y se reintentará solo. Verás un aviso abajo mientras esté pendiente.';
       if (typeof Outbox !== 'undefined') Outbox.add(getWebAppUrl(), Object.assign({}, data, {token: API_TOKEN}));
     }
   } else if(MODE==='close'){
@@ -1215,7 +1220,7 @@ document.getElementById('mainActionBtn').addEventListener('click', async ()=>{
       DraftStore.clear(draftKeyClose(permitCode));
     } else {
       btn.disabled=false;
-      document.getElementById('footerStatus').textContent = res.error || 'No se pudo guardar. Sus datos quedaron guardados localmente; intente de nuevo cuando tenga señal.';
+      document.getElementById('footerStatus').textContent = res.error || 'Sin conexión — quedó guardado y se reintentará solo. Verás un aviso abajo mientras esté pendiente.';
       if (typeof Outbox !== 'undefined') Outbox.add(getWebAppUrl(), Object.assign({}, full, {token: API_TOKEN}));
     }
   }

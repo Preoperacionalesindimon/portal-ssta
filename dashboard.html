@@ -59,6 +59,7 @@
   <p class="refresh-note" id="refreshNote">Cargando…</p>
   <div class="list" id="list"></div>
 </div>
+<script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 OfflineBanner.init();
@@ -66,13 +67,10 @@ OfflineBanner.init();
 // Mismos backends/token usados en los formularios de permisos.
 // Umbral (horas) a partir del cual un permiso abierto se marca en rojo.
 const HORAS_ALERTA = 8;
-const PERMIT_BACKENDS = [
-  { nombre: 'Trabajo en Caliente', archivo: 'permiso-trabajo-caliente.html', url: 'https://script.google.com/macros/s/AKfycbxHha7LVYOlXmKiPHzObci4ZZecO8rVghzbIyP7NExTW1uctHlVZqnYEhnPUvE5q5LXdA/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-  { nombre: 'Trabajo en Alturas',  archivo: 'permiso-trabajo-alturas.html', url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', listQuery: 'action=list' },
-  { nombre: 'Espacios Confinados', archivo: 'permiso-espacios-confinados.html', url: 'https://script.google.com/macros/s/AKfycbxhD1wHYk9z6huybOV9gSPPy3xNGnyu87dnzj9EYUGo6-kQRCP7Jgqs062JLAW8p6wY/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-  { nombre: 'Izajes de Cargas',    archivo: 'permiso-izajes-cargas.html', url: 'https://script.google.com/macros/s/AKfycbxVk8a4N164NqBHitHpGt8BXd8GVVKLwWqUAZzIwecsJPbNAtGihRrquKcMSvUX_2n1tw/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' },
-  { nombre: 'Trabajo Eléctrico',   archivo: 'permiso-trabajo-electrico.html', url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec', token: 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1' }
-];
+// Antes este arreglo estaba copiado a mano aquí, en index.html y en
+// personal-autorizado.html — ahora los tres lo calculan desde config.js,
+// así cambiar una URL de backend solo implica editar un archivo.
+const PERMIT_BACKENDS = getPermitBackends(false);
 
 function iconoPara(nombre){
   if(nombre.includes('Caliente')) return '🔥';
@@ -102,30 +100,41 @@ let cerrados = [];
 let tabActual = 'abiertos';
 
 async function cargar(){
+  // Si la pestaña está oculta (en segundo plano) o no hay señal, no tiene sentido
+  // consultar los 5 backends — antes esto se disparaba igual cada 2 minutos aunque
+  // nadie estuviera mirando el dashboard, gastando cuota de ejecución de Apps
+  // Script sin ninguna necesidad real.
+  if (document.hidden || !navigator.onLine) return;
   const noteEl = document.getElementById('refreshNote');
   abiertos = []; cerrados = [];
-  for(const backend of PERMIT_BACKENDS){
-    try{
-      const res = await fetchWithRetry(backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(backend.token));
-      const data = await res.json();
-      if(data.ok && Array.isArray(data.rows)){
-        data.rows.forEach(r=>{
-          const item = {
-            tipo: backend.nombre,
-            archivo: backend.archivo,
-            icono: iconoPara(backend.nombre),
-            code: r.code || r.permitCode || '—',
-            responsable: r.responsable || '',
-            area: r.sitio || r.area || '',
-            fechaApertura: r.openedAt || r.updatedAt || null,
-            fechaCierre: r.status === 'CERRADO' ? (r.closedAt || r.updatedAt || null) : null
-          };
-          if(r.status === 'ABIERTO') abiertos.push(item);
-          else if(r.status === 'CERRADO') cerrados.push(item);
-        });
-      }
-    }catch(e){ /* backend no disponible; se omite */ }
-  }
+  // Se consultan los 5 backends EN PARALELO (no uno detrás de otro): si alguno
+  // está caído o lento, ya no retrasa a los demás — antes, con un backend caído,
+  // la carga completa del dashboard podía tardar 10-15 segundos.
+  const resultados = await Promise.allSettled(PERMIT_BACKENDS.map(backend =>
+    fetchWithRetry(backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(backend.token))
+      .then(res => res.json())
+      .then(data => ({ backend, data }))
+  ));
+  resultados.forEach(r=>{
+    if(r.status !== 'fulfilled') return; // backend no disponible; se omite
+    const { backend, data } = r.value;
+    if(data.ok && Array.isArray(data.rows)){
+      data.rows.forEach(row=>{
+        const item = {
+          tipo: backend.nombre,
+          archivo: backend.archivo,
+          icono: iconoPara(backend.nombre),
+          code: row.code || row.permitCode || '—',
+          responsable: row.responsable || '',
+          area: row.sitio || row.area || '',
+          fechaApertura: row.openedAt || row.updatedAt || null,
+          fechaCierre: row.status === 'CERRADO' ? (row.closedAt || row.updatedAt || null) : null
+        };
+        if(row.status === 'ABIERTO') abiertos.push(item);
+        else if(row.status === 'CERRADO') cerrados.push(item);
+      });
+    }
+  });
   abiertos.sort((a,b)=>(horasDesde(a.fechaApertura)||0) < (horasDesde(b.fechaApertura)||0) ? 1 : -1);
   cerrados.sort((a,b)=> new Date(b.fechaCierre||0) - new Date(a.fechaCierre||0));
 
@@ -192,6 +201,10 @@ document.getElementById('searchInput').addEventListener('input', render);
 
 cargar();
 setInterval(cargar, 120000);
+// Al volver a la pestaña (o recuperar señal) después de estar oculta/offline,
+// refresca de una vez en vez de esperar hasta el próximo intervalo de 2 minutos.
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) cargar(); });
+window.addEventListener('online', cargar);
 </script>
 </body>
 </html>
