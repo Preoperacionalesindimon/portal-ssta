@@ -106,9 +106,6 @@ const PermisoCore = (function () {
     statusIdFor: (id) => (id.startsWith('padCierre') ? 'status' + id.replace('pad', '') : 'status_' + id)
   });
   const pads = sigMgr.pads;
-  // Exponer pads para depuración
-  PermisoCore._pads = pads;
-  
   const setupPad = sigMgr.setup;
   const refreshPadsIn = sigMgr.refreshIn;
 
@@ -1524,6 +1521,8 @@ const PermisoCore = (function () {
     downloadJson,
     getWebAppUrl,
     sendToSheet,
-    fetchFromSheet
+    fetchFromSheet,
+    // ===== EXPONER PADS PARA DEPURACIÓN (sin romper nada) =====
+    getPads: () => pads
   };
 })();
