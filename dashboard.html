@@ -205,6 +205,13 @@ setInterval(cargar, 120000);
 // refresca de una vez en vez de esperar hasta el próximo intervalo de 2 minutos.
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) cargar(); });
 window.addEventListener('online', cargar);
+
+// El dashboard nunca registraba el Service Worker — si alguien entraba por un
+// enlace directo a esta página (sin pasar antes por index.html), el modo
+// offline no quedaba instalado y tampoco aparecía el banner de actualización.
+window.addEventListener('load', ()=>{
+  if (typeof UpdateManager !== 'undefined') UpdateManager.init();
+});
 </script>
 </body>
 </html>

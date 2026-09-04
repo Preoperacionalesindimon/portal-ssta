@@ -30,7 +30,12 @@ const PORTAL_CONFIG = {
       icono: '🧗',
       archivo: 'permiso-trabajo-alturas.html',
       url: 'https://script.google.com/macros/s/AKfycbwKezPexVVn8yZ9HSmn3macc2AD4wgr6VCXu39z7mWUM3VTE0VQH9TU6illepan8Ri_/exec',
-      listQuery: 'action=list'
+      listQuery: 'list=1'
+      // NOTA: la URL de arriba es la de siempre — no cambia, siempre que
+      // reemplaces el contenido del Apps Script existente de Alturas por
+      // backend-alturas-NUEVO.gs y despliegues como "Nueva versión" (no
+      // "Nueva implementación"). Si en cambio creaste un proyecto nuevo,
+      // actualiza esta URL con la que te dé ese despliegue.
     },
     confinados: {
       nombre: 'Espacios Confinados',

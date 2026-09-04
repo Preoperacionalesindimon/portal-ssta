@@ -6,89 +6,205 @@
 <title>SSTA-F-116 · Permiso de Trabajo en Alturas</title>
 <link rel="stylesheet" href="common.css">
 <style>
-  :root{
-    --navy:#0f3a5f;
-    --navy-dark:#0a2842;
-    --blue:#1c6ea4;
-    --paper:#ffffff;
-    --bg:#eef2f5;
-    --line:#c7d0d6;
-    --line-soft:#e3e8eb;
-    --ok:#1d7a4c;
-    --warn:#b3261e;
-    --text:#1c2530;
-    --muted:#5c6a76;
-  }
-  *{box-sizing:border-box;}
-  html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-  body{
-    margin:0;
-    font-family:var(--font-family, 'Segoe UI', Arial, sans-serif);
-    background:var(--bg);
-    color:var(--text);
-    padding:24px 16px 80px;
-    overflow-x:hidden;
-  }
-  .sheet{
-    max-width:980px;
-    margin:0 auto;
-    background:var(--paper);
-    border:1px solid var(--line);
-    border-radius:var(--radius-lg, 14px);
-    box-shadow:var(--shadow-card, 0 3px 10px rgba(0,0,0,.07));
-    overflow:hidden;
-    box-shadow:0 2px 10px rgba(0,0,0,.06);
-  }
-  .head{
-    display:grid;
-    grid-template-columns:1.2fr 2fr 1fr;
-    border-bottom:2px solid var(--navy);
-  }
-  .head .logo{
-    display:flex;align-items:center;gap:8px;
-    padding:14px 16px;
-    border-right:1px solid var(--line);
-  }
-  .logo-badge{
-    width:38px;height:38px;border-radius:50%;
-    background:var(--navy);color:#fff;
-    display:flex;align-items:center;justify-content:center;
-    font-weight:700;font-size:14px;flex-shrink:0;
-  }
-  .logo small{display:block;color:var(--muted);font-size:10px;margin-top:2px;}
-  .logo b{font-size:14px;color:var(--navy-dark);}
-  .head .title{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:10px;border-right:1px solid var(--line);
-    text-align:center;
-  }
-  .head .title h1{font-size:16px;margin:0;color:var(--navy-dark);letter-spacing:.3px;}
-  .head .meta{padding:8px 14px;font-size:11px;color:var(--muted);}
-  .head .meta div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dotted var(--line-soft);}
-  .head .meta div:last-child{border-bottom:none;}
-  .head .meta b{color:var(--text);font-weight:600;}
+:root{
+  --ember:#0f3a5f;--ember-dark:#0a2842;--steel:#1c2530;--steel-mid:#3a4753;
+  --paper:#eef2f5;--paper-panel:#ffffff;--line:#c7d0d6;--ok:#1d7a4c;--warn:#b3261e;
+  --ink:#1c2530;--muted:#5c6a76;--blue:#1c6ea4;--navy:#0f3a5f;--navy-dark:#0a2842;--line-soft:#e3e8eb;--bg:#eef2f5;--text:#1c2530;
+  font-family:var(--font-family, 'Segoe UI', system-ui, sans-serif);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
+.wrap{max-width:980px;margin:0 auto;}
+.hdr{background:var(--steel);color:#f4f0e6;border-radius:var(--radius-lg, 14px);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+.hdr-left{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+.hdr-logo{width:44px;height:44px;min-width:44px;border-radius:50%;background:var(--ember);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+.hdr::before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle, rgba(200,70,26,.55), transparent 70%);}
+.hdr .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e2b79c;margin-bottom:4px;}
+.hdr h1{margin:0;font-size:22px;font-weight:700;}
+.hdr .meta{font-size:11.5px;color:#c7cdd2;text-align:right;line-height:1.5;}
+.hdr .meta b{color:#f4f0e6;}
+.status-banner{margin-top:14px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.status-banner.open{background:#fff2e5;color:var(--ember-dark);border:1px solid #f0c19c;}
+.status-banner.closed{background:#e9f5ec;color:var(--ok);border:1px solid #b9dcc2;}
+.status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
+.section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
+/* Modo "agregar personal": solo se ve la sección de ejecutantes y un pie propio con Guardar. */
+body.modo-agregar-personal #app .section:not(#execSection),
+body.modo-agregar-personal #draftBanner,
+body.modo-agregar-personal #validationBanner,
+body.modo-agregar-personal .footer-actions{display:none !important;}
+body.modo-agregar-personal #footerAddPeople{display:flex !important;}
+#footerAddPeople{
+  display:none;position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;
+  background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;
+  justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);
+}
+.section-title{background:linear-gradient(90deg, var(--ember), var(--ember-dark));color:#fff;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.section-title.locked{background:linear-gradient(90deg, var(--steel-mid), var(--steel));}
+.section-body{padding:18px 20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
 
-  .section{border-top:1px solid var(--line);}
-  /* Modo "agregar personal": solo se ve la sección de trabajadores y un pie propio con Guardar. */
-  body.modo-agregar-personal #openPhase > .section:not(#section10Workers),
-  body.modo-agregar-personal #closePhase,
-  body.modo-agregar-personal .footer-actions{display:none !important;}
-  body.modo-agregar-personal #footerAddPeopleAlt{display:flex;}
-  #footerAddPeopleAlt{
-    display:none;position:sticky;bottom:0;margin-top:24px;background:#fff;border-top:2px solid var(--navy);
-    padding:14px 20px;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+@media(max-width:600px){
+  body{padding:20px 14px 100px;}
+  .hdr{padding:20px 18px;flex-direction:column;align-items:flex-start;gap:10px;}
+  .hdr .meta{text-align:left;}
+  .hdr h1{font-size:19px;line-height:1.35;}
+  .section{margin-top:20px;}
+  .section-body{padding:20px 16px;}
+  .section-title{padding:12px 16px;font-size:12.5px;}
+  .check-item{flex-direction:column;align-items:stretch;gap:10px;padding:14px 4px;}
+  .toggle{align-self:flex-start;}
+  .close-q{flex-direction:column;align-items:flex-start;gap:8px;padding:12px 0;}
+  .grid2, .grid3{gap:16px;}
+  .field{margin-bottom:2px;}
+  .footer-actions{padding:10px 14px;}
+  .footer-actions .status{font-size:10px;}
+
+  /* Tabla de ejecutantes: de tabla ancha a tarjetas apiladas */
+  .exec-table thead{display:none;}
+  .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
+  .exec-table{border:none;}
+  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .exec-table td{border:none;padding:9px 0;}
+  .exec-table td[data-label]::before{
+    content: attr(data-label);
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    color:var(--muted);
+    letter-spacing:.04em;
+    margin-bottom:6px;
   }
-  .section-title{
-    background:var(--navy);
-    color:#fff;
-    font-size:12.5px;
-    font-weight:600;
-    padding:7px 14px;
-    letter-spacing:.2px;
-    display:flex;align-items:center;gap:8px;
+  .exec-table td.idx{display:none;}
+  .exec-table td.helper{display:flex;align-items:center;gap:10px;}
+  .exec-table td.helper::before{margin-bottom:0;}
+
+  /* Evita que iOS Safari haga zoom automático al enfocar un campo (ocurre cuando
+     el font-size es menor a 16px) y se quede la página "zoomeada" cortando el contenido */
+  input,select,textarea{font-size:16px !important;}
+}
+
+/* La tabla de ejecutantes también debe apilarse en tarjetas al girar el celular
+   a horizontal — de lo contrario, el ancho de pantalla supera los 600px y la
+   tabla vuelve a columnas angostas justo cuando se buscaba más espacio para
+   firmar. Se repiten aquí solo las reglas de la tabla (no todo el bloque móvil,
+   para no apilar innecesariamente el resto de secciones que sí caben side-by-side
+   en horizontal). */
+@media (orientation:landscape) and (max-width:960px){
+  .exec-table thead{display:none;}
+  .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
+  .exec-table{border:none;}
+  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .exec-table td{border:none;padding:9px 0;}
+  .exec-table td[data-label]::before{
+    content: attr(data-label);
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    color:var(--muted);
+    letter-spacing:.04em;
+    margin-bottom:6px;
   }
-  .progress-pill{font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:20px;margin-left:auto;}
-  .section-note{
+  .exec-table td.idx{display:none;}
+  canvas.mini-pad{height:170px !important;}
+}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
+.field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:#fcfbf8;color:var(--ink);}
+.field input.field-invalid,.field textarea.field-invalid,.field select.field-invalid{border-color:#c0392b;border-width:2px;background:#fdecea;}
+.field.field-invalid{box-shadow:inset 3px 0 0 #c0392b;padding-left:8px;}
+.section-body.field-invalid{box-shadow:inset 0 0 0 2px #c0392b;border-radius:0 0 var(--radius-lg,14px) var(--radius-lg,14px);}
+.field input[type=date],.field input[type=time]{overflow:hidden;-webkit-appearance:none;appearance:none;min-height:40px;line-height:1.3;}
+.field input[type=date]::-webkit-calendar-picker-indicator,.field input[type=time]::-webkit-calendar-picker-indicator{border-radius:4px;padding:2px;cursor:pointer;}
+.field input[type=date]::-webkit-datetime-edit,.field input[type=time]::-webkit-datetime-edit{border-radius:6px;}
+.field textarea{min-height:110px;resize:vertical;line-height:1.5;}
+.field input:disabled,.field textarea:disabled,.field select:disabled{background:#f0ede4;color:#7a7466;}
+.radio-row{display:flex;gap:18px;align-items:center;margin-top:4px;flex-wrap:wrap;}
+.radio-row label{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;padding:4px 0;}
+.check-cat{margin-bottom:16px;}
+.check-cat h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--steel);border-bottom:2px solid var(--line);padding-bottom:6px;text-transform:uppercase;}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:9px 4px;border-bottom:1px dashed var(--line);}
+.check-item:last-child{border-bottom:none;}
+.check-item p{margin:0;font-size:14.5px;line-height:1.5;flex:1;padding-top:2px;}
+.toggle{display:flex;gap:4px;flex-shrink:0;}
+.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 12px;font-size:11.5px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:44px;transition:.14s;}
+.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
+.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700;}
+.toggle button:disabled{opacity:.8;cursor:default;}
+.progress-pill{font-size:11px;font-weight:700;color:#fff;background:var(--steel-mid);padding:4px 10px;border-radius:20px;}
+.sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
+.sig-block h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:var(--steel);}
+.sig-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.sig-fields input{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:11px 12px;font-size:15px;min-height:44px;}
+canvas.pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;}
+canvas.pad.locked{cursor:default;}
+.sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+.sig-actions button{background:none;border:none;color:var(--ember-dark);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;}
+.remove-exec-btn{background:none;border:1.5px solid var(--warn);color:var(--warn);font-size:11px;font-weight:700;border-radius:20px;padding:4px 12px;cursor:pointer;white-space:nowrap;}
+.remove-exec-btn:disabled{opacity:.4;cursor:default;}
+.sig-status{font-size:11px;color:var(--muted);}
+.sig-status.done{color:var(--ok);font-weight:700;}
+.exec-cards{margin-top:10px;}
+.exec-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative;}
+.exec-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.exec-card-top .exec-num{font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border-radius:20px;padding:2px 10px;}
+.exec-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;}
+.exec-fields input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
+.exec-card .sig-pad-wrap label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;}
+.exec-card canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
+.close-q p{margin:0;font-size:14.5px;line-height:1.5;flex:1;}
+.footer-actions{margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-card);}
+.footer-actions .status{color:#e2b79c;font-size:11px;font-weight:600;line-height:1.3;}
+.btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm, 7px);font-size:12.5px;font-weight:700;cursor:pointer;}
+.btn-main:hover{background:var(--ember-dark);}
+.btn-secondary{background:transparent;color:#c7cdd2;border:1px solid #4a5762;padding:9px 16px;border-radius:var(--radius-sm, 7px);font-size:12px;font-weight:600;cursor:pointer;}
+.btn-secondary:hover{border-color:#c7cdd2;color:#fff;}
+/* LANDING */
+#landing{max-width:640px;margin:60px auto;text-align:center;}
+#landing h2{font-size:19px;margin-bottom:6px;}
+#landing p{color:var(--muted);font-size:13.5px;margin-bottom:26px;}
+.landing-choices{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:560px){.landing-choices{grid-template-columns:1fr;}}
+.choice-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 18px;cursor:pointer;transition:.15s;}
+.choice-card:hover{border-color:var(--ember);box-shadow:0 4px 14px rgba(200,70,26,.15);}
+.choice-card .icon{font-size:30px;margin-bottom:10px;}
+.choice-card h3{margin:0 0 6px;font-size:14.5px;color:var(--steel);}
+.choice-card p{margin:0;font-size:12.5px;color:var(--muted);}
+.file-input-wrap{margin-top:10px;}
+.file-input-wrap input{font-size:12px;}
+#app{display:none;}
+.hidden{display:none !important;}
+.validation-banner{display:none;background:#fdecea;border:1px solid #e08a80;color:#7a1f14;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;}
+.validation-banner.show{display:block;}
+.validation-banner strong{display:block;margin-bottom:4px;font-size:12.5px;}
+.validation-banner ul{margin:0;padding-left:18px;}
+.draft-banner{display:none;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.draft-banner.show{display:flex;}
+.draft-banner button{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #a9c9ef;background:#fff;cursor:pointer;color:#1a4a7a;font-weight:600;}
+@media print{
+  .footer-actions,.add-row-btn,.sig-actions,#landing,.validation-banner,.draft-banner{display:none !important;}
+  body{background:#fff;padding:0;}
+  .wrap{max-width:100%;}
+  .hdr{background:#fff !important;color:#1a1a1a !important;border:2px solid var(--steel);box-shadow:none;}
+  .hdr::before{display:none;}
+  .hdr .brand{color:var(--ember);}
+  .hdr .meta{color:#444;}
+  .hdr-logo{background:var(--ember) !important;color:#fff !important;}
+  .section{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+  .section-title{background:#eee !important;color:#1a1a1a !important;}
+  .toggle button.on{background:var(--ember) !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  canvas.pad,canvas.mini-pad{border:1px solid #999 !important;}
+  @page{margin:14mm 10mm;}
+}
+
+/* ===== Reglas propias de Alturas (secciones, preguntas SI/NO/NA, cálculo DTR/AMT, EPCC) ===== */
+.section-note{
     background:#fff7e0;
     color:#7a5b00;
     font-size:11px;
@@ -218,20 +334,12 @@
     display:none;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;
     padding:10px 14px;border-radius:6px;margin:0 0 12px;font-size:12px;line-height:1.5;
     align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;
+    position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1);
   }
   .draft-banner.show{display:flex;}
   .draft-banner .btn{font-size:11px;padding:6px 10px;}
 
-  @media print{
-    body{background:#fff;padding:0;}
-    .footer-actions,.add-worker-btn,.remove-worker,.validation-banner,.draft-banner{display:none !important;}
-    .sheet{box-shadow:none;border:none;}
-    .section{break-inside:avoid;}
-    .section-title,.yn-btn.active{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    canvas.sigpad{border:1px solid #999 !important;}
-    @page{margin:14mm 10mm;}
-  }
-  @media (max-width:640px){
+    @media (max-width:640px){
     .head{grid-template-columns:1fr;}
     .head .logo,.head .title{border-right:none;border-bottom:1px solid var(--line);}
     .head .logo{padding:10px 14px;}
@@ -315,97 +423,80 @@
   fieldset.readonly-phase[disabled] select,fieldset.readonly-phase[disabled] textarea,
   fieldset.readonly-phase[disabled] button{opacity:.75;cursor:not-allowed;}
   fieldset.readonly-phase[disabled] canvas.sigpad{pointer-events:none;}
+
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<!-- ══════════ GATE SCREEN ══════════ -->
-<div class="gate-wrap" id="gateScreen">
-  <div class="gate-top">
-    <div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Alturas</h1></div>
-    <div class="meta">Código: <b>SSTA-F-116</b> · V1</div>
-  </div>
-  <h2>¿Qué deseas hacer?</h2>
-  <p>Este permiso se guarda en una Google Sheet compartida: se abre desde un dispositivo y se cierra desde otro, buscando el permiso por su código.</p>
-
-  <div class="landing-choices">
-    <div class="choice-card" id="btnNewPermit">
-      <div class="icon">🧗</div>
-      <h3>Abrir nuevo permiso</h3>
-      <p>Diligenciar la inspección, autorización, riesgos, EPCC y firmas de apertura. Se guarda directo en la hoja de cálculo.</p>
+  <!-- LANDING -->
+  <div id="landing">
+    <div class="hdr" style="margin-bottom:26px;">
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Alturas</h1></div></div>
+      <div class="meta">Código: <b>SSTA-F-116</b> · V3</div>
     </div>
-    <div class="choice-card" id="cardCloseAlturas">
-      <div class="icon">✅</div>
-      <h3>Cerrar un permiso existente</h3>
-      <p>Escribe el código del permiso (o elígelo de la lista de abiertos) para revisar los datos y diligenciar el cierre.</p>
-      <div class="file-input-wrap" onclick="event.stopPropagation()">
-        <input type="text" id="closeCodeInput" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
-        <button class="gate-btn-secondary" id="btnFetchPermit" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Buscar permiso</button>
-        <button class="gate-btn-secondary" id="btnListOpen" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver permisos abiertos</button>
-        <button class="gate-btn-secondary" id="btnListClosed" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver historial (cerrados)</button>
-        <div id="closeCodeMsg"></div>
-        <div id="openPermitsList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
-        <div id="historyPanel" style="display:none;margin-top:10px;text-align:left;">
-          <input type="text" id="historySearch" placeholder="Buscar por código o responsable..." style="width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12.5px;margin-bottom:8px;">
-          <div id="closedPermitsList" style="font-size:12.5px;max-height:260px;overflow-y:auto;"></div>
+    <h2>¿Qué deseas hacer?</h2>
+    <p>Este permiso se guarda en una Google Sheet compartida: se abre desde un dispositivo y se cierra desde otro, buscando el permiso por su código.</p>
+
+    <div class="landing-choices">
+      <div class="choice-card" id="cardNew">
+        <div class="icon">🧗</div>
+        <h3>Abrir nuevo permiso</h3>
+        <p>Diligenciar la planeación, autorización, EPP, cálculo DTR/AMT, trabajadores y firmas de apertura. Se guarda directo en la hoja de cálculo.</p>
+      </div>
+      <div class="choice-card" id="cardClose">
+        <div class="icon">✅</div>
+        <h3>Cerrar un permiso existente</h3>
+        <p>Escribe el código del permiso (o elígelo de la lista de abiertos) para revisar los datos y diligenciar el cierre.</p>
+        <div class="file-input-wrap">
+          <input type="text" id="codeInput" placeholder="Ej. PTA-20260715-482173" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+          <button class="btn-secondary" id="loadCodeBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Buscar permiso</button>
+          <button class="btn-secondary" id="listOpenBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <button class="btn-secondary" id="listClosedBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver historial (cerrados)</button>
+          <div id="openList" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
+          <div id="historyPanel" style="display:none;margin-top:10px;text-align:left;">
+            <input type="text" id="historySearch" placeholder="Buscar por código o responsable..." style="width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12.5px;margin-bottom:8px;">
+            <div id="closedList" style="font-size:12.5px;max-height:260px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="choice-card" id="cardAddPeople">
+        <div class="icon">👥</div>
+        <h3>Agregar personal</h3>
+        <p>Para un permiso ya abierto en ejecución: suma más trabajadores que se van uniendo al trabajo, sin cerrar el permiso.</p>
+        <div class="file-input-wrap">
+          <input type="text" id="addPeopleCodeInput" placeholder="Ej. PTA-20260715-482173" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+          <button class="btn-secondary" id="loadAddPeopleBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y agregar personal</button>
+          <button class="btn-secondary" id="listOpenForAddBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <div id="openListForAdd" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
         </div>
       </div>
     </div>
+    <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
   </div>
 
-  <div class="choice-card" id="cardAddPeopleAlturas">
-    <div class="icon">👥</div>
-    <h3>Agregar personal</h3>
-    <p>Para un permiso ya abierto en ejecución: suma más trabajadores que se van uniendo, sin cerrar el permiso.</p>
-    <div class="file-input-wrap" onclick="event.stopPropagation()">
-      <input type="text" id="addPeopleCodeInputAlt" placeholder="Ej. ALT-20260715-001" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
-      <button class="gate-btn-secondary" id="loadAddPeopleBtnAlt" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Cargar permiso y agregar personal</button>
-      <button class="gate-btn-secondary" id="listOpenForAddBtnAlt" type="button" style="margin-top:8px;width:100%;color:var(--navy-dark);border-color:var(--line);">Ver permisos abiertos</button>
-      <div id="openListForAddAlt" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
-      <div id="addPeopleMsgAlt"></div>
+  <!-- APP -->
+  <div id="app">
+    <div class="hdr">
+      <div class="hdr-left"><div class="hdr-logo">IN</div><div><div class="brand">INDÍMON · SSTA</div><h1>Permiso de Trabajo en Alturas</h1></div></div>
+      <div class="meta">Código: <b>SSTA-F-116</b> · Versión: <b>3</b></div>
     </div>
-  </div>
-  <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
-</div>
-
-<div class="sheet" id="permitForm" style="display:none;">
-
-  <div class="head">
-    <div class="logo">
-      <div class="logo-badge">IN</div>
-      <div>
-        <b>INDIMON</b>
-        <small>Una solución eficiente a su alcance</small>
-      </div>
+    <div class="status-banner open" id="statusBanner">
+      <span id="statusBannerText">Permiso nuevo — aún no guardado</span>
+      <span>Código: <code id="permitCodeDisplay">—</code></span>
     </div>
-    <div class="title">
-      <h1>Permiso de trabajo en alturas</h1>
-    </div>
-    <div class="meta">
-      <div><span>Código</span><b>SSTA-F-116</b></div>
-      <div><span>Versión</span><b>3</b></div>
-      <div><span>Fecha</span><b>15/05/2017</b></div>
-      <div><span>Actualización</span><b>24 abr 2024</b></div>
-    </div>
-  </div>
 
-  <div class="draft-banner" id="draftBanner">
-    <span id="draftBannerText"></span>
-    <span style="display:flex;gap:8px;">
-      <button type="button" class="btn btn-secondary" id="draftRestoreBtn">Continuar borrador</button>
-      <button type="button" class="btn btn-secondary" id="draftDiscardBtn">Descartar</button>
-    </span>
-  </div>
-  <div class="validation-banner" id="validationBanner"></div>
-
-  <div class="permit-status-bar" id="permitStatusBar" style="display:none;">
-    <div>Código de permiso: <span class="code-tag" id="permitCodeTag">—</span>
-      <button type="button" class="copy-code-btn" id="copyCodeBtn">Copiar</button>
+    <div class="draft-banner" id="draftBanner">
+      <span id="draftBannerText"></span>
+      <span style="display:flex;gap:8px;">
+        <button type="button" id="draftRestoreBtn">Continuar borrador</button>
+        <button type="button" id="draftDiscardBtn">Descartar</button>
+      </span>
     </div>
-    <span class="status-pill abierto" id="permitStatusPill">ABIERTO</span>
-  </div>
+    <div class="validation-banner" id="validationBanner"></div>
 
-  <fieldset class="readonly-phase" id="openPhase">
+  <div id="openPhase">
 
   <!-- 1. PLANEACION -->
   <div class="section">
@@ -484,8 +575,8 @@
       </div>
       <div class="sig-pad-wrap">
         <label>Firma inspector de acceso</label>
-        <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
+        <canvas class="pad" id="padInspector"></canvas>
+        <div class="sig-actions"><button type="button" data-clear="padInspector">Borrar firma</button><button type="button" data-undo="padInspector">Deshacer trazo</button><span class="sig-status" id="status_padInspector">Sin firmar</span></div>
       </div>
     </div>
   </div>
@@ -582,133 +673,83 @@
   </div>
 
   <!-- 10. TRABAJADORES -->
-  <div class="section" id="section10Workers">
-    <div class="section-title">Trabajadores autorizados — declaración y firma</div>
+  <div class="section" id="execSection">
+    <div class="section-title" id="titleSecExec">Trabajadores autorizados — declaración y firma</div>
     <div class="section-note">Al firmar, cada trabajador declara estar en plena capacidad física y mental, capacitado con certificación vigente (18 meses), con EPP inspeccionado en perfectas condiciones, afiliación vigente a seguridad social y apto para trabajar en alturas.</div>
-    <div class="workers-wrap" id="workersWrap"></div>
-    <div class="workers-wrap" style="padding-top:0;"><button type="button" class="add-worker-btn" id="addWorkerBtn">+ Agregar trabajador</button></div>
+    <div class="exec-cards" id="execBody"></div>
+    <button class="add-row-btn" id="addRowBtn" type="button">+ Agregar trabajador</button>
   </div>
 
   <!-- ROLES RESPONSABLES -->
   <div class="section">
     <div class="section-title">Roles responsables</div>
-    <div class="grid" id="rolesWrap"></div>
-  </div>
-
-  </fieldset><!-- /openPhase -->
-
-  <fieldset class="readonly-phase" id="closePhase" disabled style="display:none;">
-  <!-- 11. CIERRE -->
-  <div class="section">
-    <div class="section-title">10. Cierre del permiso de trabajo</div>
-    <div class="grid">
-      <div class="field"><label>Motivo del cierre</label>
-        <select>
-          <option>Actividad finalizada</option>
-          <option>Actividad cancelada</option>
-          <option>Evento no deseado</option>
-          <option>Condiciones y/o actos inseguros</option>
-        </select>
-      </div>
-      <div class="row">
-        <div class="field"><label>Fecha real de cierre</label><input type="date"></div>
-        <div class="field"><label>Hora de cierre</label><input type="time"></div>
-      </div>
-      <div class="yn-row"><div class="yn-label">¿El personal que se encontraba interviniendo el equipo fue retirado?</div><div class="yn-opts" data-yn></div></div>
-      <div class="yn-row"><div class="yn-label">¿Se aplicaron las tres primeras "S" en el área antes de entregar el equipo?</div><div class="yn-opts" data-yn></div></div>
-      <div class="yn-row"><div class="yn-label">¿Se han inspeccionado y almacenado correctamente los equipos de protección contra caídas?</div><div class="yn-opts" data-yn></div></div>
-      <div class="yn-row"><div class="yn-label">¿Se han recogido y almacenado correctamente las herramientas usadas en la actividad?</div><div class="yn-opts" data-yn></div></div>
-      <div class="field"><label>Observaciones</label><textarea placeholder="Observaciones finales del cierre"></textarea></div>
-
-      <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Coordinador trabajo en alturas — Nombre completo / Cédula</label><input type="text" id="coordCierreNombre" placeholder="Nombre completo (escribe para buscar)"></div>
-      </div>
-      <div class="sig-pad-wrap">
-        <label>Firma coordinador — VoBo antes de archivar</label>
-        <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
-      </div>
-
-      <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Supervisor de proyecto — Nombre completo / Cédula</label><input type="text" id="supCierreNombre" placeholder="Nombre completo (escribe para buscar)"></div>
-      </div>
-      <div class="sig-pad-wrap">
-        <label>Firma supervisor de proyecto</label>
-        <canvas class="sigpad" width="600" height="150"></canvas>
-        <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
-      </div>
+    <div class="section-body">
+      <div id="responsablesSigs" style="display:flex;flex-direction:column;gap:16px;"></div>
     </div>
   </div>
-  </fieldset><!-- /closePhase -->
+
+  </div><!-- /openPhase -->
+
+
+    <!-- CIERRE -->
+    <div class="section">
+      <div class="section-title locked" id="titleSecClose">Cierre del permiso</div>
+      <div class="section-body" id="closeSectionBody">
+        <p id="closeLockedMsg" style="font-size:13px;color:var(--muted);">Esta sección se habilita al importar el permiso desde el código de apertura.</p>
+        <div id="closeFields" class="hidden">
+          <div class="grid3">
+            <div class="field"><label>Fecha real del cierre</label><input type="date" id="cierreFecha"></div>
+            <div class="field"><label>Hora de cierre</label><input type="time" id="cierreHora"></div>
+            <div class="field"><label>Motivo del cierre</label>
+              <select id="motivoCierre"><option value="">Seleccione…</option><option>Actividad Finalizada</option><option>Actividad Cancelada</option><option>Evento no deseado</option><option>Lluvia / Tormenta</option><option>Condiciones y/o actos inseguros</option></select>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
+            <div class="sig-block">
+              <h5>Coordinador trabajo en alturas — VoBo antes de archivar</h5>
+              <div class="field" style="margin-bottom:10px;"><label>Nombre completo / Cédula</label><input type="text" id="coordCierre" placeholder="Nombre completo (escribe para buscar) — Cédula"></div>
+              <canvas class="pad" id="padCoordCierre"></canvas>
+              <div class="sig-actions"><button type="button" data-clear="padCoordCierre">Borrar firma</button><button type="button" data-undo="padCoordCierre">Deshacer trazo</button><span class="sig-status" id="statusCoordCierre">Sin firmar</span></div>
+            </div>
+            <div class="sig-block">
+              <h5>Supervisor de proyecto</h5>
+              <div class="field" style="margin-bottom:10px;"><label>Nombre completo / Cédula</label><input type="text" id="supCierre" placeholder="Nombre completo (escribe para buscar) — Cédula"></div>
+              <canvas class="pad" id="padSupCierre"></canvas>
+              <div class="sig-actions"><button type="button" data-clear="padSupCierre">Borrar firma</button><button type="button" data-undo="padSupCierre">Deshacer trazo</button><span class="sig-status" id="statusSupCierre">Sin firmar</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
 </div>
 
-<div class="footer-actions">
-  <span id="status-msg">Complete la sección 1 a 9 y guarde para generar el código del permiso.</span>
-  <button class="btn btn-secondary" id="printBtn">Imprimir / PDF</button>
-  <button class="btn btn-secondary" id="btnBackToGate">Volver al inicio</button>
-  <button class="btn btn-primary" id="btnSaveOpen">Guardar y generar código</button>
-  <button class="btn btn-primary" id="btnSaveClose" style="display:none;">Guardar cierre del permiso</button>
+<div class="footer-actions" id="footerActions" style="display:none;">
+  <span class="status" id="footerStatus">—</span>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+    <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
+    <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
+  </div>
 </div>
 
-<div id="footerAddPeopleAlt">
-  <span id="addPeopleMsgAlt2">—</span>
-  <button class="btn btn-secondary" id="backFromAddPeopleBtnAlt" type="button">Volver al inicio</button>
-  <button class="btn btn-primary" id="saveAddPeopleBtnAlt" type="button">Guardar personal agregado</button>
+<div id="footerAddPeople">
+  <span class="status" id="addPeopleStatus">—</span>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn-secondary" id="backFromAddPeopleBtn" type="button">Volver al inicio</button>
+    <button class="btn-main" id="saveAddPeopleBtn" type="button">Guardar personal agregado</button>
+  </div>
 </div>
 
+</div><!-- /wrap -->
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="permiso-core.js"></script>
 <script>
-OfflineBanner.init();
-OutboxBadge.init();
-if (typeof ScrollProgress !== 'undefined') ScrollProgress.init('#0f3a5f');
-// ---------- YES/NO/NA toggle groups ----------
-document.querySelectorAll('.yn-opts').forEach(group => {
-  if(!group.hasAttribute('data-mode')){
-    group.innerHTML = '<button type="button" class="yn-btn" data-v="SI">SI</button><button type="button" class="yn-btn" data-v="N/A">N/A</button>';
-  }
-  const rowLabel = (group.closest('.yn-row')||group.closest('.field')||{}).querySelector
-    ? (group.closest('.yn-row')||group.closest('.field')).querySelector('.yn-label,label')
-    : null;
-  const labelTxt = rowLabel ? rowLabel.textContent.trim() : '';
-  group.setAttribute('role','group');
-  if(labelTxt) group.setAttribute('aria-label', labelTxt);
-  group.querySelectorAll('button').forEach(btn=>{
-    btn.classList.add('yn-btn');
-    if(labelTxt) btn.setAttribute('aria-label', `${btn.dataset.v==='SI'?'Sí':btn.dataset.v} — ${labelTxt}`);
-    btn.setAttribute('aria-pressed', 'false');
-    btn.addEventListener('click', ()=>{
-      const already = btn.classList.contains('active-si')||btn.classList.contains('active-na')||btn.classList.contains('active-no');
-      group.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-si','active-na','active-no'); b.setAttribute('aria-pressed','false'); });
-      if(already) return;
-      const v = btn.dataset.v;
-      if(v==='SI') btn.classList.add('active-si');
-      else if(v==='NO') btn.classList.add('active-no');
-      else btn.classList.add('active-na');
-      btn.setAttribute('aria-pressed','true');
-      updateSectionPills();
-    });
-  });
-});
-
-// ---------- Contador "X/Y" por sección (cuántas preguntas SI/NO/NA ya están respondidas) ----------
-function updateSectionPills(){
-  document.querySelectorAll('.section').forEach(section=>{
-    const groups = section.querySelectorAll('.yn-opts');
-    if(!groups.length) return; // secciones sin preguntas SI/NO/NA (ej. cálculos, firmas) no llevan contador
-    const title = section.querySelector('.section-title');
-    if(!title) return;
-    let pill = title.querySelector('.progress-pill');
-    if(!pill){ pill = document.createElement('span'); pill.className='progress-pill'; title.appendChild(pill); }
-    let respondidas = 0;
-    groups.forEach(g=>{ if(g.querySelector('.active-si,.active-no,.active-na')) respondidas++; });
-    pill.textContent = `${respondidas}/${groups.length}`;
-  });
-}
-updateSectionPills();
-
-// ---------- EPCC table ----------
+/* ================= EPCC: tabla de elementos de protección contra caídas =================
+   Igual que las preguntas SI/NO/N-A, se usa clave por texto (no por posición),
+   para que la tabla no se desalinee si el día de mañana se agrega o reordena
+   un elemento. */
 const epccItems = [
   "Cinta de anclaje certificada",
   "Eslinga para detención de caídas en Y con absorbedor de impacto",
@@ -721,136 +762,51 @@ const epccItems = [
   "Línea de vida horizontal",
   "Otro, ¿cuál?"
 ];
-const tbody = document.querySelector('#table-epcc tbody');
-epccItems.forEach(name=>{
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td>${name}</td>
-    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
-    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
-    <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>`;
-  tbody.appendChild(tr);
-});
-
-// ---------- Signature pads (generic init, incl. dynamically added ones) ----------
-const sigPadResizers = [];
-function initSigPad(canvas){
-  if(canvas.dataset.sigInit) return;
-  canvas.dataset.sigInit = '1';
-  const wrapLabel = canvas.parentElement.querySelector('label');
-  const labelTxt = wrapLabel ? wrapLabel.textContent.trim() : 'firma';
-  canvas.setAttribute('role','img');
-  canvas.setAttribute('aria-label', `Área para dibujar: ${labelTxt}`);
-  const clearBtn = canvas.parentElement.querySelector('.clear-sig');
-  if(clearBtn) clearBtn.setAttribute('aria-label', `Borrar ${labelTxt}`);
-  const undoBtn = canvas.parentElement.querySelector('.undo-sig');
-  if(undoBtn) undoBtn.setAttribute('aria-label', `Deshacer último trazo de ${labelTxt}`);
-  const ctx = canvas.getContext('2d');
-  let history = [];
-  function resize(){
-    const ratio = Math.max(window.devicePixelRatio||1,1);
-    const rect = canvas.getBoundingClientRect();
-    if(rect.width===0 || rect.height===0) return; // still hidden, skip
-    canvas.width = rect.width*ratio;
-    canvas.height = rect.height*ratio;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(ratio,ratio);
-    ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#0f3a5f';
-    history = [];
-  }
-  resize();
-  sigPadResizers.push(resize);
-  let drawing=false, hasSigned=false;
-  const statusEl = canvas.parentElement.querySelector('.sig-status');
-  function pos(e){
-    const rect = canvas.getBoundingClientRect();
-    const cx = (e.touches? e.touches[0].clientX : e.clientX)-rect.left;
-    const cy = (e.touches? e.touches[0].clientY : e.clientY)-rect.top;
-    return {x:cx,y:cy};
-  }
-  function saveHistory(){
-    try{
-      history.push(ctx.getImageData(0,0,canvas.width,canvas.height));
-      if(history.length>15) history.shift();
-    }catch(e){ /* canvas vacío o sin tamaño aún */ }
-  }
-  function start(e){ if(canvas.closest('fieldset[disabled]')) return; saveHistory(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
-  function move(e){
-    if(!drawing) return;
-    const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();
-    if(!hasSigned){ hasSigned=true; statusEl.textContent='Firmado'; statusEl.classList.add('signed'); }
-    e.preventDefault();
-  }
-  function end(){ drawing=false; }
-  canvas.addEventListener('mousedown',start);
-  canvas.addEventListener('mousemove',move);
-  window.addEventListener('mouseup',end);
-  canvas.addEventListener('touchstart',start,{passive:false});
-  canvas.addEventListener('touchmove',move,{passive:false});
-  canvas.addEventListener('touchend',end);
-
-  canvas.parentElement.querySelector('.clear-sig').addEventListener('click',()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    history = [];
-    hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
+function keyFromTextEpcc(text){
+  let hash=0; for(let i=0;i<text.length;i++) hash=((hash<<5)-hash+text.charCodeAt(i))|0;
+  return 'epcc_'+Math.abs(hash).toString(36);
+}
+function buildEpccTable(){
+  const tbody = document.querySelector('#table-epcc tbody');
+  if(tbody.children.length) return; // ya se construyó (evita duplicar si initRender corre más de una vez)
+  epccItems.forEach(name=>{
+    const tr = document.createElement('tr');
+    tr.dataset.key = keyFromTextEpcc(name);
+    tr.innerHTML = `<td>${name}</td>
+      <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
+      <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>
+      <td><select><option value="">-</option><option>SI</option><option>N/A</option></select></td>`;
+    tbody.appendChild(tr);
   });
-  if(undoBtn){
-    undoBtn.addEventListener('click', ()=>{
-      if(canvas.closest('fieldset[disabled]')) return;
-      if(history.length===0){
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed');
-        return;
-      }
-      const prev = history.pop();
-      ctx.putImageData(prev,0,0);
-      if(history.length===0){ hasSigned=false; statusEl.textContent='Sin firmar'; statusEl.classList.remove('signed'); }
-    });
-  }
+}
+function collectEpccAlt(){
+  const out = {};
+  [...document.querySelectorAll('#table-epcc tbody tr')].forEach(tr=>{
+    const sels = tr.querySelectorAll('select');
+    out[tr.dataset.key] = [sels[0].value, sels[1].value, sels[2].value];
+  });
+  return out;
+}
+function applyEpccAlt(data){
+  if(!data) return;
+  const esViejo = Array.isArray(data); // permisos guardados antes de esta migración
+  [...document.querySelectorAll('#table-epcc tbody tr')].forEach((tr,i)=>{
+    const valores = esViejo ? data[i] : data[tr.dataset.key];
+    if(!valores) return;
+    const sels = tr.querySelectorAll('select');
+    sels[0].value = valores[0]||''; sels[1].value = valores[1]||''; sels[2].value = valores[2]||'';
+  });
 }
 
-// ---------- Roles responsables ----------
-const roles = [
-  "Coordinador trabajo en alturas","Supervisor de proyecto","Ayudante de seguridad","Rescatista",
-  "Encargado del área enterado turno 1","Encargado del área enterado turno 2","Responsable de activar el plan de emergencia"
-];
-const rolesWrap = document.getElementById('rolesWrap');
-roles.forEach(r=>{
-  const div = document.createElement('div');
-  div.className = 'row';
-  div.innerHTML = `
-    <div class="field"><label>${r} — Nombre</label><input type="text" placeholder="Nombre completo (escribe para buscar)"></div>
-    <div class="field" style="max-width:160px;"><label>Cédula</label><input type="text" inputmode="numeric"></div>
-    <div class="field" style="flex:1 1 100%;">
-      <label>Firma</label>
-      <canvas class="sigpad" width="600" height="150"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
-    </div>`;
-  rolesWrap.appendChild(div);
-  initSigPad(div.querySelector('canvas.sigpad'));
-  const nombreEl = div.querySelector('.field input[type=text]');
-  const cedulaEl = div.querySelectorAll('.field input[type=text]')[1];
-  attachPersonalAutocomplete(nombreEl, persona=>{
-    nombreEl.value = persona.nombre;
-    cedulaEl.value = persona.cedula;
-  });
-});
-
-// ---------- Calculo DTR ----------
-const at = document.getElementById('calc-at');
-const rc = document.getElementById('calc-rc');
-const dcl = document.getElementById('calc-dcl');
-const da = document.getElementById('calc-da');
-const amt = document.getElementById('calc-amt');
-const dtrOut = document.getElementById('calc-dtr');
-const resultBox = document.getElementById('calc-result');
-
-function updateCalc(){
-  const v = (el)=> parseFloat(el.value)||0;
-  const dtr = v(at)+v(rc)+v(dcl)+v(da);
-  dtrOut.textContent = dtr.toFixed(2)+' m';
-  const amtVal = v(amt);
+/* ================= Cálculo DTR/AMT (sección 6) ================= */
+function updateCalcAlturas(){
+  const v = (id)=> parseFloat(document.getElementById(id).value)||0;
+  const dtr = v('calc-at')+v('calc-rc')+v('calc-dcl')+v('calc-da');
+  document.getElementById('calc-dtr').textContent = dtr.toFixed(2)+' m';
+  const amtVal = v('calc-amt');
+  const resultBox = document.getElementById('calc-result');
   const justifWrap = document.getElementById('calc-justif-wrap');
-  if(amtVal===0 && dtr===parseFloat(rc.value||1)){
+  if(amtVal===0 && dtr===0){
     resultBox.className='alert-result pending';
     resultBox.textContent='Ingrese los valores para validar: ¿AMT > DTR?';
     justifWrap.style.display='none';
@@ -864,824 +820,108 @@ function updateCalc(){
     justifWrap.style.display='block';
   }
 }
-function attachDecimalMask(input){
-  input.addEventListener('input', ()=>{
-    let digits = input.value.replace(/\D/g,'');
-    digits = digits.replace(/^0+(?=\d)/,'');
-    while(digits.length<3) digits = '0'+digits;
-    const entero = digits.slice(0,-2);
-    const decimales = digits.slice(-2);
-    input.value = `${parseInt(entero,10)}.${decimales}`;
-    updateCalc();
-  });
-  input.addEventListener('focus', ()=>{
-    setTimeout(()=> input.setSelectionRange(input.value.length, input.value.length), 0);
+
+/* ================= Contador "X/Y" por sección ================= */
+function updateSectionPills(){
+  document.querySelectorAll('.section').forEach(section=>{
+    const groups = section.querySelectorAll('.yn-opts');
+    if(!groups.length) return;
+    const title = section.querySelector('.section-title');
+    if(!title) return;
+    let pill = title.querySelector('.progress-pill');
+    if(!pill){ pill = document.createElement('span'); pill.className='progress-pill'; pill.style.marginLeft='auto'; title.appendChild(pill); }
+    let respondidas = 0;
+    groups.forEach(g=>{ if(g.querySelector('.active-si,.active-no,.active-na')) respondidas++; });
+    pill.textContent = `${respondidas}/${groups.length}`;
   });
 }
-document.querySelectorAll('.calc-mask').forEach(attachDecimalMask);
-[at,rc,dcl,da,amt].forEach(el=>el.addEventListener('input', updateCalc));
-updateCalc();
 
-function resizeAllSigPads(){
-  sigPadResizers.forEach(fn=>fn());
-}
-document.querySelectorAll('canvas.sigpad').forEach(initSigPad);
-attachPersonalAutocomplete(document.getElementById('coordCierreNombre'), persona=>{
-  document.getElementById('coordCierreNombre').value = persona.nombre + ' — ' + persona.cedula;
-});
-attachPersonalAutocomplete(document.getElementById('supCierreNombre'), persona=>{
-  document.getElementById('supCierreNombre').value = persona.nombre + ' — ' + persona.cedula;
-});
+/* ================= CONFIGURACIÓN DE ESTE TIPO DE PERMISO ================= */
+const cfg = {
+  key: 'alturas',
+  codePrefix: 'PTA',
+  draftSlug: 'alturas',
+  themeColor: '#0f3a5f',
+  freeformYN: true, // preguntas SI/NO/N-A intercaladas en las secciones, no en listas por categoría
 
-// Al girar el celular el lienzo cambia de tamaño en pantalla (ver CSS de modo
-// horizontal). Cambiar canvas.width/height borra el dibujo y desfasa el mapeo
-// de coordenadas del trazo respecto a donde toca el dedo. Por eso aquí se
-// guarda cada firma ya hecha, se reajusta el lienzo, y se vuelve a dibujar.
-let _rotateTimer=null;
-function handleOrientationChange(){
-  clearTimeout(_rotateTimer);
-  _rotateTimer=setTimeout(()=>{
-    const saved=[];
-    document.querySelectorAll('canvas.sigpad').forEach(c=>{
-      const statusEl=c.parentElement.querySelector('.sig-status');
-      const yaFirmado = statusEl && statusEl.classList.contains('signed');
-      saved.push([c, yaFirmado ? collectSig(c) : null]);
+  responsables: [
+    "Coordinador trabajo en alturas", "Supervisor de proyecto",
+    "Ayudante de seguridad", "Rescatista",
+    "Encargado del área enterado turno 1", "Encargado del área enterado turno 2",
+    "Responsable de activar el plan de emergencia"
+  ],
+  responsablesOpcionales: ["Encargado del área enterado turno 1", "Encargado del área enterado turno 2"],
+  responsableDashboardIndex: 0, // "Coordinador trabajo en alturas" — equivalente elegido a "Supervisor SSTA" para el dashboard
+  responsablesSectionLabel: 'sección de roles responsables',
+
+  execExtraFields: [
+    { id:'execVerif', field:'verificacion', type:'select', placeholder:'Verificación SS',
+      options:[{value:'Verificada',label:'Verificada'},{value:'Pendiente',label:'Pendiente'}] },
+    { id:'execEstado', field:'estado', type:'select', placeholder:'Estado',
+      options:[{value:'Trabajador autorizado y apto',label:'Trabajador autorizado y apto'},{value:'No apto',label:'No apto'}] }
+  ],
+
+  requiredOpenFields: [
+    { id:'fechaInicioAlt', label:'Fecha inicio (sección 2)' },
+    { id:'horaInicioAlt', label:'Hora inicio (sección 2)' },
+    { id:'fechaCulminacionAlt', label:'Fecha culminación (sección 2)' },
+    { id:'horaCulminacionAlt', label:'Hora culminación (sección 2)' },
+    { id:'areaAlt', label:'Área(s) donde se realiza el trabajo (sección 2)' },
+    { id:'descripcionAlt', label:'Descripción de la actividad (sección 2)' }
+  ],
+  dateRange: { desdeFecha:'fechaInicioAlt', desdeHora:'horaInicioAlt', hastaFecha:'fechaCulminacionAlt', hastaHora:'horaCulminacionAlt', sectionLabel:'sección 2' },
+
+  // Cierre fiel al formato real de Alturas (Coordinador/Supervisor de proyecto,
+  // campo combinado "Nombre / Cédula"), en vez del par genérico de los otros 4 permisos.
+  closeSigners: [
+    { idPrefix:'coordCierre', padKey:'padCoordCierre', field:'coordCierre', label:'Coordinador trabajo en alturas', combined:true },
+    { idPrefix:'supCierre',   padKey:'padSupCierre',   field:'supCierre',   label:'Supervisor de proyecto',        combined:true }
+  ],
+  closeQuestions: false, // Alturas no tiene las 4 preguntas de cierre que sí tienen los otros 4
+
+  extraOnInitRender(){
+    buildEpccTable();
+    ['calc-at','calc-rc','calc-dcl','calc-da','calc-amt'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', updateCalcAlturas);
     });
-    resizeAllSigPads();
-    saved.forEach(([c,url])=>{ if(url) applySig(c,url); });
-  },120); // pequeño margen para que el navegador termine de recalcular el layout
-}
-window.addEventListener('orientationchange', handleOrientationChange);
-// Nota: ya NO se escucha 'resize' — ese evento también se dispara cuando aparece
-// o desaparece el teclado del celular, lo que interrumpía la firma justo cuando
-// alguien pasaba de escribir un campo a firmar. 'orientationchange' solo se activa
-// al girar el dispositivo, que es el caso real que queremos cubrir.
-
-// ---------- Workers (dynamic rows) ----------
-let workerCount = 0;
-const workersWrap = document.getElementById('workersWrap');
-
-function addWorker(){
-  workerCount++;
-  const card = document.createElement('div');
-  card.className = 'worker-card';
-  card.innerHTML = `
-    <button type="button" class="remove-worker">Eliminar</button>
-    <h4>Trabajador ${workerCount}</h4>
-    <div class="worker-grid">
-      <input type="text" placeholder="Nombre completo (escribe para buscar)" class="w-nombre" autocomplete="off">
-      <input type="text" placeholder="Cédula" class="w-cedula" inputmode="numeric">
-      <input type="text" placeholder="Cargo" class="w-cargo">
-      <select><option value="">Verificación seguridad social</option><option>Verificada</option><option>Pendiente</option></select>
-      <select><option value="">Estado</option><option>Trabajador autorizado y apto</option><option>No apto</option></select>
-    </div>
-    <div class="sig-pad-wrap">
-      <label>Firma del trabajador</label>
-      <canvas class="sigpad" width="600" height="150"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-sig">Borrar firma</button><button type="button" class="undo-sig">Deshacer trazo</button><span class="sig-status">Sin firmar</span></div>
-    </div>`;
-  workersWrap.appendChild(card);
-  initSigPad(card.querySelector('canvas.sigpad'));
-  card.querySelector('.remove-worker').addEventListener('click', ()=>{
-    card.remove();
-  });
-  attachPersonalAutocomplete(card.querySelector('.w-nombre'), persona=>{
-    card.querySelector('.w-nombre').value = persona.nombre;
-    card.querySelector('.w-cedula').value = persona.cedula;
-    card.querySelector('.w-cargo').value = persona.cargo || '';
-  });
-}
-document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
-addWorker(); addWorker();
-
-// ==================================================================
-// CONFIGURACIÓN — centralizada en config.js, no se edita aquí
-// ==================================================================
-const CONFIG = {
-  SCRIPT_URL: PORTAL_CONFIG.BACKENDS.alturas.url,
-  API_TOKEN: PORTAL_CONFIG.API_TOKEN
+    updateCalcAlturas();
+    updateSectionPills();
+  },
+  onYNChange(){ updateSectionPills(); },
+  extraCollectOpenData(){
+    return {
+      epcc: collectEpccAlt(),
+      calcAt: document.getElementById('calc-at').value,
+      calcRc: document.getElementById('calc-rc').value,
+      calcDcl: document.getElementById('calc-dcl').value,
+      calcDa: document.getElementById('calc-da').value,
+      calcAmt: document.getElementById('calc-amt').value,
+      calcJustif: (document.getElementById('calc-justif')||{}).value || ''
+    };
+  },
+  extraSetFieldValues(vals){
+    applyEpccAlt(vals.epcc);
+    document.getElementById('calc-at').value = vals.calcAt || '0.00';
+    document.getElementById('calc-rc').value = vals.calcRc || '1.00';
+    document.getElementById('calc-dcl').value = vals.calcDcl || '0.00';
+    document.getElementById('calc-da').value = vals.calcDa || '0.00';
+    document.getElementById('calc-amt').value = vals.calcAmt || '0.00';
+    if(document.getElementById('calc-justif')) document.getElementById('calc-justif').value = vals.calcJustif || '';
+    updateCalcAlturas();
+    updateSectionPills();
+  },
+  extraValidateOpen(missing){
+    const resultBox = document.getElementById('calc-result');
+    if(resultBox.classList.contains('fail')){
+      const justif = document.getElementById('calc-justif');
+      if(!justif || !justif.value.trim()){
+        missing.push({ msg:'Justificación obligatoria: el cálculo de distancias (sección 6) no cumple (AMT ≤ DTR)', el: justif });
+      }
+    }
+  }
 };
 
-// ==================================================================
-// BASE DE DATOS DE PERSONAL COMPARTIDA — misma que usa el anexo
-// SSTA-F-149 "Personal Autorizado". Solo lectura desde aquí: el
-// personal se agrega/edita/elimina en ese anexo, no en los permisos.
-// ==================================================================
-const PERSONAL_DB_URL = PORTAL_CONFIG.BACKENDS.personal.url;
-const PERSONAL_DB_TOKEN = PORTAL_CONFIG.API_TOKEN;
-let personalCache = [];
-async function cargarPersonalCompartido(){
-  try{
-    const res = await fetchWithRetry(PERSONAL_DB_URL + '?action=listPersonal&token=' + encodeURIComponent(PERSONAL_DB_TOKEN));
-    const data = await res.json();
-    personalCache = (data.ok && data.personal) ? data.personal : [];
-  }catch(err){ /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */ }
-}
-cargarPersonalCompartido();
-
-/* ================= AUTOCOMPLETAR DE PERSONAL (propio, no usa <datalist> —
-   el datalist nativo del navegador casi no funciona en Safari de iPhone) ================= */
-function attachPersonalAutocomplete(inputEl, onSelect){
-  if(inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
-  inputEl.dataset.autocompleteInit = '1';
-  let box = null;
-  function cerrar(){ if(box){ box.remove(); box=null; } }
-  function abrir(){
-    cerrar();
-    const q = inputEl.value.trim().toLowerCase();
-    if(!q) return;
-    const matches = personalCache.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,6);
-    if(!matches.length) return;
-    box = document.createElement('div');
-    box.className = 'autocomplete-box';
-    const rect = inputEl.getBoundingClientRect();
-    box.style.position = 'absolute';
-    box.style.left = (rect.left + window.scrollX) + 'px';
-    box.style.top = (rect.bottom + window.scrollY + 2) + 'px';
-    box.style.width = rect.width + 'px';
-    matches.forEach(p=>{
-      const item = document.createElement('div');
-      item.className = 'autocomplete-item';
-      item.innerHTML = `<b>${esc(p.nombre)}</b><span>CC ${esc(p.cedula)}${p.cargo?' · '+esc(p.cargo):''}</span>`;
-      item.addEventListener('mousedown', e=>{ e.preventDefault(); onSelect(p); cerrar(); });
-      box.appendChild(item);
-    });
-    document.body.appendChild(box);
-  }
-  inputEl.addEventListener('input', abrir);
-  inputEl.addEventListener('focus', abrir);
-  inputEl.addEventListener('blur', ()=> setTimeout(cerrar, 150));
-  window.addEventListener('scroll', cerrar, true);
-}
-
-const statusMsg = document.getElementById('status-msg');
-
-// ---------- Helpers: serialize / apply generic phase data (order-based) ----------
-function collectYN(container){
-  return [...container.querySelectorAll('.yn-opts')].map(g=>{
-    const active = g.querySelector('.active-si,.active-na,.active-no');
-    return active ? active.dataset.v : '';
-  });
-}
-function applyYN(container, values){
-  const groups = [...container.querySelectorAll('.yn-opts')];
-  groups.forEach((g,i)=>{
-    const v = values[i];
-    g.querySelectorAll('button').forEach(b=>{ b.classList.remove('active-si','active-na','active-no'); b.setAttribute('aria-pressed','false'); });
-    if(!v) return;
-    const btn = [...g.querySelectorAll('button')].find(b=>b.dataset.v===v);
-    if(btn){ btn.classList.add(v==='SI'?'active-si':v==='NO'?'active-no':'active-na'); btn.setAttribute('aria-pressed','true'); }
-  });
-}
-function collectTextFields(container){
-  return [...container.querySelectorAll('input[type=text],input[type=number],input[type=date],input[type=time],textarea,select')]
-    .filter(el=>!el.closest('.worker-card') && !el.closest('#table-epcc') && !el.closest('#rolesWrap'))
-    .map(el=>el.value);
-}
-function applyTextFields(container, values){
-  const els = [...container.querySelectorAll('input[type=text],input[type=number],input[type=date],input[type=time],textarea,select')]
-    .filter(el=>!el.closest('.worker-card') && !el.closest('#table-epcc') && !el.closest('#rolesWrap'));
-  els.forEach((el,i)=>{ if(values[i]!==undefined) el.value = values[i]; });
-}
-function collectSig(canvas){ return canvas.toDataURL('image/png'); }
-function applySig(canvas, dataUrl){
-  if(!dataUrl) return;
-  const ctx = canvas.getContext('2d');
-  const ratio = Math.max(window.devicePixelRatio||1,1);
-  const img = new Image();
-  img.onload = ()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0,canvas.width/ratio,canvas.height/ratio);
-    const statusEl = canvas.parentElement.querySelector('.sig-status');
-    if(statusEl){ statusEl.textContent='Firmado'; statusEl.classList.add('signed'); }
-  };
-  img.src = dataUrl;
-}
-
-function collectEpcc(){
-  return [...document.querySelectorAll('#table-epcc tbody tr')].map(tr=>{
-    const sels = tr.querySelectorAll('select');
-    return [sels[0].value, sels[1].value, sels[2].value];
-  });
-}
-function applyEpcc(rows){
-  const trs = document.querySelectorAll('#table-epcc tbody tr');
-  trs.forEach((tr,i)=>{
-    if(!rows[i]) return;
-    const sels = tr.querySelectorAll('select');
-    sels[0].value = rows[i][0]||''; sels[1].value = rows[i][1]||''; sels[2].value = rows[i][2]||'';
-  });
-}
-function collectRoles(){
-  const texts = [...document.querySelectorAll('#rolesWrap .field input')].map(i=>i.value);
-  const sigs = [...document.querySelectorAll('#rolesWrap canvas.sigpad')].map(collectSig);
-  return { texts, sigs };
-}
-function applyRoles(data){
-  const values = Array.isArray(data) ? data : (data && data.texts) || [];
-  const sigs = Array.isArray(data) ? [] : (data && data.sigs) || [];
-  const els = document.querySelectorAll('#rolesWrap .field input');
-  els.forEach((el,i)=>{ if(values[i]!==undefined) el.value = values[i]; });
-  const canvases = document.querySelectorAll('#rolesWrap canvas.sigpad');
-  canvases.forEach((c,i)=>{ if(sigs[i]) applySig(c, sigs[i]); });
-}
-function collectWorkers(){
-  return [...document.querySelectorAll('.worker-card')].map(card=>{
-    const inputs = card.querySelectorAll('.worker-grid input,.worker-grid select');
-    return {
-      fields: [...inputs].map(i=>i.value),
-      sig: collectSig(card.querySelector('canvas.sigpad'))
-    };
-  });
-}
-function applyWorkers(list){
-  // reset to only what's needed
-  workersWrap.innerHTML = '';
-  workerCount = 0;
-  list.forEach(w=>{
-    addWorker();
-    const card = workersWrap.lastElementChild;
-    const inputs = card.querySelectorAll('.worker-grid input,.worker-grid select');
-    inputs.forEach((el,i)=>{ if(w.fields[i]!==undefined) el.value = w.fields[i]; });
-    applySig(card.querySelector('canvas.sigpad'), w.sig);
-  });
-}
-
-function collectOpenData(){
-  const openPhase = document.getElementById('openPhase');
-  const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
-  const inspectorNombreEl = document.getElementById('inspectorNombreInput');
-  const areaEl = document.getElementById('areaAlt');
-  // "responsable" es lo que se muestra en el dashboard como "quién abrió el permiso" —
-  // se usa el Coordinador trabajo en alturas (primer rol de la lista de responsables),
-  // ya que en Alturas no existe un rol llamado literalmente "Supervisor SSTA".
-  const coordinadorRow = document.querySelector('#rolesWrap .row');
-  const coordinadorNombre = coordinadorRow ? (coordinadorRow.querySelector('input[type=text]')||{}).value : '';
-  return {
-    yn: collectYN(openPhase),
-    text: collectTextFields(openPhase),
-    epcc: collectEpcc(),
-    roles: collectRoles(),
-    workers: collectWorkers(),
-    accessInspectorSig: accessSigCanvas ? collectSig(accessSigCanvas) : null,
-    inspectorAcceso: inspectorNombreEl ? inspectorNombreEl.value : '', // quien hizo la inspección del equipo (dato aparte, no es "el responsable" del permiso)
-    responsable: coordinadorNombre || (inspectorNombreEl ? inspectorNombreEl.value : ''),
-    area: areaEl ? areaEl.value : ''
-  };
-}
-function applyOpenData(data){
-  const openPhase = document.getElementById('openPhase');
-  applyYN(openPhase, data.yn||[]);
-  applyTextFields(openPhase, data.text||[]);
-  applyEpcc(data.epcc||[]);
-  applyRoles(data.roles||[]);
-  applyWorkers(data.workers||[]);
-  const accessSigCanvas = document.querySelector('#section4 canvas.sigpad');
-  if(accessSigCanvas) applySig(accessSigCanvas, data.accessInspectorSig);
-  updateCalc();
-  updateSectionPills();
-}
-function collectCloseData(){
-  const closePhase = document.getElementById('closePhase');
-  const sigs = [...closePhase.querySelectorAll('canvas.sigpad')].map(collectSig);
-  return { yn: collectYN(closePhase), text: collectTextFields(closePhase), sigs };
-}
-function applyCloseData(data){
-  const closePhase = document.getElementById('closePhase');
-  applyYN(closePhase, data.yn||[]);
-  applyTextFields(closePhase, data.text||[]);
-  updateSectionPills();
-  const canvases = [...closePhase.querySelectorAll('canvas.sigpad')];
-  canvases.forEach((c,i)=> applySig(c, (data.sigs||[])[i]));
-}
-
-// ---------- Validation ----------
-function validatePhase(container){
-  const missing = [];
-  container.querySelectorAll('.yn-opts').forEach(g=> g.classList.remove('field-invalid'));
-  container.querySelectorAll('.sig-pad-wrap').forEach(w=> w.classList.remove('field-invalid'));
-  container.querySelectorAll('.yn-opts').forEach(g=>{
-    const active = g.querySelector('.active-si,.active-na,.active-no');
-    if(!active){
-      g.classList.add('field-invalid');
-      const row = g.closest('.yn-row') || g.closest('.field') || g.closest('.row');
-      if(row) row.classList.add('field-invalid');
-      const label = row ? (row.querySelector('.yn-label,label')||{}).textContent : null;
-      missing.push(label ? label.trim() : 'una pregunta SI/N/A');
-    }
-  });
-  const sigsPending = [];
-  container.querySelectorAll('.sig-pad-wrap').forEach(wrap=>{
-    const statusEl = wrap.querySelector('.sig-status');
-    if(!statusEl || !statusEl.classList.contains('signed')){
-      wrap.classList.add('field-invalid');
-      const label = wrap.querySelector('label');
-      sigsPending.push(label ? label.textContent.trim() : 'una firma');
-    }
-  });
-  // Bloquea el guardado si el cálculo de distancias (sección 6) no cumple
-  // (AMT <= DTR) y no se registró una justificación con controles adicionales.
-  const calcResultEl = container.querySelector('#calc-result');
-  if(calcResultEl && calcResultEl.classList.contains('fail')){
-    const justif = container.querySelector('#calc-justif');
-    if(!justif || !justif.value.trim()){
-      const justifWrap = document.getElementById('calc-justif-wrap');
-      if(justifWrap) justifWrap.classList.add('field-invalid');
-      missing.push('Justificación obligatoria: el cálculo de distancias (sección 6) no cumple (AMT ≤ DTR)');
-    }
-  }
-
-  // Estos campos generales (fecha, hora, área, descripción) solo existen dentro
-  // de la sección de apertura — al validar el cierre, querySelector no los
-  // encuentra y estas líneas simplemente no aplican, sin necesidad de revisar
-  // en qué fase estamos.
-  const camposGenerales = [
-    ['#fechaInicioAlt', 'Fecha inicio (sección 2)'],
-    ['#horaInicioAlt', 'Hora inicio (sección 2)'],
-    ['#fechaCulminacionAlt', 'Fecha culminación (sección 2)'],
-    ['#horaCulminacionAlt', 'Hora culminación (sección 2)'],
-    ['#areaAlt', 'Área(s) donde se realiza el trabajo (sección 2)'],
-    ['#descripcionAlt', 'Descripción de la actividad (sección 2)'],
-  ];
-  camposGenerales.forEach(([sel, msg])=>{
-    const el = container.querySelector(sel);
-    if(el && !el.value.trim()){ el.classList.add('field-invalid'); missing.push(msg); }
-  });
-  const fInicio = container.querySelector('#fechaInicioAlt'), hInicio = container.querySelector('#horaInicioAlt');
-  const fFin = container.querySelector('#fechaCulminacionAlt'), hFin = container.querySelector('#horaCulminacionAlt');
-  if(fInicio && fInicio.value && hInicio.value && fFin.value && hFin.value){
-    const inicio = new Date(fInicio.value+'T'+hInicio.value);
-    const fin = new Date(fFin.value+'T'+hFin.value);
-    if(fin <= inicio){
-      fFin.classList.add('field-invalid');
-      missing.push('La fecha/hora de culminación debe ser posterior al inicio (sección 2)');
-    }
-  }
-
-  // Nombre y cédula de los roles responsables — misma excepción que en los
-  // otros 4 permisos: los encargados de turno quedan opcionales porque no
-  // siempre hay alguien asignado a ese rol al momento de abrir el permiso.
-  if(container.id === 'openPhase'){
-    const ROLES_OPCIONALES = ['Encargado del área enterado turno 1','Encargado del área enterado turno 2'];
-    [...container.querySelectorAll('#rolesWrap .row')].forEach((row, i)=>{
-      const nombreRol = roles[i];
-      if(!nombreRol || ROLES_OPCIONALES.includes(nombreRol)) return;
-      const inputs = row.querySelectorAll('input[type=text]');
-      const nombre = inputs[0] ? inputs[0].value.trim() : '';
-      const cedula = inputs[1] ? inputs[1].value.trim() : '';
-      if(!nombre || !cedula){
-        row.classList.add('field-invalid');
-        missing.push(`Nombre y cédula de "${nombreRol}" (sección de roles responsables)`);
-      }
-    });
-  }
-
-  // Al menos un trabajador con nombre, cédula y firma completos — antes se
-  // podía guardar un permiso de alturas sin ningún trabajador registrado.
-  if(container.id === 'openPhase'){
-    const workerCards = [...container.querySelectorAll('.worker-card')];
-    const algunoCompleto = workerCards.some(card=>{
-      const inputs = card.querySelectorAll('.worker-grid input');
-      const nombre = inputs[0] ? inputs[0].value.trim() : '';
-      const cedula = inputs[1] ? inputs[1].value.trim() : '';
-      const canvas = card.querySelector('canvas.sigpad');
-      const statusEl = canvas ? card.querySelector('.sig-status') : null;
-      const firmado = statusEl && statusEl.classList.contains('signed');
-      return nombre && cedula && firmado;
-    });
-    if(!algunoCompleto){
-      missing.push('Debe registrarse al menos un trabajador con nombre, cédula y firma completos (sección 10)');
-    }
-  }
-
-  return { valid: missing.length===0 && sigsPending.length===0, missing, sigsPending };
-}
-// Quita la marca roja de un campo en tiempo real apenas el usuario lo completa,
-// sin esperar a que vuelva a intentar guardar.
-document.addEventListener('click', (e)=>{
-  const ynBtn = e.target.closest('.yn-opts .yn-btn');
-  if(ynBtn){
-    const group = ynBtn.closest('.yn-opts');
-    if(group) setTimeout(()=>{
-      group.classList.remove('field-invalid');
-      const row = group.closest('.yn-row') || group.closest('.field') || group.closest('.row');
-      if(row) row.classList.remove('field-invalid');
-    }, 0);
-  }
-});
-document.addEventListener('mouseup', markSigPadFixedIfSigned, true);
-document.addEventListener('touchend', markSigPadFixedIfSigned, true);
-function markSigPadFixedIfSigned(e){
-  const wrap = e.target.closest && e.target.closest('.sig-pad-wrap');
-  if(!wrap) return;
-  const statusEl = wrap.querySelector('.sig-status');
-  if(statusEl && statusEl.classList.contains('signed')) wrap.classList.remove('field-invalid');
-}
-function showValidationAlert(result){
-  const banner = document.getElementById('validationBanner');
-  let html = '<strong>Faltan campos por completar antes de guardar:</strong><ul>';
-  if(result.missing.length){
-    html += `<li>${result.missing.length} pregunta(s) SI/N-A sin responder</li>`;
-  }
-  if(result.sigsPending.length){
-    html += `<li>${result.sigsPending.length} firma(s) pendiente(s): ${result.sigsPending.slice(0,5).join(', ')}${result.sigsPending.length>5?'…':''}</li>`;
-  }
-  html += '</ul>';
-  banner.innerHTML = html;
-  banner.classList.add('show');
-  banner.scrollIntoView({behavior:'smooth', block:'center'});
-}
-function hideValidationBanner(){
-  const banner = document.getElementById('validationBanner');
-  banner.classList.remove('show');
-  banner.innerHTML = '';
-}
-
-
-function generateCode(){
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth()+1).padStart(2,'0');
-  const d = String(now.getDate()).padStart(2,'0');
-  const rand = String(Math.floor(Math.random()*900000)+100000);
-  return `PTA-${y}${m}${d}-${rand}`;
-}
-
-// ---------- Mode / navigation ----------
-let currentMode = null; // 'open' | 'close-view'
-let currentCode = null;
-
-const gateScreen = document.getElementById('gateScreen');
-const sheetEl = document.getElementById('permitForm');
-const statusBar = document.getElementById('permitStatusBar');
-const codeTag = document.getElementById('permitCodeTag');
-const statusPill = document.getElementById('permitStatusPill');
-const openPhaseEl = document.getElementById('openPhase');
-const closePhaseEl = document.getElementById('closePhase');
-const btnSaveOpen = document.getElementById('btnSaveOpen');
-const btnSaveClose = document.getElementById('btnSaveClose');
-
-document.getElementById('btnNewPermit').addEventListener('click', ()=>{
-  currentMode = 'open';
-  gateScreen.style.display='none';
-  sheetEl.style.display='block';
-  openPhaseEl.style.display='block';
-  openPhaseEl.disabled = false;
-  closePhaseEl.style.display='none';
-  statusBar.style.display='none';
-  btnSaveOpen.style.display='inline-block';
-  btnSaveClose.style.display='none';
-  statusMsg.textContent = 'Complete la sección 1 a 9 y guarde para generar el código del permiso.';
-  resizeAllSigPads();
-  checkForOpenDraft();
-});
-
-document.getElementById('printBtn').addEventListener('click', ()=> window.print());
-
-document.getElementById('btnListOpen').addEventListener('click', async ()=>{
-  const listEl = document.getElementById('openPermitsList');
-  listEl.innerHTML = 'Buscando…';
-  try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
-    const json = await res.json();
-    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
-    const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
-    if(abiertos.length===0){ listEl.innerHTML = '<em>No hay permisos abiertos.</em>'; return; }
-    listEl.innerHTML = '';
-    abiertos.forEach(r=>{
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-      div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#888;float:right;">${r.status}</span>
-        <div style="margin-top:3px;">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>`;
-      div.addEventListener('click', ()=>{
-        document.getElementById('closeCodeInput').value = r.code;
-        document.getElementById('btnFetchPermit').click();
-      });
-      listEl.appendChild(div);
-    });
-  }catch(err){
-    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
-  }
-});
-
-let closedPermitsCache = [];
-document.getElementById('btnListClosed').addEventListener('click', async ()=>{
-  const panel = document.getElementById('historyPanel');
-  const listEl = document.getElementById('closedPermitsList');
-  const opening = panel.style.display === 'none';
-  panel.style.display = opening ? 'block' : 'none';
-  if(!opening) return;
-  listEl.innerHTML = 'Buscando…';
-  try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
-    const json = await res.json();
-    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener el historial.</em>'; return; }
-    closedPermitsCache = json.rows.filter(r=> r.status==='CERRADO');
-    renderClosedPermits(closedPermitsCache);
-  }catch(err){
-    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
-  }
-});
-function renderClosedPermits(rows){
-  const listEl = document.getElementById('closedPermitsList');
-  if(rows.length===0){ listEl.innerHTML = '<em>No hay permisos cerrados aún.</em>'; return; }
-  listEl.innerHTML = '';
-  rows.slice().sort((a,b)=> new Date(b.closedAt||0) - new Date(a.closedAt||0)).forEach(r=>{
-    const div = document.createElement('div');
-    div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;background:#f7f9fb;cursor:pointer;';
-    const closedTxt = r.closedAt ? new Date(r.closedAt).toLocaleString('es-CO', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-    div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#2f6b45;float:right;font-weight:600;">CERRADO</span>
-      <div style="margin-top:3px;">Responsable: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
-      <div style="color:#888;">Cerrado: ${closedTxt}</div>`;
-    div.addEventListener('click', ()=>{
-      document.getElementById('closeCodeInput').value = r.code;
-      document.getElementById('btnFetchPermit').click();
-    });
-    listEl.appendChild(div);
-  });
-}
-document.getElementById('historySearch').addEventListener('input', (e)=>{
-  const q = e.target.value.trim().toLowerCase();
-  if(!q){ renderClosedPermits(closedPermitsCache); return; }
-  renderClosedPermits(closedPermitsCache.filter(r=>
-    (r.code||'').toLowerCase().includes(q) || (r.responsable||'').toLowerCase().includes(q)
-  ));
-});
-
-document.getElementById('btnFetchPermit').addEventListener('click', async ()=>{
-  const code = document.getElementById('closeCodeInput').value.trim().toUpperCase();
-  const msg = document.getElementById('closeCodeMsg');
-  if(!code){ msg.textContent='Ingrese un código.'; msg.className='err'; return; }
-  if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ msg.textContent='Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código.'; msg.className='err'; return; }
-  msg.textContent='Buscando...'; msg.className='';
-  try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
-    const json = await res.json();
-    if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
-    // Success: load into form (funciona tanto para permisos abiertos como cerrados)
-    currentMode = 'close-view';
-    currentCode = json.code;
-    gateScreen.style.display='none';
-    sheetEl.style.display='block';
-    statusBar.style.display='flex';
-    codeTag.textContent = currentCode;
-    openPhaseEl.style.display='block';
-    openPhaseEl.disabled = true; // read-only reference
-    closePhaseEl.style.display='block';
-    resizeAllSigPads();
-    applyOpenData(json.openData||{});
-    if(json.status === 'CERRADO'){
-      statusPill.textContent = 'CERRADO — modo consulta';
-      statusPill.className = 'status-pill cerrado';
-      closePhaseEl.disabled = true; // también de solo lectura
-      applyCloseData(json.closeData||{});
-      btnSaveOpen.style.display='none';
-      btnSaveClose.style.display='none';
-      statusMsg.textContent = 'Permiso cerrado — mostrando la información completa en modo consulta (no se puede editar).';
-    } else {
-      statusPill.textContent = 'ABIERTO — completando cierre';
-      statusPill.className = 'status-pill abierto';
-      closePhaseEl.disabled = false;
-      btnSaveOpen.style.display='none';
-      btnSaveClose.style.display='inline-block';
-      statusMsg.textContent = 'Permiso cargado. Complete la sección 10 (Cierre) y guarde.';
-      checkForCloseDraft(currentCode);
-    }
-  }catch(err){
-    msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
-  }
-});
-
-document.getElementById('btnBackToGate').addEventListener('click', ()=>{
-  location.href='index.html';
-});
-
-document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
-  navigator.clipboard.writeText(currentCode||'');
-  statusMsg.textContent = 'Código copiado al portapapeles.';
-});
-
-// ---------- Borrador local (autosave) ----------
-const DRAFT_KEY_OPEN = 'indimon-draft-alturas-open';
-const draftKeyClose = code => `indimon-draft-alturas-close-${code}`;
-
-const saveOpenDraft = debounce(()=>{
-  if(currentMode!=='open') return;
-  DraftStore.save(DRAFT_KEY_OPEN, collectOpenData());
-}, 1200);
-const saveCloseDraft = debounce(()=>{
-  if(!currentCode) return;
-  DraftStore.save(draftKeyClose(currentCode), collectCloseData());
-}, 1200);
-
-['input','change','click','mouseup','touchend'].forEach(evt=>{
-  openPhaseEl.addEventListener(evt, saveOpenDraft);
-  closePhaseEl.addEventListener(evt, ()=>{ if(currentMode==='close-view') saveCloseDraft(); });
-});
-
-function checkForOpenDraft(){
-  const draft = DraftStore.load(DRAFT_KEY_OPEN);
-  const banner = document.getElementById('draftBanner');
-  if(!draft){ banner.classList.remove('show'); return; }
-  document.getElementById('draftBannerText').textContent = `Hay un borrador sin guardar de un permiso de apertura (${formatSavedAt(draft.savedAt)}).`;
-  banner.classList.add('show');
-  document.getElementById('draftRestoreBtn').onclick = ()=>{
-    applyOpenData(draft.data);
-    banner.classList.remove('show');
-    statusMsg.textContent = 'Borrador restaurado. Continúe diligenciando y guarde cuando termine.';
-  };
-  document.getElementById('draftDiscardBtn').onclick = ()=>{
-    DraftStore.clear(DRAFT_KEY_OPEN);
-    banner.classList.remove('show');
-  };
-}
-function checkForCloseDraft(code){
-  const draft = DraftStore.load(draftKeyClose(code));
-  const banner = document.getElementById('draftBanner');
-  if(!draft){ banner.classList.remove('show'); return; }
-  document.getElementById('draftBannerText').textContent = `Hay un borrador sin guardar del cierre de este permiso (${formatSavedAt(draft.savedAt)}).`;
-  banner.classList.add('show');
-  document.getElementById('draftRestoreBtn').onclick = ()=>{
-    applyCloseData(draft.data);
-    banner.classList.remove('show');
-    statusMsg.textContent = 'Borrador de cierre restaurado. Continúe y guarde cuando termine.';
-  };
-  document.getElementById('draftDiscardBtn').onclick = ()=>{
-    DraftStore.clear(draftKeyClose(code));
-    banner.classList.remove('show');
-  };
-}
-
-btnSaveOpen.addEventListener('click', async ()=>{
-  if(CONFIG.SCRIPT_URL.includes('PASTE_YOUR')){ alert('Falta configurar la URL del backend (CONFIG.SCRIPT_URL) en el código antes de guardar.'); return; }
-  hideValidationBanner();
-  const check = validatePhase(openPhaseEl);
-  if(!check.valid){ showValidationAlert(check); return; }
-  const code = generateCode();
-  const data = collectOpenData();
-  btnSaveOpen.disabled = true;
-  statusMsg.textContent = 'Guardando...';
-  try{
-    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'open', code, data, token: CONFIG.API_TOKEN })
-    });
-    const json = await res.json();
-    if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveOpen.disabled=false; return; }
-    currentCode = code; currentMode='open-saved';
-    statusBar.style.display='flex';
-    codeTag.textContent = code;
-    statusPill.textContent = 'ABIERTO';
-    statusPill.className = 'status-pill abierto';
-    statusMsg.textContent = 'Permiso guardado. Comparta el código con quien vaya a cerrarlo.';
-    openPhaseEl.disabled = true;
-    btnSaveOpen.style.display='none';
-    DraftStore.clear(DRAFT_KEY_OPEN);
-    alert('Permiso abierto correctamente.\n\nCódigo del permiso: '+code+'\n\nGuarde este código — lo necesitará para cerrar el permiso cuando termine la actividad.');
-  }catch(err){
-    statusMsg.textContent = 'Sin conexión — quedó guardado y se reintentará solo. Puedes seguir usando el celular; verás un aviso abajo mientras esté pendiente.';
-    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token: CONFIG.API_TOKEN });
-    btnSaveOpen.disabled = false;
-  }
-});
-
-btnSaveClose.addEventListener('click', async ()=>{
-  if(!currentCode) return;
-  hideValidationBanner();
-  const check = validatePhase(closePhaseEl);
-  if(!check.valid){ showValidationAlert(check); return; }
-  const data = collectCloseData();
-  btnSaveClose.disabled = true;
-  statusMsg.textContent = 'Guardando cierre...';
-  try{
-    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'close', code: currentCode, data, token: CONFIG.API_TOKEN })
-    });
-    const json = await res.json();
-    if(!json.ok){ statusMsg.textContent = 'Error: '+(json.error||'no se pudo guardar.'); btnSaveClose.disabled=false; return; }
-    statusPill.textContent = 'CERRADO';
-    statusPill.className = 'status-pill cerrado';
-    closePhaseEl.disabled = true;
-    btnSaveClose.style.display='none';
-    statusMsg.textContent = 'Permiso cerrado correctamente. Puede exportarlo a PDF para archivarlo.';
-    DraftStore.clear(draftKeyClose(currentCode));
-    alert('Permiso cerrado correctamente.');
-  }catch(err){
-    statusMsg.textContent = 'Sin conexión — quedó guardado y se reintentará solo. Puedes seguir usando el celular; verás un aviso abajo mientras esté pendiente.';
-    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'close', code: currentCode, data, token: CONFIG.API_TOKEN });
-    btnSaveClose.disabled = false;
-  }
-});
-
-// Si se llega desde un enlace con ?code=XXX (ej. desde el dashboard de permisos),
-// abre ese permiso directamente en modo consulta/cierre, sin pasar por la pantalla de inicio.
-(function(){
-  const codeFromUrl = new URLSearchParams(location.search).get('code');
-  if(codeFromUrl){
-    document.getElementById('closeCodeInput').value = codeFromUrl;
-    document.getElementById('btnFetchPermit').click();
-  }
-})();
-
-/* ================= AGREGAR PERSONAL SIN CERRAR EL PERMISO ================= */
-async function cargarParaAgregarPersonalAlt(code){
-  code = (code||'').trim().toUpperCase();
-  const msg = document.getElementById('addPeopleMsgAlt');
-  if(!code){ msg.textContent='Ingrese un código.'; msg.className='err'; return; }
-  msg.textContent='Buscando...'; msg.className='';
-  try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=get&code=${encodeURIComponent(code)}&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
-    const json = await res.json();
-    if(!json.ok){ msg.textContent = json.error || 'No encontrado.'; msg.className='err'; return; }
-    if(json.status === 'CERRADO'){ msg.textContent='Este permiso ya fue cerrado, no se puede agregar personal.'; msg.className='err'; return; }
-    currentCode = json.code;
-    gateScreen.style.display='none';
-    sheetEl.style.display='block';
-    sheetEl.classList.add('modo-agregar-personal');
-    document.body.classList.add('modo-agregar-personal');
-    statusBar.style.display='flex';
-    codeTag.textContent = currentCode;
-    statusPill.textContent = 'ABIERTO — agregando personal';
-    statusPill.className = 'status-pill abierto';
-    openPhaseEl.style.display='block';
-    openPhaseEl.disabled = false; // sección de trabajadores debe quedar editable
-    resizeAllSigPads();
-    applyWorkers((json.openData||{}).workers || []);
-    addWorker(); // fila extra en blanco lista para la persona nueva
-    document.getElementById('addPeopleMsgAlt2').textContent = '';
-  }catch(err){
-    msg.textContent = 'No se pudo conectar. Verifique su conexión e intente de nuevo.'; msg.className='err';
-  }
-}
-document.getElementById('loadAddPeopleBtnAlt').addEventListener('click', ()=>{
-  cargarParaAgregarPersonalAlt(document.getElementById('addPeopleCodeInputAlt').value);
-});
-document.getElementById('listOpenForAddBtnAlt').addEventListener('click', async ()=>{
-  const listEl = document.getElementById('openListForAddAlt');
-  listEl.innerHTML = 'Buscando…';
-  try{
-    const res = await fetchWithRetry(`${CONFIG.SCRIPT_URL}?action=list&token=${encodeURIComponent(CONFIG.API_TOKEN)}`);
-    const json = await res.json();
-    if(!json.ok || !Array.isArray(json.rows)){ listEl.innerHTML = '<em>No se pudo obtener la lista.</em>'; return; }
-    const abiertos = json.rows.filter(r=> r.status==='ABIERTO');
-    if(abiertos.length===0){ listEl.innerHTML = '<em>No hay permisos abiertos.</em>'; return; }
-    listEl.innerHTML = '';
-    abiertos.forEach(r=>{
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:8px 10px;border:1px solid var(--line-soft,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-      div.innerHTML = `<b>${esc(r.code)}</b> <span style="color:#888;float:right;">${r.status}</span>
-        <div style="margin-top:3px;">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>`;
-      div.addEventListener('click', ()=> cargarParaAgregarPersonalAlt(r.code));
-      listEl.appendChild(div);
-    });
-  }catch(err){
-    listEl.innerHTML = '<em>No se pudo conectar. Verifique su conexión e intente de nuevo.</em>';
-  }
-});
-document.getElementById('backFromAddPeopleBtnAlt').addEventListener('click', ()=>{
-  sheetEl.classList.remove('modo-agregar-personal');
-  document.body.classList.remove('modo-agregar-personal');
-  sheetEl.style.display='none';
-  gateScreen.style.display='block';
-  document.getElementById('addPeopleCodeInputAlt').value='';
-});
-document.getElementById('saveAddPeopleBtnAlt').addEventListener('click', async ()=>{
-  const statusEl = document.getElementById('addPeopleMsgAlt2');
-  const btn = document.getElementById('saveAddPeopleBtnAlt');
-  btn.disabled = true; statusEl.textContent = 'Guardando…';
-  const data = collectOpenData();
-  try{
-    const res = await fetchWithRetry(CONFIG.SCRIPT_URL, {
-      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'open', code: currentCode, data, token: CONFIG.API_TOKEN })
-    });
-    const json = await res.json();
-    btn.disabled = false;
-    if(json.ok){
-      const nombres = (data.workers||[]).filter(w=> w.fields && w.fields[0] && w.fields[0].trim()).length;
-      statusEl.textContent = '✓ Guardado — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('backFromAddPeopleBtnAlt').style.cssText = 'background:#1d7a4c;color:#fff;border-color:#1d7a4c;font-weight:700;';
-      alert(`✓ Personal guardado correctamente.\n\nEste permiso ahora tiene ${nombres} trabajador(es) registrado(s) en total.\n\nPuedes seguir agregando más gente, o tocar "Volver al inicio" cuando termines.`);
-    } else {
-      statusEl.textContent = json.error || 'No se pudo guardar.';
-      alert('No se pudo guardar: ' + (json.error || 'intente de nuevo.'));
-    }
-  }catch(err){
-    btn.disabled = false;
-    statusEl.textContent = 'Sin conexión — se reintentará solo.';
-    if (typeof Outbox !== 'undefined') Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code: currentCode, data, token: CONFIG.API_TOKEN });
-  }
-});
+PermisoCore.init(cfg);
 </script>
-<script>
-window.addEventListener('load', ()=>{
-  if (typeof UpdateManager !== 'undefined') UpdateManager.init();
-  if (typeof Outbox !== 'undefined') Outbox.flush();
-});
-</script>
-
 </body>
 </html>

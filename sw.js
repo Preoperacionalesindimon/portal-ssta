@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v3';
+const CACHE_NAME = 'ssta-portal-v9';
 
 const PAGES = [
   './',
@@ -34,6 +34,7 @@ const STATIC_ASSETS = [
   './config.js',
   './common.css',
   './common.js',
+  './permiso-core.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -81,7 +82,10 @@ self.addEventListener('fetch', (event) => {
     return; // deja pasar tal cual (red real, sin caché)
   }
 
-  const isNavigation = req.mode === 'navigate' || PAGES.some(p => url.pathname.endsWith(p.replace('./', '')));
+  const isNavigation = req.mode === 'navigate' || PAGES.some(p => {
+    const rel = p.replace('./', '');
+    return rel !== '' && url.pathname.endsWith(rel);
+  });
 
   if (isNavigation) {
     // Páginas: network-first, con caché como respaldo y offline.html

@@ -40,10 +40,24 @@ async function fetchWithRetry(url, options, retries = 2, backoffMs = 800) {
  * o el celular bloquea la página a medio llenar.
  */
 const DraftStore = {
+  _avisoMostrado: false,
   save(key, data) {
     try {
       localStorage.setItem(key, JSON.stringify({ data, savedAt: new Date().toISOString() }));
-    } catch (e) { /* almacenamiento no disponible (modo privado, etc.) — se ignora */ }
+      return true;
+    } catch (e) {
+      // El guardado automático del borrador falló (cuota de almacenamiento
+      // llena por firmas en base64, modo privado de Safari, etc.). Antes esto
+      // se ignoraba en silencio: el usuario creía tener un respaldo local que
+      // en realidad no existe. Se avisa una sola vez por sesión — no en cada
+      // tecla, ya que save() se llama muy seguido mientras se escribe.
+      if (!this._avisoMostrado) {
+        this._avisoMostrado = true;
+        console.error('DraftStore.save falló:', e);
+        window.dispatchEvent(new CustomEvent('draft-guardado-fallido', { detail: { error: e } }));
+      }
+      return false;
+    }
   },
   load(key) {
     try {
@@ -56,6 +70,23 @@ const DraftStore = {
     try { localStorage.removeItem(key); } catch (e) { /* no-op */ }
   }
 };
+
+// Aviso visible si el borrador automático deja de poder guardarse — se activa
+// solo (no necesita que cada página lo llame), ya que common.js está en todas.
+window.addEventListener('draft-guardado-fallido', () => {
+  if (document.getElementById('draftFailBanner')) return;
+  const el = document.createElement('div');
+  el.id = 'draftFailBanner';
+  el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#b3261e;color:#fff;font-weight:600;font-size:13px;padding:10px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:10px;';
+  el.innerHTML = '<span>⚠️ El respaldo automático de este formulario no se está guardando en este dispositivo (memoria llena o modo privado). Si cierras la página sin guardar, podrías perder lo escrito — guarda cuanto antes.</span>';
+  const btn = document.createElement('button');
+  btn.textContent = '✕';
+  btn.style.cssText = 'background:none;border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;';
+  btn.addEventListener('click', () => el.remove());
+  el.appendChild(btn);
+  document.body.appendChild(el);
+});
 
 /** debounce: evita guardar en cada tecla; agrupa cambios rápidos en uno solo. */
 function debounce(fn, wait) {
@@ -158,11 +189,22 @@ const Outbox = {
     });
     return this._dbPromise;
   },
+  /**
+   * Encola un permiso pendiente. A diferencia de la versión anterior, la
+   * promesa ahora SÍ rechaza si IndexedDB no pudo guardar el registro
+   * (cuota llena por las firmas en base64, modo privado de Safari, etc.).
+   * Antes la promesa quedaba colgada para siempre y el formulario le
+   * mostraba al usuario "quedó guardado y se reintentará solo" sin que
+   * realmente hubiera quedado nada guardado — quien llama debe hacer
+   * await y avisar al usuario si esto rechaza.
+   */
   async add(url, body) {
     const db = await this._db();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const tx = db.transaction('pending', 'readwrite');
       tx.objectStore('pending').add({ url, body, savedAt: new Date().toISOString(), intentos: 0 });
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Outbox: transacción abortada'));
       tx.oncomplete = async () => {
         // Registra el Background Sync si el navegador lo soporta; si no,
         // igual queda guardado y se reintentará la próxima vez que la

@@ -220,6 +220,10 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 <script>
 OfflineBanner.init();
 OutboxBadge.init();
+// Reintenta lo pendiente al cargar la página — antes esto solo pasaba en los
+// 5 permisos; si algo quedaba en cola desde este anexo, se quedaba esperando
+// a que alguien abriera OTRA página del portal para poder enviarse.
+if (typeof Outbox !== 'undefined') Outbox.flush();
 if (typeof UpdateManager !== 'undefined') UpdateManager.init();
 
 // URL fija del backend en Google Apps Script (Anexo SSTA-F-149) — centralizada en config.js
@@ -669,8 +673,16 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
     alert('Registro del día guardado correctamente.');
     showScreen('screenObra');
   }catch(err){
-    document.getElementById('registroStatus').textContent = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.';
-    if (typeof Outbox !== 'undefined') Outbox.add(FIXED_WEBAPP_URL, { action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, token: API_TOKEN });
+    if (typeof Outbox !== 'undefined') {
+      try {
+        await Outbox.add(FIXED_WEBAPP_URL, { action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, token: API_TOKEN });
+        document.getElementById('registroStatus').textContent = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.';
+      } catch (e) {
+        document.getElementById('registroStatus').textContent = 'No se pudo guardar ni en el servidor ni localmente (memoria llena o modo privado). Anote los datos antes de salir de la página.';
+      }
+    } else {
+      document.getElementById('registroStatus').textContent = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.';
+    }
     btn.disabled = false;
   }
 });

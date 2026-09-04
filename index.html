@@ -1229,11 +1229,12 @@
 
 </script>
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{ /* si falla, la app sigue funcionando normal, solo sin modo offline */ });
-  });
-}
+window.addEventListener('load', ()=>{
+  // UpdateManager ya se encarga de registrar el Service Worker y de mostrar
+  // el banner de "hay una versión nueva" — antes esto se registraba a mano
+  // aquí y ese banner nunca aparecía en la portada del portal.
+  if (typeof UpdateManager !== 'undefined') UpdateManager.init();
+});
 </script>
 
 </body>
