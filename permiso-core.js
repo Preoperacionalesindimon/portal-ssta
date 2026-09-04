@@ -588,26 +588,46 @@ const PermisoCore = (function () {
       applyToggleState(states[g.stateKey], g.toggleStates);
       updateProgress(states[g.stateKey], g.progressId);
     });
-    refreshPadsIn($('responsablesSigs')); // asegura tamaño correcto del lienzo antes de dibujar la firma guardada
-    (data.responsablesSigs || []).forEach((r, i) => {
-      const id = 'resp' + i;
-      const nEl = $(id + 'nombre'),
-        cEl = $(id + 'cc');
-      if (nEl) nEl.value = r.nombre || '';
-      if (cEl) cEl.value = r.cc || '';
-      if (pads['pad_' + id] && r.sig) pads['pad_' + id].setDataUrl(r.sig);
+
+    // ===== FIX: Asegurar que las firmas se dibujen correctamente =====
+    // Usamos requestAnimationFrame para garantizar que el DOM esté completamente
+    // renderizado antes de dibujar las firmas. Esto evita que los canvas tengan
+    // tamaño 0x0 y las firmas queden invisibles.
+    requestAnimationFrame(() => {
+      // 1. Responsables
+      const responsablesSigs = data.responsablesSigs || [];
+      const responsablesContainer = $('responsablesSigs');
+      if (responsablesContainer) {
+        // Forzar un reflujo para asegurar que el contenedor tenga dimensiones
+        responsablesContainer.offsetHeight;
+        refreshPadsIn(responsablesContainer);
+        responsablesSigs.forEach((r, i) => {
+          const id = 'resp' + i;
+          const nEl = $(id + 'nombre'),
+            cEl = $(id + 'cc');
+          if (nEl) nEl.value = r.nombre || '';
+          if (cEl) cEl.value = r.cc || '';
+          if (pads['pad_' + id] && r.sig) {
+            pads['pad_' + id].setDataUrl(r.sig);
+          }
+        });
+      }
+
+      // 2. Ejecutantes
+      // Primero creamos todas las filas de ejecutantes
+      execBody.innerHTML = '';
+      execCounter = 0;
+      (data.ejecutantes || []).forEach((row) => addExecRow(row));
+      if ((data.ejecutantes || []).length === 0) {
+        for (let i = 0; i < 3; i++) addExecRow();
+      }
+
+      // Ahora dibujamos las firmas de los ejecutantes
+      // Forzamos un reflujo del contenedor
+      execBody.offsetHeight;
+      refreshPadsIn(execBody);
+      applyPendingExecSignatures();
     });
-    execBody.innerHTML = '';
-    execCounter = 0;
-    (data.ejecutantes || []).forEach((row) => addExecRow(row));
-    if ((data.ejecutantes || []).length === 0) {
-      for (let i = 0; i < 3; i++) addExecRow();
-    }
-    // Igual que con responsablesSigs arriba: primero se asegura el tamaño
-    // real de TODOS los lienzos del lote, y solo después se dibujan las
-    // firmas guardadas — si no, algunas quedan invisibles.
-    refreshPadsIn(execBody);
-    applyPendingExecSignatures();
   }
 
   /* ================= BACKEND (Google Apps Script) ================= */
