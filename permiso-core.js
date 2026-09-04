@@ -1347,6 +1347,51 @@ const PermisoCore = (function () {
       DraftStore.save(draftKeyClose(permitCode), collectCloseData());
     }, 1200);
     wireEvents();
+    if (new URLSearchParams(location.search).get('debug') === '1') initDebugPanel_();
+  }
+
+  // ================= PANEL DE DIAGNÓSTICO (solo con ?debug=1 en la URL) =================
+  // No afecta el funcionamiento normal del portal — es un panel flotante, visible SOLO
+  // si se pide explícitamente por la URL, para poder ver en pantalla (sin consola ni
+  // cable) el estado real de los pads de firma en un dispositivo específico: si hay
+  // tinta capturada (hasInk), si getDataUrl() devuelve algo, y cualquier error de
+  // JavaScript que ocurra en la página mientras se prueba. Se puede quitar este bloque
+  // (y la línea que lo llama arriba) cuando ya no haga falta.
+  function initDebugPanel_() {
+    const panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#111;color:#0f0;font:11px/1.4 monospace;padding:10px;border-radius:8px;max-height:45vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+    panel.innerHTML =
+      '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+      '<button id="dbgRefrescar" style="flex:1;padding:8px;font-weight:700;">Ver estado de firmas</button>' +
+      '<button id="dbgCerrar" style="padding:8px 12px;">✕</button>' +
+      '</div><pre id="dbgOut" style="margin:0;white-space:pre-wrap;word-break:break-all;"></pre>';
+    document.body.appendChild(panel);
+    const out = panel.querySelector('#dbgOut');
+    function log(line) {
+      out.textContent += line + '\n';
+      panel.scrollTop = panel.scrollHeight;
+    }
+    panel.querySelector('#dbgCerrar').addEventListener('click', () => panel.remove());
+    panel.querySelector('#dbgRefrescar').addEventListener('click', () => {
+      out.textContent = '--- ' + new Date().toLocaleTimeString('es-CO') + ' ---\n';
+      const ids = Object.keys(pads);
+      if (!ids.length) { log('(no hay pads registrados todavía)'); return; }
+      ids.forEach((id) => {
+        const p = pads[id];
+        let info;
+        try {
+          const url = p.getDataUrl();
+          info = 'hasInk=' + p.hasInk() + ' | getDataUrl()=' + (url ? url.length + ' caracteres' : 'null');
+        } catch (err) {
+          info = '⚠️ ERROR al leer: ' + err.name + ': ' + err.message;
+        }
+        log(id + '  →  ' + info);
+      });
+    });
+    window.addEventListener('error', (e) => {
+      log('⚠️ ERROR JS: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')');
+    });
+    log('Panel de diagnóstico activo. Firma, luego toca "Ver estado de firmas" antes Y después de tocar Guardar, para comparar.');
   }
 
   return {
