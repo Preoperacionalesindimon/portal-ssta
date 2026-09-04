@@ -27,16 +27,16 @@ const PermisoCore = (function () {
   let cfg = null;
   let MODE = null; // 'open' | 'close'
   let permitCode = null;
-  let firstSaveDone = false; // se resetea al iniciar un permiso nuevo; ver startNewPermit()
+  let firstSaveDone = false;
   let locked = false;
-  const states = {}; // stateKey -> { chk_0:'C'|'NA'|null, ... } — uno por grupo de checklist
+  const states = {}; // stateKey -> { chk_0:'C'|'NA'|null, ... }
   let execCounter = 0;
   let execBody = null;
   let personalCache = [];
   let closedPermitsCache = [];
   let addPeopleData = null;
-  let baseExecCount = 0; // cuántos ejecutantes ya existían ANTES de esta sesión de "agregar personal"
-  let opIdAddWorkers = null; // clave de idempotencia del guardado de personal en curso
+  let baseExecCount = 0;
+  let opIdAddWorkers = null;
 
   const TOGGLE_2STATE = [
     { val: 'C', label: 'C', cls: 'active-c' },
@@ -51,14 +51,6 @@ const PermisoCore = (function () {
   const $ = (id) => document.getElementById(id);
 
   /* ================= RENDER TOGGLE GROUPS ================= */
-  // Clave estable derivada del TEXTO de la pregunta, no de su posición en la
-  // lista — antes se usaba prefix+"_"+índice (ej. "chk_3"), que en el fondo
-  // sigue siendo la posición: si mañana se agrega o reordena una pregunta del
-  // checklist, las respuestas ya guardadas de las preguntas que NO cambiaron
-  // quedarían apuntando a la pregunta equivocada al reabrir un permiso viejo
-  // en modo consulta — grave en un documento con valor legal. Con esta clave,
-  // dos preguntas con el mismo texto siempre producen la misma clave, sin
-  // importar en qué orden ni en qué posición estén.
   function keyFromText(prefix, text) {
     let hash = 0;
     for (let i = 0; i < text.length; i++) {
@@ -106,12 +98,14 @@ const PermisoCore = (function () {
       updateProgress(stateObj, progressElId);
     });
   }
+
   function updateProgress(stateObj, elId) {
     const total = Object.keys(stateObj).length,
       done = Object.values(stateObj).filter((v) => v !== null).length;
     const el = $(elId);
     if (el) el.textContent = `${done}/${total}`;
   }
+
   function applyToggleState(stateObj, toggleStates) {
     const states_ = toggleStates || cfg.toggleStates || TOGGLE_2STATE;
     document.querySelectorAll('button[data-key]').forEach((btn) => {
@@ -129,33 +123,55 @@ const PermisoCore = (function () {
     });
   }
 
-  /* ================= SIGNATURE PAD =================
-     La implementación del lienzo de firma vive ahora en common.js
-     (SignaturePad), compartida con personal-autorizado.html — antes
-     estaba copiada y pegada en los dos archivos por separado. Aquí solo
-     se configura el caso particular de este núcleo: el <span> de estado
-     de los pads de cierre usa el prefijo 'padCierre' en vez de 'status_'. */
+  /* ================= SIGNATURE PAD ================= */
   const sigMgr = SignaturePad.createManager({
     statusIdFor: (id) => (id.startsWith('padCierre') ? 'status' + id.replace('pad', '') : 'status_' + id)
   });
-  const pads = sigMgr.pads; // id -> {clear,undo,getDataUrl,setDataUrl,hasInk,refreshSize}
+  const pads = sigMgr.pads;
   const setupPad = sigMgr.setup;
   const refreshPadsIn = sigMgr.refreshIn;
+
   function lockPad(canvas) {
     SignaturePad.lock(canvas);
   }
   sigMgr.bindOrientationChange();
-  // Dibuja las firmas de ejecutantes que quedaron pendientes en addExecRow
-  // (ver comentario ahí). Se debe llamar SIEMPRE después de refreshPadsIn(execBody),
-  // una vez que todas las filas del lote ya están en el DOM y con su tamaño real
-  // asegurado — así ninguna firma guardada queda invisible por timing.
+
+  function forzarTamanioCanvas(container) {
+    if (!container) return;
+    container.querySelectorAll('canvas.pad, canvas.mini-pad').forEach((canvas) => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = rect.width * ratio;
+        canvas.height = rect.height * ratio;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(ratio, ratio);
+      }
+    });
+  }
+
   function applyPendingExecSignatures() {
     execBody.querySelectorAll('.exec-card').forEach((card) => {
       const sig = card.dataset.pendingSig;
       if (!sig) return;
       const canvas = card.querySelector('canvas.mini-pad');
-      if (canvas && pads[canvas.id]) pads[canvas.id].setDataUrl(sig);
-      delete card.dataset.pendingSig;
+      if (canvas && pads[canvas.id]) {
+        // Verificar que el canvas tenga tamaño
+        if (canvas.width > 0 && canvas.height > 0) {
+          pads[canvas.id].setDataUrl(sig);
+        } else {
+          // Forzar tamaño
+          const rect = canvas.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = rect.width * ratio;
+            canvas.height = rect.height * ratio;
+            pads[canvas.id].setDataUrl(sig);
+          }
+        }
+        delete card.dataset.pendingSig;
+      }
     });
   }
 
@@ -194,10 +210,6 @@ const PermisoCore = (function () {
     const n = execCounter;
     const card = document.createElement('div');
     card.className = 'exec-card';
-    // cfg.execExtraFields: lista de campos extra por tipo de permiso (más allá
-    // de nombre/documento/cargo/firma). Cada uno: {id, field, type:'text'|'select',
-    // placeholder, options:[{value,label}]}. Por compatibilidad, cfg.execExtraField
-    // (singular, un solo campo de texto) se sigue soportando como caso especial.
     const extras = cfg.execExtraFields || (cfg.execExtraField ? [Object.assign({ type: 'text' }, cfg.execExtraField)] : []);
     const extrasHtml = extras
       .map((ex) => {
@@ -239,15 +251,6 @@ const PermisoCore = (function () {
         const el = $(ex.id + n);
         if (el) el.value = prefill[ex.field] || '';
       });
-      // OJO: la firma guardada NO se dibuja aquí. Si esta fila se está creando
-      // dentro de un lote (cargar un permiso existente con varios ejecutantes
-      // ya firmados), el lienzo puede no tener todavía su tamaño real en este
-      // instante exacto (mismo problema que ya se había resuelto para las
-      // firmas de responsables — ver refreshPadsIn en loadOpenDataIntoForm).
-      // Si se dibuja de una, algunas firmas quedan invisibles (canvas 0x0)
-      // aunque el dato sí se guardó bien. Por eso se guarda como "pendiente"
-      // y se dibuja en un segundo paso, después de refreshPadsIn(execBody),
-      // vía applyPendingExecSignatures().
       if (prefill.sig) card.dataset.pendingSig = prefill.sig;
     }
     attachPersonalAutocomplete($('execNombre' + n), (persona) => {
@@ -262,6 +265,7 @@ const PermisoCore = (function () {
     });
     return n;
   }
+
   function collectExecRows() {
     const rows = [];
     const extras = cfg.execExtraFields || (cfg.execExtraField ? [Object.assign({ type: 'text' }, cfg.execExtraField)] : []);
@@ -282,24 +286,11 @@ const PermisoCore = (function () {
     }
     return rows;
   }
-  /* ================= PREGUNTAS SI/NO/N-A SUELTAS (freeformYN) =================
-     Para permisos donde las preguntas no vienen agrupadas en listas por
-     categoría (como checklistGroups), sino intercaladas a mano dentro de las
-     secciones del formulario junto con fechas, campos de texto, etc. — el
-     caso de Alturas. Se activa con cfg.freeformYN = true. */
-  function keyFromText(prefix, text) {
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
-    return prefix + '_' + Math.abs(hash).toString(36);
-  }
-  function ynGroupKey(group, idx) {
-    const label = group.previousElementSibling;
-    const texto = label ? label.textContent.trim() : null;
-    return texto ? keyFromText('yn', texto) : keyFromText('yn', 'sinEtiqueta_' + idx);
-  }
+
+  /* ================= PREGUNTAS SI/NO/N-A SUELTAS (freeformYN) ================= */
   function initFreeformYN() {
     document.querySelectorAll('.yn-opts').forEach((group) => {
-      if (group.dataset.freeformInit) return; // evita doble "escucha" de clic si initRender() corre más de una vez
+      if (group.dataset.freeformInit) return;
       group.dataset.freeformInit = '1';
       if (!group.hasAttribute('data-mode')) {
         group.innerHTML = '<button type="button" class="yn-btn" data-v="SI">SI</button><button type="button" class="yn-btn" data-v="N/A">N/A</button>';
@@ -332,29 +323,41 @@ const PermisoCore = (function () {
       });
     });
   }
+
   function collectFreeformYN(container) {
     const out = {};
     [...container.querySelectorAll('.yn-opts')].forEach((g, i) => {
       const active = g.querySelector('.active-si,.active-na,.active-no');
-      out[ynGroupKey(g, i)] = active ? active.dataset.v : '';
+      const label = g.previousElementSibling;
+      const texto = label ? label.textContent.trim() : null;
+      const key = texto ? keyFromText('yn', texto) : keyFromText('yn', 'sinEtiqueta_' + i);
+      out[key] = active ? active.dataset.v : '';
     });
     return out;
   }
-  // Convierte un estado guardado con esquema VIEJO (arreglo por posición) al
-  // esquema nuevo (objeto por clave-de-texto) — para permisos que ya estaban
-  // abiertos ANTES de activar freeformYN.
+
   function migrarFreeformYNAntiguo(valores, container) {
     if (!Array.isArray(valores)) return valores;
     const migrado = {};
     [...container.querySelectorAll('.yn-opts')].forEach((g, i) => {
-      if (valores[i] !== undefined) migrado[ynGroupKey(g, i)] = valores[i];
+      if (valores[i] !== undefined) {
+        const label = g.previousElementSibling;
+        const texto = label ? label.textContent.trim() : null;
+        const key = texto ? keyFromText('yn', texto) : keyFromText('yn', 'sinEtiqueta_' + i);
+        migrado[key] = valores[i];
+      }
     });
     return migrado;
   }
+
   function applyFreeformYN(container, valoresGuardados) {
     const values = migrarFreeformYNAntiguo(valoresGuardados || {}, container);
-    [...container.querySelectorAll('.yn-opts')].forEach((g, i) => {
-      const v = values[ynGroupKey(g, i)];
+    [...container.querySelectorAll('.yn-opts')].forEach((g) => {
+      const label = g.previousElementSibling;
+      const texto = label ? label.textContent.trim() : null;
+      const key = texto ? keyFromText('yn', texto) : null;
+      if (!key) return;
+      const v = values[key];
       g.querySelectorAll('button').forEach((b) => {
         b.classList.remove('active-si', 'active-na', 'active-no');
         b.setAttribute('aria-pressed', 'false');
@@ -368,6 +371,7 @@ const PermisoCore = (function () {
     });
     if (cfg.onYNChange) cfg.onYNChange();
   }
+
   function validateFreeformYN(container, missing) {
     container.querySelectorAll('.yn-opts').forEach((g) => g.classList.remove('field-invalid'));
     container.querySelectorAll('.yn-opts').forEach((g) => {
@@ -427,6 +431,7 @@ const PermisoCore = (function () {
     if (cfg.freeformYN && $('openPhase')) applyFreeformYN($('openPhase'), vals.yn);
     if (cfg.extraSetFieldValues) cfg.extraSetFieldValues(vals);
   }
+
   function lockOpenSections() {
     locked = true;
     document
@@ -444,15 +449,12 @@ const PermisoCore = (function () {
     document.querySelectorAll('#app .remove-exec-btn').forEach((b) => (b.disabled = true));
     const addRowBtn = $(cfg.addRowBtnId || 'addRowBtn');
     if (addRowBtn) addRowBtn.style.display = 'none';
-    // Lista explícita por tipo (viene de cfg, construida leyendo el markup real de
-    // cada archivo) — a diferencia del array copiado a mano de antes, un id que no
-    // exista simplemente se ignora en vez de lanzar una excepción que rompía en
-    // silencio el resto de la transición a modo cierre.
     (cfg.lockSectionIds || []).forEach((id) => {
       const el = $(id);
       if (el) el.classList.add('locked');
     });
   }
+
   function genCode() {
     const d = new Date();
     return (
@@ -465,11 +467,8 @@ const PermisoCore = (function () {
       String(Math.floor(Math.random() * 900000) + 100000)
     );
   }
+
   function collectOpenData() {
-    // formVersion: se guarda con cada registro para saber, ante una auditoría o
-    // un cambio futuro de checklist, con qué versión del formulario se llenó
-    // este permiso en particular — sube cada vez que cambie la ESTRUCTURA del
-    // formulario (no el contenido/redacción de una pregunta puntual).
     const base = { permitCode, status: 'ABIERTO', formVersion: cfg.formVersion || 1, createdAt: new Date().toISOString() };
     if ($('descripcion')) base.descripcion = $('descripcion').value;
     if ($('cualPermiso')) base.cualPermiso = $('cualPermiso').value;
@@ -482,10 +481,6 @@ const PermisoCore = (function () {
     if ($('hastaHora')) base.hastaHora = $('hastaHora').value;
     if ($('sitio')) base.sitio = $('sitio').value;
     if ($('responsable')) base.responsableTrabajo = $('responsable').value;
-    // "responsable" es lo que se muestra en el dashboard como "quién abrió el
-    // permiso" — se usa uno de los responsables firmantes (índice configurable
-    // por tipo) en vez del campo libre "Responsable del trabajo", que igual
-    // queda guardado aparte (responsableTrabajo) por si se necesita.
     const dashIdx = cfg.responsableDashboardIndex;
     const dashEl = dashIdx !== undefined ? $('resp' + dashIdx + 'nombre') : null;
     base.responsable = (dashEl && dashEl.value) || ($('responsable') ? $('responsable').value : '') || '';
@@ -499,13 +494,8 @@ const PermisoCore = (function () {
     if (cfg.extraCollectOpenData) Object.assign(base, cfg.extraCollectOpenData());
     return base;
   }
+
   function collectCloseData() {
-    // cfg.closeSigners: permite personalizar quién firma el cierre. Si no se
-    // define, se usa el par fijo cierre1/cierre2 (nombre+cédula+cargo por
-    // separado) que ya usan los 4 permisos gemelos. Alturas define el suyo
-    // porque su cierre pide un campo combinado "Nombre / Cédula" para dos
-    // roles con nombre propio (Coordinador, Supervisor de proyecto), no el
-    // par genérico "Trabajador autorizado / Supervisor SSTA".
     const signers = cfg.closeSigners || [
       { idPrefix: 'cierre1', padKey: 'padCierre1', field: 'cierre1', combined: false },
       { idPrefix: 'cierre2', padKey: 'padCierre2', field: 'cierre2', combined: false }
@@ -535,6 +525,7 @@ const PermisoCore = (function () {
     });
     return base;
   }
+
   function downloadJson(obj, filename) {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -546,16 +537,7 @@ const PermisoCore = (function () {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
-  // Convierte un estado de checklist guardado con el esquema VIEJO (clave =
-  // posición, ej. "chk_3") al esquema nuevo (clave = texto de la pregunta).
-  // Necesario para que los permisos que ya estaban abiertos ANTES de este
-  // cambio se seguían restaurando bien — sin esto, se hubieran visto como
-  // "todo sin responder" la primera vez que alguien los reabriera después
-  // de actualizar el portal. Asume que el orden de las preguntas en `data`
-  // es el mismo que tenían cuando se guardó ese permiso (válido para migrar
-  // lo que hay guardado HOY; si más adelante se reordenan preguntas, los
-  // permisos guardados DESPUÉS de esta migración ya usan la clave nueva y
-  // no dependen del orden).
+
   function migrarClaveEstadoAntigua(guardado, prefix, data) {
     if (!guardado) return guardado;
     const pareceEsquemaViejo = Object.keys(guardado).some((k) => new RegExp('^' + prefix + '_\\d+$').test(k));
@@ -572,49 +554,63 @@ const PermisoCore = (function () {
     return migrado;
   }
 
+  /* ================= LOAD OPEN DATA INTO FORM (FIX FIRMAS) ================= */
   function loadOpenDataIntoForm(data) {
     permitCode = data.permitCode;
+
     (cfg.checklistGroups || []).forEach((g) => {
       states[g.stateKey] = states[g.stateKey] || {};
       const guardadoMigrado = migrarClaveEstadoAntigua(data[g.stateKey], g.statePrefix, g.data);
       Object.assign(states[g.stateKey], guardadoMigrado || {});
     });
+
     setFieldValues(data);
-    // Antes de arreglar esto, un archivo con un 3er grupo de checklist (ej.
-    // "controles" en eléctrico) restauraba el estado visual de los botones
-    // pero se le olvidaba refrescar su contador "X/Y" — acá se hace para
-    // TODOS los grupos declarados en cfg, así que no se puede volver a olvidar.
+
     (cfg.checklistGroups || []).forEach((g) => {
       applyToggleState(states[g.stateKey], g.toggleStates);
       updateProgress(states[g.stateKey], g.progressId);
     });
 
-    // ===== FIX: Asegurar que las firmas se dibujen correctamente =====
-    // Usamos requestAnimationFrame para garantizar que el DOM esté completamente
-    // renderizado antes de dibujar las firmas. Esto evita que los canvas tengan
-    // tamaño 0x0 y las firmas queden invisibles.
-    requestAnimationFrame(() => {
-      // 1. Responsables
+    // ===== FUNCIÓN PARA DIBUJAR FIRMAS CON MÚLTIPLES INTENTOS =====
+    function dibujarFirmasConRetry(intentos = 0) {
+      const maxIntentos = 5;
+      const delay = 200;
+
+      // 1. RESPONSABLES
       const responsablesSigs = data.responsablesSigs || [];
       const responsablesContainer = $('responsablesSigs');
       if (responsablesContainer) {
-        // Forzar un reflujo para asegurar que el contenedor tenga dimensiones
+        const wasHidden = responsablesContainer.style.display === 'none';
+        if (wasHidden) responsablesContainer.style.display = 'block';
         responsablesContainer.offsetHeight;
+        forzarTamanioCanvas(responsablesContainer);
         refreshPadsIn(responsablesContainer);
         responsablesSigs.forEach((r, i) => {
           const id = 'resp' + i;
-          const nEl = $(id + 'nombre'),
-            cEl = $(id + 'cc');
+          const nEl = $(id + 'nombre');
+          const cEl = $(id + 'cc');
           if (nEl) nEl.value = r.nombre || '';
           if (cEl) cEl.value = r.cc || '';
-          if (pads['pad_' + id] && r.sig) {
-            pads['pad_' + id].setDataUrl(r.sig);
+          const pad = pads['pad_' + id];
+          if (pad && r.sig) {
+            const canvas = document.getElementById('pad_' + id);
+            if (canvas && canvas.width > 0 && canvas.height > 0) {
+              pad.setDataUrl(r.sig);
+            } else if (canvas) {
+              const rect = canvas.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) {
+                const ratio = window.devicePixelRatio || 1;
+                canvas.width = rect.width * ratio;
+                canvas.height = rect.height * ratio;
+                pad.setDataUrl(r.sig);
+              }
+            }
           }
         });
+        if (wasHidden) responsablesContainer.style.display = 'none';
       }
 
-      // 2. Ejecutantes
-      // Primero creamos todas las filas de ejecutantes
+      // 2. EJECUTANTES
       execBody.innerHTML = '';
       execCounter = 0;
       (data.ejecutantes || []).forEach((row) => addExecRow(row));
@@ -622,18 +618,58 @@ const PermisoCore = (function () {
         for (let i = 0; i < 3; i++) addExecRow();
       }
 
-      // Ahora dibujamos las firmas de los ejecutantes
-      // Forzamos un reflujo del contenedor
+      const wasExecHidden = execBody.style.display === 'none';
+      if (wasExecHidden) execBody.style.display = 'block';
       execBody.offsetHeight;
+      forzarTamanioCanvas(execBody);
       refreshPadsIn(execBody);
-      applyPendingExecSignatures();
-    });
+
+      // Dibujar firmas pendientes
+      let pendientes = 0;
+      execBody.querySelectorAll('.exec-card').forEach((card) => {
+        const sig = card.dataset.pendingSig;
+        if (!sig) return;
+        const canvas = card.querySelector('canvas.mini-pad');
+        if (canvas && pads[canvas.id]) {
+          if (canvas.width > 0 && canvas.height > 0) {
+            pads[canvas.id].setDataUrl(sig);
+            delete card.dataset.pendingSig;
+          } else {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const ratio = window.devicePixelRatio || 1;
+              canvas.width = rect.width * ratio;
+              canvas.height = rect.height * ratio;
+              pads[canvas.id].setDataUrl(sig);
+              delete card.dataset.pendingSig;
+            } else {
+              pendientes++;
+            }
+          }
+        }
+      });
+
+      if (wasExecHidden) execBody.style.display = 'none';
+
+      // Si aún hay firmas pendientes, reintentar
+      if (pendientes > 0 && intentos < maxIntentos) {
+        setTimeout(() => {
+          dibujarFirmasConRetry(intentos + 1);
+        }, delay);
+      }
+    }
+
+    // Iniciar el dibujo con un pequeño delay
+    setTimeout(() => {
+      dibujarFirmasConRetry(0);
+    }, 100);
   }
 
-  /* ================= BACKEND (Google Apps Script) ================= */
+  /* ================= BACKEND ================= */
   function getWebAppUrl() {
     return PORTAL_CONFIG.BACKENDS[cfg.key].url;
   }
+
   async function sendToSheet(payload) {
     const url = getWebAppUrl();
     if (!url) return { ok: false };
@@ -648,6 +684,7 @@ const PermisoCore = (function () {
       return { ok: false, error: 'No se pudo conectar con el backend. Verifique su conexión e intente de nuevo.' };
     }
   }
+
   async function fetchFromSheet(code) {
     const url = getWebAppUrl();
     if (!url) return null;
@@ -664,9 +701,11 @@ const PermisoCore = (function () {
       return null;
     }
   }
+
   function listQuery() {
     return (PORTAL_CONFIG.BACKENDS[cfg.key] || {}).listQuery || 'list=1';
   }
+
   async function fetchOpenList() {
     const url = getWebAppUrl();
     if (!url) return [];
@@ -678,6 +717,7 @@ const PermisoCore = (function () {
       return [];
     }
   }
+
   async function fetchClosedList() {
     const url = getWebAppUrl();
     if (!url) return [];
@@ -690,7 +730,7 @@ const PermisoCore = (function () {
     }
   }
 
-  /* ================= PERSONAL COMPARTIDO (autocompletar) ================= */
+  /* ================= PERSONAL COMPARTIDO ================= */
   async function cargarPersonalCompartido() {
     try {
       const res = await fetchWithRetry(
@@ -699,11 +739,12 @@ const PermisoCore = (function () {
       const data = await res.json();
       personalCache = data.ok && data.personal ? data.personal : [];
     } catch (err) {
-      /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */
+      /* no op */
     }
   }
+
   function attachPersonalAutocomplete(inputEl, onSelect) {
-    if (inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
+    if (inputEl.dataset.autocompleteInit) return;
     inputEl.dataset.autocompleteInit = '1';
     let box = null;
     function cerrar() {
@@ -748,6 +789,7 @@ const PermisoCore = (function () {
   function scrollToEl(el) {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
   function validateOpenData() {
     const missing = [];
     (cfg.requiredOpenFields || []).forEach((f) => {
@@ -825,6 +867,7 @@ const PermisoCore = (function () {
     if (cfg.extraValidateOpen) cfg.extraValidateOpen(missing);
     return missing;
   }
+
   function validateCloseData() {
     const missing = [];
     const cierreFecha = $('cierreFecha'),
@@ -833,10 +876,6 @@ const PermisoCore = (function () {
     if (!cierreFecha.value) missing.push({ msg: 'Fecha real del cierre', el: cierreFecha });
     if (!cierreHora.value) missing.push({ msg: 'Hora de cierre', el: cierreHora });
     if (!motivo.value) missing.push({ msg: 'Motivo del cierre', el: motivo });
-    // cfg.closeQuestions === false: para permisos (como Alturas) que no
-    // tienen estas 4 preguntas puntuales en su sección de cierre — sin este
-    // guard, se bloqueaba el guardado pidiendo respuestas a preguntas que
-    // ni siquiera existían en la pantalla.
     if (cfg.closeQuestions !== false) {
       ['q1', 'q2', 'q3', 'q4'].forEach((q, i) => {
         if (!document.querySelector(`input[name=${q}]:checked`)) {
@@ -863,6 +902,7 @@ const PermisoCore = (function () {
     });
     return missing;
   }
+
   function showMissing(missing) {
     document.querySelectorAll('.field-invalid').forEach((el) => el.classList.remove('field-invalid'));
     const banner = $('validationBanner');
@@ -876,6 +916,7 @@ const PermisoCore = (function () {
     });
     scrollToEl(missing[0].el);
   }
+
   function hideValidationBanner() {
     const banner = $('validationBanner');
     banner.classList.remove('show');
@@ -886,17 +927,11 @@ const PermisoCore = (function () {
   function draftKeyOpen() {
     return 'indimon-draft-' + cfg.draftSlug + '-open';
   }
+
   function draftKeyClose(code) {
     return 'indimon-draft-' + cfg.draftSlug + '-close-' + code;
   }
-  function dismissOpenDraftBannerOnEdit() {
-    // Antes esto ocultaba el aviso apenas el usuario tocaba cualquier campo,
-    // sin haber elegido "Restaurar" ni "Descartar" — el borrador anterior
-    // quedaba pisado por el autoguardado 1.2s después, sin ningún rastro
-    // visible de que eso había pasado. Ahora el aviso se queda fijo en
-    // pantalla hasta que el usuario elige explícitamente una de las dos
-    // opciones, aunque siga escribiendo en el formulario nuevo mientras tanto.
-  }
+
   function checkForOpenDraft() {
     const draft = DraftStore.load(draftKeyOpen());
     const banner = $('draftBanner');
@@ -920,6 +955,7 @@ const PermisoCore = (function () {
       banner.classList.remove('show');
     };
   }
+
   function checkForCloseDraft(code) {
     const draft = DraftStore.load(draftKeyClose(code));
     const banner = $('draftBanner');
@@ -969,6 +1005,7 @@ const PermisoCore = (function () {
     $('app').style.display = 'block';
     $('footerActions').style.display = 'flex';
   }
+
   function startNewPermit() {
     MODE = 'open';
     permitCode = genCode();
@@ -984,6 +1021,7 @@ const PermisoCore = (function () {
     $('closeFields').classList.add('hidden');
     checkForOpenDraft();
   }
+
   async function openCloseModeWithCode(code) {
     if (!code) return;
     const data = await fetchFromSheet(code);
@@ -1012,6 +1050,7 @@ const PermisoCore = (function () {
       checkForCloseDraft(permitCode);
     }
   }
+
   async function cargarParaAgregarPersonal(code) {
     if (!code) {
       alert('Escribe el código del permiso.');
@@ -1039,16 +1078,16 @@ const PermisoCore = (function () {
     execCounter = 0;
     execBody.innerHTML = '';
     (data.ejecutantes || []).forEach((row) => addExecRow(row));
-    baseExecCount = execCounter; // todo lo que se agregue DESPUÉS de este punto es "nuevo" para esta sesión
+    baseExecCount = execCounter;
     opIdAddWorkers = null;
-    addExecRow(); // fila extra en blanco lista para la persona nueva
-    // Mismo arreglo que en loadOpenDataIntoForm: asegura el tamaño real de
-    // los lienzos (la sección recién se hizo visible con modo-agregar-personal)
-    // antes de dibujar las firmas ya guardadas de los ejecutantes existentes.
-    refreshPadsIn(execBody);
-    applyPendingExecSignatures();
+    addExecRow();
+    setTimeout(() => {
+      refreshPadsIn(execBody);
+      applyPendingExecSignatures();
+    }, 150);
     $('addPeopleStatus').textContent = '';
   }
+
   function renderClosedPermits(rows) {
     const listEl = $('closedList');
     if (rows.length === 0) {
@@ -1072,6 +1111,7 @@ const PermisoCore = (function () {
         listEl.appendChild(div);
       });
   }
+
   function renderOpenList(container, rows, onPick) {
     if (rows.length === 0) {
       container.innerHTML = '<em>No hay permisos abiertos.</em>';
@@ -1089,7 +1129,7 @@ const PermisoCore = (function () {
     });
   }
 
-  /* ================= WIRING (llamado una vez desde init) ================= */
+  /* ================= WIRING ================= */
   function wireEvents() {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-clear]');
@@ -1109,8 +1149,6 @@ const PermisoCore = (function () {
     const addRowBtn = $(cfg.addRowBtnId || 'addRowBtn');
     if (addRowBtn) addRowBtn.addEventListener('click', () => { if (!locked) addExecRow(); });
 
-    // Quita la marca roja de un campo en tiempo real, apenas el usuario lo completa
-    // (sin esperar a que vuelva a intentar guardar).
     $('app').addEventListener(
       'blur',
       (e) => {
@@ -1167,14 +1205,6 @@ const PermisoCore = (function () {
       const btn = $('saveAddPeopleBtn');
       btn.disabled = true;
       statusEl.textContent = 'Guardando…';
-      // Solo se envían las filas NUEVAS agregadas en esta sesión (no el registro
-      // completo) — antes esto reescribía TODO el permiso con collectOpenData(),
-      // lo que significaba: (a) dos personas agregando gente al mismo permiso al
-      // tiempo se pisaban entre sí, y (b) un reintento del Outbox podía sobrescribir
-      // con datos viejos si la respuesta original se perdió mas el envío sí llegó.
-      // El backend ahora aplica esto como un "solo agregar", bajo su propio
-      // candado, leyendo el estado MÁS RECIENTE del permiso — no el que este
-      // celular tenía cargado hace rato.
       const todasLasFilas = collectExecRows();
       const filasNuevas = todasLasFilas.slice(baseExecCount);
       if (!opIdAddWorkers) opIdAddWorkers = addPeopleData.permitCode + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
@@ -1191,8 +1221,8 @@ const PermisoCore = (function () {
         const nombres = todasLasFilas.filter((f) => f.nombre && f.nombre.trim()).length;
         statusEl.textContent = '✓ Guardado — ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
         $('backFromAddPeopleBtn').style.cssText = 'background:var(--ok,#1d7a4c);color:#fff;border-color:var(--ok,#1d7a4c);font-weight:700;';
-        baseExecCount = todasLasFilas.length; // lo recién guardado ya no cuenta como "nuevo" si se sigue agregando más
-        opIdAddWorkers = null; // esta operación ya se completó; la siguiente necesita su propia clave
+        baseExecCount = todasLasFilas.length;
+        opIdAddWorkers = null;
         alert(
           `✓ Personal guardado correctamente.\n\nEste permiso ahora tiene ${nombres} ejecutante(s) registrado(s) en total.\n\nPuedes seguir agregando más gente, o tocar "Volver al inicio" cuando termines.`
         );
@@ -1248,12 +1278,9 @@ const PermisoCore = (function () {
       btn.textContent = 'Guardando…';
       if (MODE === 'open') {
         const data = collectOpenData();
-        data.firstSave = !firstSaveDone; // le dice al backend si esto es la primera vez que se guarda este código
+        data.firstSave = !firstSaveDone;
         let res = await sendToSheet(data);
         let intentosColision = 0;
-        // Si el backend detecta que este código ya existe con OTRO permiso distinto
-        // (colisión, muy improbable pero posible con generación aleatoria), se genera
-        // un código nuevo y se reintenta automáticamente, sin que el usuario lo note.
         while (res.error === 'CODE_COLLISION' && intentosColision < 3) {
           intentosColision++;
           permitCode = genCode();
@@ -1310,7 +1337,6 @@ const PermisoCore = (function () {
 
     $('app').addEventListener('input', () => {
       if (MODE === 'open') {
-        dismissOpenDraftBannerOnEdit();
         saveOpenDraftDebounced();
       } else if (MODE === 'close') {
         saveCloseDraftDebounced();
@@ -1319,7 +1345,6 @@ const PermisoCore = (function () {
     ['change', 'click', 'mouseup', 'touchend'].forEach((evt) => {
       $('app').addEventListener(evt, () => {
         if (MODE === 'open') {
-          dismissOpenDraftBannerOnEdit();
           saveOpenDraftDebounced();
         } else if (MODE === 'close') {
           saveCloseDraftDebounced();
@@ -1333,8 +1358,6 @@ const PermisoCore = (function () {
       location.href = 'index.html';
     });
 
-    // Si se llega desde un enlace con ?code=XXX (ej. desde el dashboard de permisos),
-    // abre ese permiso directamente en modo consulta/cierre, sin pasar por la pantalla de inicio.
     const codeFromUrl = new URLSearchParams(location.search).get('code');
     if (codeFromUrl) {
       $('codeInput').value = codeFromUrl;
@@ -1343,7 +1366,7 @@ const PermisoCore = (function () {
 
     window.addEventListener('load', () => {
       if (typeof UpdateManager !== 'undefined') UpdateManager.init();
-      if (typeof Outbox !== 'undefined') Outbox.flush(); // reintenta lo pendiente si ya hay señal al abrir la página
+      if (typeof Outbox !== 'undefined') Outbox.flush();
     });
   }
 
@@ -1377,8 +1400,6 @@ const PermisoCore = (function () {
     getPermitCode: () => permitCode,
     isLocked: () => locked,
     getState: (key) => states[key],
-    // Expuestos para los hooks extraOnInitRender/extraCollectOpenData/etc. de
-    // tipos con subsistemas propios (ej. gases/EPP en confinados).
     setupPad,
     refreshPadsIn,
     attachPersonalAutocomplete,
@@ -1386,9 +1407,6 @@ const PermisoCore = (function () {
     updateProgress,
     applyToggleState,
     downloadJson,
-    // Expuestos para pantallas propias de un tipo (ej. la "lectura rápida"
-    // de confinados) que necesitan hablar con el backend fuera del flujo
-    // genérico open/close.
     getWebAppUrl,
     sendToSheet,
     fetchFromSheet
