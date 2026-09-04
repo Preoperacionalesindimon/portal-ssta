@@ -1,35 +1,14 @@
 /* ============================================================
    permiso-core.js — Núcleo compartido de los 4 permisos de trabajo
    "gemelos" (caliente, eléctrico, izajes, confinados).
-
-   Extraído de las ~30 funciones que estaban copy-pasteadas casi
-   idénticas en los 4 archivos. Cada HTML de permiso ahora solo
-   define su contenido específico (arrays de checklist, campos
-   extra) y un objeto de configuración por tipo, y llama a
-   PermisoCore.init(cfg).
-
-   permiso-trabajo-alturas.html NO usa este núcleo: su backend usa
-   un formato distinto (arrays posicionales bajo un sobre
-   {action,code,data,token} en vez de un registro plano con campos
-   nombrados) — migrarlo requeriría también tocar el Apps Script
-   desplegado, así que queda para una fase aparte.
-
-   Convención: igual que UpdateManager/Outbox/OutboxBadge en
-   common.js, un objeto singleton con .init(cfg). Como cada página
-   solo carga un tipo de permiso a la vez, un único estado interno
-   por closure es seguro (no hay dos formularios en la misma página).
-
-   Carga: <script src="config.js"> → <script src="common.js"> →
-   <script src="permiso-core.js"> → <script> inline con los datos
-   del tipo + PermisoCore.init(cfg).
    ============================================================ */
 const PermisoCore = (function () {
   let cfg = null;
-  let MODE = null; // 'open' | 'close'
+  let MODE = null;
   let permitCode = null;
   let firstSaveDone = false;
   let locked = false;
-  const states = {}; // stateKey -> { chk_0:'C'|'NA'|null, ... }
+  const states = {};
   let execCounter = 0;
   let execBody = null;
   let personalCache = [];
@@ -50,7 +29,6 @@ const PermisoCore = (function () {
 
   const $ = (id) => document.getElementById(id);
 
-  /* ================= RENDER TOGGLE GROUPS ================= */
   function keyFromText(prefix, text) {
     let hash = 0;
     for (let i = 0; i < text.length; i++) {
@@ -493,6 +471,18 @@ const PermisoCore = (function () {
     base.ejecutantes = collectExecRows();
     if (cfg.freeformYN && $('openPhase')) base.yn = collectFreeformYN($('openPhase'));
     if (cfg.extraCollectOpenData) Object.assign(base, cfg.extraCollectOpenData());
+
+    // ===== DEPURACIÓN: Verificar firmas antes de guardar =====
+    console.log('=== COLECTANDO DATOS PARA GUARDAR ===');
+    console.log('Responsables con firmas:');
+    (base.responsablesSigs || []).forEach((r, i) => {
+      console.log(`  Responsable ${i}: ${r.nombre} - ${r.sig ? 'TIENE FIRMA ✅' : 'SIN FIRMA ❌'}`);
+    });
+    console.log('Ejecutantes con firmas:');
+    (base.ejecutantes || []).forEach((r, i) => {
+      console.log(`  Ejecutante ${i}: ${r.nombre} - ${r.sig ? 'TIENE FIRMA ✅' : 'SIN FIRMA ❌'}`);
+    });
+
     return base;
   }
 
@@ -555,7 +545,7 @@ const PermisoCore = (function () {
     return migrado;
   }
 
-  /* ================= LOAD OPEN DATA INTO FORM (FIX FIRMAS) ================= */
+  /* ================= LOAD OPEN DATA INTO FORM ================= */
   function loadOpenDataIntoForm(data) {
     console.log('loadOpenDataIntoForm: Cargando permiso', data.permitCode);
     permitCode = data.permitCode;
@@ -573,7 +563,6 @@ const PermisoCore = (function () {
       updateProgress(states[g.stateKey], g.progressId);
     });
 
-    // ===== FUNCIÓN PARA DIBUJAR FIRMAS CON MÚLTIPLES INTENTOS =====
     function dibujarFirmasConRetry(intentos = 0) {
       const maxIntentos = 10;
       const delay = 300;
@@ -588,7 +577,6 @@ const PermisoCore = (function () {
         if (wasHidden) responsablesContainer.style.display = 'block';
         responsablesContainer.offsetHeight;
         
-        // Forzar tamaño de todos los canvas
         responsablesContainer.querySelectorAll('canvas.pad').forEach((canvas) => {
           const rect = canvas.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0) {
@@ -601,9 +589,6 @@ const PermisoCore = (function () {
             ctx.lineWidth = 2.2;
             ctx.lineCap = 'round';
             ctx.strokeStyle = '#1f2a33';
-            console.log(`Canvas ${canvas.id}: tamaño forzado a ${canvas.width}x${canvas.height}`);
-          } else {
-            console.warn(`Canvas ${canvas.id}: tamaño 0x0, se saltará`);
           }
         });
         
@@ -621,15 +606,12 @@ const PermisoCore = (function () {
             if (canvas && canvas.width > 0 && canvas.height > 0) {
               pad.setDataUrl(r.sig);
             } else if (canvas) {
-              console.warn(`Canvas pad_${id} sin tamaño, forzando...`);
               const rect = canvas.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) {
                 const ratio = window.devicePixelRatio || 1;
                 canvas.width = rect.width * ratio;
                 canvas.height = rect.height * ratio;
                 pad.setDataUrl(r.sig);
-              } else {
-                console.error(`Canvas pad_${id} invisible o sin tamaño`);
               }
             }
           } else {
@@ -651,7 +633,6 @@ const PermisoCore = (function () {
       if (wasExecHidden) execBody.style.display = 'block';
       execBody.offsetHeight;
       
-      // Forzar tamaño de todos los canvas mini-pad
       execBody.querySelectorAll('canvas.mini-pad').forEach((canvas) => {
         const rect = canvas.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
@@ -669,7 +650,6 @@ const PermisoCore = (function () {
       
       refreshPadsIn(execBody);
 
-      // Dibujar firmas pendientes
       let pendientes = 0;
       execBody.querySelectorAll('.exec-card').forEach((card) => {
         const sig = card.dataset.pendingSig;
@@ -677,11 +657,9 @@ const PermisoCore = (function () {
         const canvas = card.querySelector('canvas.mini-pad');
         if (canvas && pads[canvas.id]) {
           if (canvas.width > 0 && canvas.height > 0) {
-            console.log(`Dibujando firma de ejecutante (canvas ${canvas.id})`);
             pads[canvas.id].setDataUrl(sig);
             delete card.dataset.pendingSig;
           } else {
-            console.warn(`Canvas ${canvas.id} sin tamaño, forzando...`);
             const rect = canvas.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
               const ratio = window.devicePixelRatio || 1;
@@ -691,7 +669,6 @@ const PermisoCore = (function () {
               delete card.dataset.pendingSig;
             } else {
               pendientes++;
-              console.warn(`Canvas ${canvas.id} invisible, pendiente`);
             }
           }
         }
@@ -701,9 +678,7 @@ const PermisoCore = (function () {
 
       console.log(`Firmas pendientes después del intento ${intentos + 1}: ${pendientes}`);
 
-      // Si aún hay firmas pendientes, reintentar
       if (pendientes > 0 && intentos < maxIntentos) {
-        console.log(`Reintentando en ${delay}ms...`);
         setTimeout(() => {
           dibujarFirmasConRetry(intentos + 1);
         }, delay);
@@ -714,7 +689,6 @@ const PermisoCore = (function () {
       }
     }
 
-    // Iniciar el dibujo con un pequeño delay
     console.log('Iniciando dibujo de firmas...');
     setTimeout(() => {
       dibujarFirmasConRetry(0);
