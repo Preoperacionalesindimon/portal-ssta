@@ -388,7 +388,19 @@ const SignaturePad = {
     function setup(canvas) {
       if (canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners
       canvas.dataset.sigInit = '1';
-      const ctx = canvas.getContext('2d');
+      // willReadFrequently: true — le dice al navegador desde el inicio que este
+      // lienzo se va a LEER seguido (getImageData para el historial de "deshacer",
+      // toDataURL al guardar), no solo dibujar. Sin esto, el navegador por defecto
+      // asume que el canvas es para dibujar-y-mostrar nada más, y lo maneja con
+      // memoria de video (GPU) — en dispositivos con poca memoria y varias firmas
+      // abiertas a la vez en la misma pantalla (los 5-6 recuadros de un permiso),
+      // esa memoria de video puede liberarse en segundo plano para los lienzos que
+      // quedan fuera de pantalla mientras se sigue llenando el formulario, dejando
+      // el dibujo en blanco silenciosamente aunque el estado siga diciendo
+      // "Firmado ✓" (ese estado es solo texto, no depende del contenido del
+      // lienzo). Con willReadFrequently, el navegador usa memoria normal (CPU) en
+      // vez de memoria de video, evitando ese vaciado.
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       let history = [];
       function resize() {
         const rect = canvas.getBoundingClientRect();
