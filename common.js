@@ -46,11 +46,6 @@ const DraftStore = {
       localStorage.setItem(key, JSON.stringify({ data, savedAt: new Date().toISOString() }));
       return true;
     } catch (e) {
-      // El guardado automático del borrador falló (cuota de almacenamiento
-      // llena por firmas en base64, modo privado de Safari, etc.). Antes esto
-      // se ignoraba en silencio: el usuario creía tener un respaldo local que
-      // en realidad no existe. Se avisa una sola vez por sesión — no en cada
-      // tecla, ya que save() se llama muy seguido mientras se escribe.
       if (!this._avisoMostrado) {
         this._avisoMostrado = true;
         console.error('DraftStore.save falló:', e);
@@ -71,8 +66,7 @@ const DraftStore = {
   }
 };
 
-// Aviso visible si el borrador automático deja de poder guardarse — se activa
-// solo (no necesita que cada página lo llame), ya que common.js está en todas.
+// Aviso visible si el borrador automático deja de poder guardarse
 window.addEventListener('draft-guardado-fallido', () => {
   if (document.getElementById('draftFailBanner')) return;
   const el = document.createElement('div');
@@ -107,23 +101,33 @@ function formatSavedAt(iso) {
 
 /**
  * OfflineBanner: muestra/oculta un aviso fijo cuando el navegador detecta
- * que no hay conexión, para que en zonas de planta con señal débil quede
- * claro que lo que se ve puede ser una copia guardada (caché) y no la
- * versión más reciente. No interfiere con el borrador local: ese sigue
- * guardando normalmente sin conexión.
+ * que no hay conexión.
  */
+const OfflineBanner = {
+  init() {
+    if (document.getElementById('offlineBanner')) return;
+    const el = document.createElement('div');
+    el.id = 'offlineBanner';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.textContent = '⚠ Sin conexión — mostrando la última versión guardada. Los datos nuevos se guardarán cuando vuelva la señal.';
+    document.body.prepend(el);
+    const update = () => { el.style.display = navigator.onLine ? 'none' : 'block'; };
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
+  }
+};
+
 /**
  * UpdateManager: detecta cuando hay una versión nueva del portal ya
  * descargada (Service Worker "esperando") y muestra un banner para que
- * el usuario decida cuándo actualizar — nunca se recarga la página solo,
- * para no perder un permiso a medio llenar.
- * Requiere sw.js v2 (que no hace skipWaiting automático).
+ * el usuario decida cuándo actualizar.
  */
 const UpdateManager = {
   init() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('sw.js').then((reg) => {
-      // Ya hay un SW nuevo esperando desde antes de esta carga.
       if (reg.waiting) this._showBanner(reg.waiting);
       reg.addEventListener('updatefound', () => {
         const nuevo = reg.installing;
@@ -136,7 +140,6 @@ const UpdateManager = {
       });
     }).catch(() => {});
 
-    // Cuando el SW nuevo toma control, recarga una sola vez.
     let recargando = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (recargando) return;
@@ -144,7 +147,6 @@ const UpdateManager = {
       location.reload();
     });
 
-    // Mensaje del SW pidiendo reintentar la cola pendiente (background sync).
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data === 'TRY_FLUSH_OUTBOX') Outbox.flush();
     });
@@ -169,14 +171,10 @@ const UpdateManager = {
  * Outbox: cola de permisos que no se pudieron guardar por falta de señal.
  * Usa IndexedDB (no localStorage) porque el Service Worker también debe
  * poder leerla/escribirla en segundo plano vía Background Sync.
- * Uso desde los formularios (dentro del catch de fetchWithRetry):
- *   await Outbox.add(CONFIG.SCRIPT_URL, { action:'open', code, data, token });
- * Y al cargar la página: Outbox.flush();  // reintenta lo pendiente
  */
 const Outbox = {
   _dbPromise: null,
-  _flushing: false, // evita que dos disparos simultáneos (carga de página + evento 'online'
-                     // + mensaje del Service Worker) reenvíen el mismo permiso dos veces
+  _flushing: false,
   _db() {
     if (this._dbPromise) return this._dbPromise;
     this._dbPromise = new Promise((resolve, reject) => {
@@ -189,15 +187,6 @@ const Outbox = {
     });
     return this._dbPromise;
   },
-  /**
-   * Encola un permiso pendiente. A diferencia de la versión anterior, la
-   * promesa ahora SÍ rechaza si IndexedDB no pudo guardar el registro
-   * (cuota llena por las firmas en base64, modo privado de Safari, etc.).
-   * Antes la promesa quedaba colgada para siempre y el formulario le
-   * mostraba al usuario "quedó guardado y se reintentará solo" sin que
-   * realmente hubiera quedado nada guardado — quien llama debe hacer
-   * await y avisar al usuario si esto rechaza.
-   */
   async add(url, body) {
     const db = await this._db();
     return new Promise((resolve, reject) => {
@@ -206,14 +195,11 @@ const Outbox = {
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Outbox: transacción abortada'));
       tx.oncomplete = async () => {
-        // Registra el Background Sync si el navegador lo soporta; si no,
-        // igual queda guardado y se reintentará la próxima vez que la
-        // página cargue con señal (ver flush() en init de cada formulario).
         if ('serviceWorker' in navigator && 'SyncManager' in window) {
           try {
             const reg = await navigator.serviceWorker.ready;
             await reg.sync.register('sync-outbox');
-          } catch (e) { /* sin soporte o permiso denegado; no es crítico */ }
+          } catch (e) { /* no op */ }
         }
         Outbox._avisar();
         resolve();
@@ -251,7 +237,6 @@ const Outbox = {
       getReq.onerror = () => resolve(0);
     });
   },
-  /** Reintenta enviar todo lo pendiente. Llamar al cargar la página y al volver la señal. */
   async flush() {
     if (!navigator.onLine) return;
     if (this._flushing) return;
@@ -270,17 +255,13 @@ const Outbox = {
             await this.remove(item.id);
             Outbox._avisarEnviado(item);
           } else {
-            // El servidor respondió pero con error (token inválido, permiso ya
-            // cerrado, etc.) — no es un problema de señal, así que reintentar
-            // sin límite nunca lo resolvería solo. Tras 5 intentos fallidos se
-            // saca de la cola y se avisa, en vez de reintentar para siempre.
             const intentos = await this._incrementarIntentos(item.id);
             if (intentos >= 5) {
               await this.remove(item.id);
               Outbox._avisarFallidoDefinitivo(item, json.error);
             }
           }
-        } catch (e) { /* sigue sin señal; se reintenta después, sin contar como intento fallido */ }
+        } catch (e) { /* sigue sin señal */ }
       }
     } finally {
       this._flushing = false;
@@ -303,10 +284,7 @@ const Outbox = {
 window.addEventListener('online', () => Outbox.flush());
 
 /**
- * OutboxBadge: indicador visible ("N permisos pendientes de enviar") para que
- * el usuario sepa en todo momento si algo quedó en cola sin salir — antes,
- * un permiso podía quedar guardándose en segundo plano sin ningún aviso.
- * Se actualiza solo con los eventos que dispara Outbox.
+ * OutboxBadge: indicador visible ("N permisos pendientes de enviar")
  */
 const OutboxBadge = {
   init() {
@@ -343,30 +321,7 @@ const OutboxBadge = {
 
 /**
  * SignaturePad: lienzo táctil de firma (dibujar, deshacer trazo, borrar,
- * cargar una firma ya guardada). Antes esta misma lógica (~80 líneas)
- * vivía copiada y pegada en permiso-core.js Y en personal-autorizado.html
- * por separado — un arreglo hecho en un lado (como el bug de firmas que
- * quedaban invisibles al restaurar varias de golpe) había que acordarse
- * de repetirlo a mano en el otro. Ahora vive en un solo lugar y ambos
- * consumidores comparten la misma implementación.
- *
- * Cada página que la usa crea SU PROPIO manager (no hay estado global
- * compartido entre, por ejemplo, un permiso y el anexo de personal):
- *
- *   const sigMgr = SignaturePad.createManager({
- *     statusIdFor: (canvasId) => 'status_' + canvasId  // opcional, este es el default
- *   });
- *   sigMgr.setup(canvasEl);
- *   sigMgr.pads['idDelCanvas'].setDataUrl(firmaGuardada);
- *   sigMgr.refreshIn(contenedor); // ver nota de refreshSize más abajo
- *
- * IMPORTANTE sobre restaurar firmas guardadas en lote (varias filas a la
- * vez, ej. varios ejecutantes de un permiso ya abierto): llama primero
- * refreshIn()/setup() para que el lienzo tenga su tamaño real, y solo
- * después dibuja la firma con setDataUrl — si el <canvas> todavía no está
- * visible (contenedor recién mostrado, sección aún colapsada) su tamaño
- * puede ser 0x0 en ese instante y la firma se "dibuja" en un lienzo sin
- * tamaño, quedando invisible aunque el dato sí se guardó bien.
+ * cargar una firma ya guardada).
  */
 const SignaturePad = {
   createManager(opts) {
@@ -386,13 +341,17 @@ const SignaturePad = {
     }
 
     function setup(canvas) {
-      if (canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners
+      if (canvas.dataset.sigInit) return;
       canvas.dataset.sigInit = '1';
       const ctx = canvas.getContext('2d');
       let history = [];
+      let hasInk = false;
+      let drawing = false;
+      let lastX = 0, lastY = 0;
+
       function resize() {
         const rect = canvas.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return; // aún oculto, se reintentará al mostrarse
+        if (rect.width === 0 || rect.height === 0) return;
         const ratio = window.devicePixelRatio || 1;
         canvas.width = rect.width * ratio;
         canvas.height = rect.height * ratio;
@@ -404,19 +363,21 @@ const SignaturePad = {
         history = [];
       }
       resize();
-      let drawing = false, hasInk = false, lastX = 0, lastY = 0;
+
       function pos(e) {
         const r = canvas.getBoundingClientRect();
         const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
         const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
         return [cx, cy];
       }
+
       function saveHistory() {
         try {
           history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
           if (history.length > 15) history.shift();
         } catch (e) {}
       }
+
       function start(e) {
         if (canvas.dataset.locked === '1') return;
         e.preventDefault();
@@ -424,6 +385,7 @@ const SignaturePad = {
         drawing = true;
         [lastX, lastY] = pos(e);
       }
+
       function move(e) {
         if (!drawing || canvas.dataset.locked === '1') return;
         e.preventDefault();
@@ -436,13 +398,16 @@ const SignaturePad = {
         hasInk = true;
         markSigned(canvas.id);
       }
+
       function end() { drawing = false; }
+
       canvas.addEventListener('mousedown', start);
       canvas.addEventListener('mousemove', move);
       window.addEventListener('mouseup', end);
       canvas.addEventListener('touchstart', start, { passive: false });
       canvas.addEventListener('touchmove', move, { passive: false });
       canvas.addEventListener('touchend', end);
+
       pads[canvas.id] = {
         clear: () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -463,25 +428,68 @@ const SignaturePad = {
         },
         getDataUrl: () => (hasInk ? canvas.toDataURL('image/png') : null),
         setDataUrl: (url) => {
-          if (!url) return;
+          if (!url) {
+            console.warn('setDataUrl: URL vacía');
+            return;
+          }
+          
+          // Verificar que el canvas tenga tamaño
+          if (canvas.width === 0 || canvas.height === 0) {
+            console.warn('setDataUrl: Canvas sin tamaño, forzando resize');
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const ratio = window.devicePixelRatio || 1;
+              canvas.width = rect.width * ratio;
+              canvas.height = rect.height * ratio;
+              const ctx2 = canvas.getContext('2d');
+              ctx2.setTransform(1, 0, 0, 1, 0, 0);
+              ctx2.scale(ratio, ratio);
+              ctx2.lineWidth = 2.2;
+              ctx2.lineCap = 'round';
+              ctx2.strokeStyle = '#1f2a33';
+            } else {
+              console.error('setDataUrl: Canvas invisible o sin tamaño');
+              return;
+            }
+          }
+          
           hasInk = true;
           markSigned(canvas.id);
+          
           const img = new Image();
+          const ctx2 = canvas.getContext('2d');
+          const ratio2 = window.devicePixelRatio || 1;
+          
           img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+            console.log('setDataUrl: Imagen cargada correctamente', img.width, 'x', img.height);
+            ctx2.clearRect(0, 0, canvas.width, canvas.height);
+            ctx2.drawImage(img, 0, 0, canvas.width / ratio2, canvas.height / ratio2);
+            hasInk = true;
+            markSigned(canvas.id);
           };
+          
+          img.onerror = (e) => {
+            console.error('setDataUrl: Error al cargar la imagen', e);
+            setTimeout(() => {
+              const img2 = new Image();
+              img2.onload = () => {
+                console.log('setDataUrl: Imagen cargada en reintento');
+                ctx2.clearRect(0, 0, canvas.width, canvas.height);
+                ctx2.drawImage(img2, 0, 0, canvas.width / ratio2, canvas.height / ratio2);
+                hasInk = true;
+                markSigned(canvas.id);
+              };
+              img2.onerror = () => {
+                console.error('setDataUrl: Falló el reintento de carga de imagen');
+              };
+              img2.src = url;
+            }, 200);
+          };
+          
+          console.log('setDataUrl: Cargando imagen desde URL (primeros 50 chars):', url.substring(0, 50) + '...');
           img.src = url;
         },
         hasInk: () => hasInk,
-        // ⚠️ A diferencia de la versión anterior (donde solo el manejador de
-        // rotación de pantalla preservaba la firma), refreshSize() SIEMPRE
-        // guarda la firma actual antes de redimensionar y la vuelve a
-        // dibujar después — fijar canvas.width/height limpia el bitmap, así
-        // que sin esto, cualquier llamado a refreshIn() sobre un canvas ya
-        // firmado borraría la firma en silencio (el estado seguiría
-        // diciendo "Firmado ✓" pero el lienzo quedaría en blanco). Ahora es
-        // seguro llamarlo en cualquier momento, sin importar el orden.
         refreshSize: () => {
           const saved = hasInk ? pads[canvas.id].getDataUrl() : null;
           resize();
@@ -497,8 +505,6 @@ const SignaturePad = {
       });
     }
 
-    /** Registra el reintento de tamaño al girar el celular (con espera para
-     *  no recalcular a medio giro). Llamar una sola vez por manager. */
     function bindOrientationChange() {
       let timer = null;
       window.addEventListener('orientationchange', () => {
@@ -511,8 +517,6 @@ const SignaturePad = {
 
     return { pads, setup, refreshIn, bindOrientationChange };
   },
-  /** Bloquea un lienzo (modo consulta / permiso ya cerrado) — no depende
-   *  del manager, se puede llamar directo sobre el <canvas>. */
   lock(canvas) {
     canvas.dataset.locked = '1';
     canvas.classList.add('locked');
@@ -521,9 +525,7 @@ const SignaturePad = {
 
 /**
  * ScrollProgress: barra fina y fija arriba de la pantalla que muestra
- * cuánto lleva recorrido el usuario del formulario — información real
- * en un documento largo de 10 secciones diligenciado en celular, no
- * decoración. Color configurable por página (color de marca del permiso).
+ * cuánto lleva recorrido el usuario del formulario.
  */
 const ScrollProgress = {
   init(color) {
@@ -540,22 +542,6 @@ const ScrollProgress = {
     };
     window.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
-    update();
-  }
-};
-
-const OfflineBanner = {
-  init() {
-    if (document.getElementById('offlineBanner')) return; // ya existe
-    const el = document.createElement('div');
-    el.id = 'offlineBanner';
-    el.setAttribute('role', 'status');
-    el.setAttribute('aria-live', 'polite');
-    el.textContent = '⚠ Sin conexión — mostrando la última versión guardada. Los datos nuevos se guardarán cuando vuelva la señal.';
-    document.body.prepend(el);
-    const update = () => { el.style.display = navigator.onLine ? 'none' : 'block'; };
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
     update();
   }
 };
