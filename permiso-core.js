@@ -236,6 +236,19 @@ const PermisoCore = (function () {
       if (pads[c.id]) pads[c.id].refreshSize();
     });
   }
+  // Dibuja las firmas de ejecutantes que quedaron pendientes en addExecRow
+  // (ver comentario ahí). Se debe llamar SIEMPRE después de refreshPadsIn(execBody),
+  // una vez que todas las filas del lote ya están en el DOM y con su tamaño real
+  // asegurado — así ninguna firma guardada queda invisible por timing.
+  function applyPendingExecSignatures() {
+    execBody.querySelectorAll('.exec-card').forEach((card) => {
+      const sig = card.dataset.pendingSig;
+      if (!sig) return;
+      const canvas = card.querySelector('canvas.mini-pad');
+      if (canvas && pads[canvas.id]) pads[canvas.id].setDataUrl(sig);
+      delete card.dataset.pendingSig;
+    });
+  }
   let _rotateTimer = null;
   function handleOrientationChange() {
     clearTimeout(_rotateTimer);
@@ -356,7 +369,16 @@ const PermisoCore = (function () {
         const el = $(ex.id + n);
         if (el) el.value = prefill[ex.field] || '';
       });
-      if (prefill.sig) pads[c.id].setDataUrl(prefill.sig);
+      // OJO: la firma guardada NO se dibuja aquí. Si esta fila se está creando
+      // dentro de un lote (cargar un permiso existente con varios ejecutantes
+      // ya firmados), el lienzo puede no tener todavía su tamaño real en este
+      // instante exacto (mismo problema que ya se había resuelto para las
+      // firmas de responsables — ver refreshPadsIn en loadOpenDataIntoForm).
+      // Si se dibuja de una, algunas firmas quedan invisibles (canvas 0x0)
+      // aunque el dato sí se guardó bien. Por eso se guarda como "pendiente"
+      // y se dibuja en un segundo paso, después de refreshPadsIn(execBody),
+      // vía applyPendingExecSignatures().
+      if (prefill.sig) card.dataset.pendingSig = prefill.sig;
     }
     attachPersonalAutocomplete($('execNombre' + n), (persona) => {
       $('execNombre' + n).value = persona.nombre;
@@ -711,6 +733,11 @@ const PermisoCore = (function () {
     if ((data.ejecutantes || []).length === 0) {
       for (let i = 0; i < 3; i++) addExecRow();
     }
+    // Igual que con responsablesSigs arriba: primero se asegura el tamaño
+    // real de TODOS los lienzos del lote, y solo después se dibujan las
+    // firmas guardadas — si no, algunas quedan invisibles.
+    refreshPadsIn(execBody);
+    applyPendingExecSignatures();
   }
 
   /* ================= BACKEND (Google Apps Script) ================= */
@@ -1125,6 +1152,11 @@ const PermisoCore = (function () {
     baseExecCount = execCounter; // todo lo que se agregue DESPUÉS de este punto es "nuevo" para esta sesión
     opIdAddWorkers = null;
     addExecRow(); // fila extra en blanco lista para la persona nueva
+    // Mismo arreglo que en loadOpenDataIntoForm: asegura el tamaño real de
+    // los lienzos (la sección recién se hizo visible con modo-agregar-personal)
+    // antes de dibujar las firmas ya guardadas de los ejecutantes existentes.
+    refreshPadsIn(execBody);
+    applyPendingExecSignatures();
     $('addPeopleStatus').textContent = '';
   }
   function renderClosedPermits(rows) {
