@@ -3,141 +3,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diagnóstico de firma · Portal SSTA</title>
+<title>Diagnóstico v2 · Portal SSTA</title>
 <style>
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef1f4;color:#151b24;padding:1rem;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef1f4;color:#151b24;padding:1rem;padding-bottom:4rem;}
   h1{font-size:18px;margin:0 0 4px;}
   p.sub{font-size:12.5px;color:#5c6a76;margin:0 0 1rem;}
   .card{background:#fff;border:1px solid #dde3e8;border-radius:12px;padding:1rem;margin-bottom:1rem;}
   .card h2{font-size:14px;margin:0 0 8px;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  td{padding:4px 2px;border-bottom:1px solid #eaeef1;}
-  td:first-child{color:#5c6a76;width:55%;}
-  td:last-child{font-weight:700;word-break:break-all;}
-  canvas{width:100%;height:220px;border:2px dashed #c8461a;border-radius:8px;background:#fff;touch-action:none;display:block;}
-  .btnrow{display:flex;gap:8px;margin-top:10px;}
-  button{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
-  .btn-primary{background:#151b24;color:#fff;}
-  .btn-secondary{background:#eef1f4;color:#151b24;border:1px solid #dde3e8;}
-  .resultado{margin-top:12px;padding:12px;border-radius:8px;font-size:13px;white-space:pre-wrap;word-break:break-all;}
+  .card .n{display:inline-block;background:#151b24;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px;}
+  canvas{width:100%;height:170px;border:2px dashed #c8461a;border-radius:8px;background:#fff;touch-action:none;display:block;}
+  .estado{font-size:11.5px;font-weight:700;margin-top:4px;color:#999;}
+  .estado.firmado{color:#1d7a4c;}
+  .spacer{height:340px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:13px;background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 10px,#eee 10px,#eee 20px);border-radius:8px;margin:14px 0;}
+  .btnrow{position:sticky;bottom:0;background:#eef1f4;padding:10px 0;}
+  button{width:100%;padding:14px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;background:#151b24;color:#fff;}
+  .resultado{margin-top:12px;padding:12px;border-radius:8px;font-size:12.5px;white-space:pre-wrap;word-break:break-all;}
   .resultado.ok{background:rgba(29,122,76,.1);color:#1d7a4c;border:1px solid rgba(29,122,76,.3);}
   .resultado.error{background:rgba(192,57,43,.1);color:#c0392b;border:1px solid rgba(192,57,43,.3);}
-  .resultado.pendiente{background:#f4f4f4;color:#666;}
-  img.previsualizacion{max-width:100%;border:1px solid #dde3e8;border-radius:8px;margin-top:8px;background:repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 16px 16px;}
+  .resumen{font-size:13px;font-weight:700;margin-bottom:8px;}
+  img.mini{width:120px;border:1px solid #dde3e8;border-radius:6px;background:repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 12px 12px;margin-top:4px;}
 </style>
 </head>
 <body>
-  <h1>🔍 Diagnóstico de firma</h1>
-  <p class="sub">Esta página NO es parte del portal — solo sirve para ver, directamente en la pantalla del dispositivo, qué está pasando con la captura de la firma. Se puede borrar después.</p>
+  <h1>🔍 Diagnóstico v2 — varias firmas a la vez</h1>
+  <p class="sub">Esta página simula el permiso real: 5 recuadros de firma en la misma pantalla, con "relleno" entre ellos para forzar que algunos queden fuera de vista mientras firmas los demás — igual que pasa en un formulario largo. No es parte del portal, se puede borrar después.</p>
+
+  <div class="card"><h2><span class="n">1</span>Responsable / Coordinador</h2><canvas class="pad" id="pad1"></canvas><div class="estado" id="estado1">Sin firmar</div></div>
+  <div class="spacer">↓ (simula una sección larga del formulario) ↓</div>
+  <div class="card"><h2><span class="n">2</span>Supervisor</h2><canvas class="pad" id="pad2"></canvas><div class="estado" id="estado2">Sin firmar</div></div>
+  <div class="spacer">↓ (simula otra sección) ↓</div>
+  <div class="card"><h2><span class="n">3</span>Ejecutante 1</h2><canvas class="pad" id="pad3"></canvas><div class="estado" id="estado3">Sin firmar</div></div>
+  <div class="card"><h2><span class="n">4</span>Ejecutante 2</h2><canvas class="pad" id="pad4"></canvas><div class="estado" id="estado4">Sin firmar</div></div>
+  <div class="spacer">↓ (simula el resto del formulario) ↓</div>
+  <div class="card"><h2><span class="n">5</span>Ejecutante 3</h2><canvas class="pad" id="pad5"></canvas><div class="estado" id="estado5">Sin firmar</div></div>
 
   <div class="card">
-    <h2>1. Datos del dispositivo/navegador</h2>
-    <table id="infoTable"></table>
+    <h2>Resultado</h2>
+    <p style="font-size:12.5px;color:#5c6a76;margin:0 0 10px;">
+      Firma los 5 recuadros de arriba (desplázate entre uno y otro, tómate tu tiempo, igual que llenarías el permiso real). Cuando termines, baja hasta el botón de abajo y tócalo.
+    </p>
+    <div id="resumen"></div>
   </div>
 
-  <div class="card">
-    <h2>2. Dibuja aquí con el dedo (igual que en el portal)</h2>
-    <canvas id="pad"></canvas>
-    <div class="btnrow">
-      <button class="btn-secondary" id="btnLimpiar">Borrar</button>
-      <button class="btn-primary" id="btnProbar">Probar guardar firma</button>
-    </div>
-    <div class="resultado pendiente" id="resultado">Dibuja algo arriba y toca "Probar guardar firma".</div>
-    <div id="previewWrap"></div>
+  <div class="btnrow">
+    <button id="btnProbar">Probar guardar las 5 firmas</button>
   </div>
 
 <script>
-const info = document.getElementById('infoTable');
-function addRow(label, value) {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td>${label}</td><td>${value}</td>`;
-  info.appendChild(tr);
+const pads = {};
+function setup(canvas) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1f2a33';
+  }
+  resize();
+  let drawing = false, hasInk = false, lastX = 0, lastY = 0;
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+    return [cx, cy];
+  }
+  function start(e) { e.preventDefault(); drawing = true; [lastX, lastY] = pos(e); }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const [x, y] = pos(e);
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+    [lastX, lastY] = [x, y];
+    hasInk = true;
+    const est = document.getElementById('estado' + canvas.id.replace('pad', ''));
+    est.textContent = 'Firmado ✓'; est.classList.add('firmado');
+  }
+  function end() { drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+  pads[canvas.id] = {
+    hasInk: () => hasInk,
+    getDataUrl: () => hasInk ? canvas.toDataURL('image/png') : null
+  };
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
 }
-addRow('Navegador (User-Agent)', navigator.userAgent);
-addRow('devicePixelRatio', window.devicePixelRatio || 1);
-addRow('Tamaño de pantalla', screen.width + ' × ' + screen.height);
-addRow('Tamaño de ventana visible', window.innerWidth + ' × ' + window.innerHeight);
-
-const canvas = document.getElementById('pad');
-const ctx = canvas.getContext('2d');
-let drawing = false, hasInk = false, lastX = 0, lastY = 0;
-
-function resize() {
-  const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = rect.width * ratio;
-  canvas.height = rect.height * ratio;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(ratio, ratio);
-  ctx.lineWidth = 2.2;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#1f2a33';
-  addRow('Tamaño real del canvas (con zoom de píxeles)', canvas.width + ' × ' + canvas.height + ' px (' + (canvas.width * canvas.height / 1e6).toFixed(2) + ' megapíxeles)');
-}
-resize();
-
-function pos(e) {
-  const r = canvas.getBoundingClientRect();
-  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-  return [cx, cy];
-}
-function start(e) { e.preventDefault(); drawing = true; [lastX, lastY] = pos(e); }
-function move(e) {
-  if (!drawing) return;
-  e.preventDefault();
-  const [x, y] = pos(e);
-  ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
-  [lastX, lastY] = [x, y];
-  hasInk = true;
-}
-function end() { drawing = false; }
-canvas.addEventListener('mousedown', start);
-canvas.addEventListener('mousemove', move);
-window.addEventListener('mouseup', end);
-canvas.addEventListener('touchstart', start, { passive: false });
-canvas.addEventListener('touchmove', move, { passive: false });
-canvas.addEventListener('touchend', end);
-
-document.getElementById('btnLimpiar').addEventListener('click', () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  hasInk = false;
-  document.getElementById('resultado').className = 'resultado pendiente';
-  document.getElementById('resultado').textContent = 'Dibuja algo arriba y toca "Probar guardar firma".';
-  document.getElementById('previewWrap').innerHTML = '';
-});
+document.querySelectorAll('canvas.pad').forEach(setup);
 
 document.getElementById('btnProbar').addEventListener('click', () => {
-  const resEl = document.getElementById('resultado');
-  const previewWrap = document.getElementById('previewWrap');
-  previewWrap.innerHTML = '';
-  if (!hasInk) {
-    resEl.className = 'resultado error';
-    resEl.textContent = 'No detecté ningún trazo — dibuja primero con el dedo antes de probar.';
-    return;
-  }
-  try {
-    const url = canvas.toDataURL('image/png');
-    const bytesAprox = Math.round(url.length * 0.75 / 1024);
-    if (!url || url === 'data:,' || url.length < 100) {
-      resEl.className = 'resultado error';
-      resEl.textContent = '⚠️ toDataURL() devolvió un resultado vacío o casi vacío (longitud: ' + url.length + ' caracteres). Esto confirma que el navegador está bloqueando o vaciando la lectura del dibujo, aunque el trazo se vea bien en pantalla.\n\nValor completo devuelto:\n' + url;
+  const resumenEl = document.getElementById('resumen');
+  resumenEl.innerHTML = '';
+  let totalFirmados = 0, totalConDatoReal = 0;
+  Object.keys(pads).forEach((id) => {
+    const p = pads[id];
+    const n = id.replace('pad', '');
+    const div = document.createElement('div');
+    if (!p.hasInk()) {
+      div.className = 'resultado';
+      div.style.background = '#f4f4f4';
+      div.style.color = '#888';
+      div.textContent = 'Recuadro ' + n + ': no se dibujó nada.';
     } else {
-      resEl.className = 'resultado ok';
-      resEl.textContent = '✓ Se generó una imagen de ' + url.length + ' caracteres (~' + bytesAprox + ' KB). Revisa abajo: si la imagen que aparece se ve como tu firma, todo funciona bien en este navegador/dispositivo. Si aparece en blanco o con ruido/estática, el navegador está "confundiendo" la imagen a propósito.';
-      const img = document.createElement('img');
-      img.className = 'previsualizacion';
-      img.src = url;
-      previewWrap.appendChild(img);
+      totalFirmados++;
+      let url;
+      try {
+        url = p.getDataUrl();
+      } catch (err) {
+        div.className = 'resultado error';
+        div.textContent = 'Recuadro ' + n + ': ⚠️ ERROR al leer la firma → ' + err.name + ': ' + err.message;
+        resumenEl.appendChild(div);
+        return;
+      }
+      if (!url || url.length < 100) {
+        div.className = 'resultado error';
+        div.textContent = 'Recuadro ' + n + ': ⚠️ SE DIBUJÓ pero al leerlo salió VACÍO (longitud: ' + (url ? url.length : 0) + '). Esto reproduce el problema.';
+      } else {
+        totalConDatoReal++;
+        div.className = 'resultado ok';
+        div.innerHTML = 'Recuadro ' + n + ': ✓ OK (' + url.length + ' caracteres)';
+        const img = document.createElement('img');
+        img.className = 'mini';
+        img.src = url;
+        div.appendChild(document.createElement('br'));
+        div.appendChild(img);
+      }
     }
-  } catch (err) {
-    resEl.className = 'resultado error';
-    resEl.textContent = '⚠️ toDataURL() lanzó un ERROR (esto es más grave que devolver vacío):\n\n' + err.name + ': ' + err.message + '\n\n' + (err.stack || '');
-  }
+    resumenEl.appendChild(div);
+  });
+  const tit = document.createElement('div');
+  tit.className = 'resumen';
+  tit.textContent = 'Firmaste ' + totalFirmados + ' de 5 → de esos, ' + totalConDatoReal + ' guardaron el dato real correctamente.';
+  resumenEl.prepend(tit);
+  resumenEl.scrollIntoView({ behavior: 'smooth' });
 });
-
-window.addEventListener('resize', resize);
-window.addEventListener('orientationchange', () => setTimeout(resize, 150));
 </script>
 </body>
 </html>
