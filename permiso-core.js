@@ -147,6 +147,9 @@ const PermisoCore = (function () {
         const ctx = canvas.getContext('2d');
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(ratio, ratio);
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#1f2a33';
       }
     });
   }
@@ -157,11 +160,9 @@ const PermisoCore = (function () {
       if (!sig) return;
       const canvas = card.querySelector('canvas.mini-pad');
       if (canvas && pads[canvas.id]) {
-        // Verificar que el canvas tenga tamaño
         if (canvas.width > 0 && canvas.height > 0) {
           pads[canvas.id].setDataUrl(sig);
         } else {
-          // Forzar tamaño
           const rect = canvas.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0) {
             const ratio = window.devicePixelRatio || 1;
@@ -556,6 +557,7 @@ const PermisoCore = (function () {
 
   /* ================= LOAD OPEN DATA INTO FORM (FIX FIRMAS) ================= */
   function loadOpenDataIntoForm(data) {
+    console.log('loadOpenDataIntoForm: Cargando permiso', data.permitCode);
     permitCode = data.permitCode;
 
     (cfg.checklistGroups || []).forEach((g) => {
@@ -573,17 +575,38 @@ const PermisoCore = (function () {
 
     // ===== FUNCIÓN PARA DIBUJAR FIRMAS CON MÚLTIPLES INTENTOS =====
     function dibujarFirmasConRetry(intentos = 0) {
-      const maxIntentos = 5;
-      const delay = 200;
+      const maxIntentos = 10;
+      const delay = 300;
+      console.log(`dibujarFirmasConRetry: Intento ${intentos + 1} de ${maxIntentos}`);
 
       // 1. RESPONSABLES
       const responsablesSigs = data.responsablesSigs || [];
+      console.log(`Responsables a dibujar: ${responsablesSigs.length}`);
       const responsablesContainer = $('responsablesSigs');
       if (responsablesContainer) {
         const wasHidden = responsablesContainer.style.display === 'none';
         if (wasHidden) responsablesContainer.style.display = 'block';
         responsablesContainer.offsetHeight;
-        forzarTamanioCanvas(responsablesContainer);
+        
+        // Forzar tamaño de todos los canvas
+        responsablesContainer.querySelectorAll('canvas.pad').forEach((canvas) => {
+          const rect = canvas.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = rect.width * ratio;
+            canvas.height = rect.height * ratio;
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(ratio, ratio);
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#1f2a33';
+            console.log(`Canvas ${canvas.id}: tamaño forzado a ${canvas.width}x${canvas.height}`);
+          } else {
+            console.warn(`Canvas ${canvas.id}: tamaño 0x0, se saltará`);
+          }
+        });
+        
         refreshPadsIn(responsablesContainer);
         responsablesSigs.forEach((r, i) => {
           const id = 'resp' + i;
@@ -593,18 +616,24 @@ const PermisoCore = (function () {
           if (cEl) cEl.value = r.cc || '';
           const pad = pads['pad_' + id];
           if (pad && r.sig) {
+            console.log(`Dibujando firma de responsable ${i} (${r.nombre})`);
             const canvas = document.getElementById('pad_' + id);
             if (canvas && canvas.width > 0 && canvas.height > 0) {
               pad.setDataUrl(r.sig);
             } else if (canvas) {
+              console.warn(`Canvas pad_${id} sin tamaño, forzando...`);
               const rect = canvas.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) {
                 const ratio = window.devicePixelRatio || 1;
                 canvas.width = rect.width * ratio;
                 canvas.height = rect.height * ratio;
                 pad.setDataUrl(r.sig);
+              } else {
+                console.error(`Canvas pad_${id} invisible o sin tamaño`);
               }
             }
+          } else {
+            console.warn(`Responsable ${i}: sin firma o sin pad`);
           }
         });
         if (wasHidden) responsablesContainer.style.display = 'none';
@@ -621,7 +650,23 @@ const PermisoCore = (function () {
       const wasExecHidden = execBody.style.display === 'none';
       if (wasExecHidden) execBody.style.display = 'block';
       execBody.offsetHeight;
-      forzarTamanioCanvas(execBody);
+      
+      // Forzar tamaño de todos los canvas mini-pad
+      execBody.querySelectorAll('canvas.mini-pad').forEach((canvas) => {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = rect.width * ratio;
+          canvas.height = rect.height * ratio;
+          const ctx = canvas.getContext('2d');
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(ratio, ratio);
+          ctx.lineWidth = 2.2;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#1f2a33';
+        }
+      });
+      
       refreshPadsIn(execBody);
 
       // Dibujar firmas pendientes
@@ -632,9 +677,11 @@ const PermisoCore = (function () {
         const canvas = card.querySelector('canvas.mini-pad');
         if (canvas && pads[canvas.id]) {
           if (canvas.width > 0 && canvas.height > 0) {
+            console.log(`Dibujando firma de ejecutante (canvas ${canvas.id})`);
             pads[canvas.id].setDataUrl(sig);
             delete card.dataset.pendingSig;
           } else {
+            console.warn(`Canvas ${canvas.id} sin tamaño, forzando...`);
             const rect = canvas.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
               const ratio = window.devicePixelRatio || 1;
@@ -644,6 +691,7 @@ const PermisoCore = (function () {
               delete card.dataset.pendingSig;
             } else {
               pendientes++;
+              console.warn(`Canvas ${canvas.id} invisible, pendiente`);
             }
           }
         }
@@ -651,18 +699,26 @@ const PermisoCore = (function () {
 
       if (wasExecHidden) execBody.style.display = 'none';
 
+      console.log(`Firmas pendientes después del intento ${intentos + 1}: ${pendientes}`);
+
       // Si aún hay firmas pendientes, reintentar
       if (pendientes > 0 && intentos < maxIntentos) {
+        console.log(`Reintentando en ${delay}ms...`);
         setTimeout(() => {
           dibujarFirmasConRetry(intentos + 1);
         }, delay);
+      } else if (pendientes === 0) {
+        console.log('Todas las firmas dibujadas correctamente ✅');
+      } else {
+        console.error('No se pudieron dibujar algunas firmas después de varios intentos ❌');
       }
     }
 
     // Iniciar el dibujo con un pequeño delay
+    console.log('Iniciando dibujo de firmas...');
     setTimeout(() => {
       dibujarFirmasConRetry(0);
-    }, 100);
+    }, 200);
   }
 
   /* ================= BACKEND ================= */
