@@ -4,11 +4,7 @@
    ============================================================ */
 
 /**
- * esc: escapa texto antes de insertarlo con innerHTML. Los datos que
- * vienen de la hoja de cálculo (nombres, sitios, responsables, cédulas)
- * los escribe cualquier persona con acceso al formulario — sin escapar,
- * un valor como <img src=x onerror=...> se ejecutaría en el navegador
- * de quien lo vea después (dashboard, listas de permisos abiertos, etc).
+ * esc: escapa texto antes de insertarlo con innerHTML.
  */
 function esc(v){
   return String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,8 +12,7 @@ function esc(v){
 
 /**
  * fetchWithRetry: como fetch(), pero reintenta automáticamente si hay
- * un fallo de red (típico en zonas de planta con señal débil), con
- * espera creciente entre intentos.
+ * un fallo de red, con espera creciente entre intentos.
  */
 async function fetchWithRetry(url, options, retries = 2, backoffMs = 800) {
   let lastErr;
@@ -35,9 +30,7 @@ async function fetchWithRetry(url, options, retries = 2, backoffMs = 800) {
 }
 
 /**
- * DraftStore: guarda/recupera un borrador del formulario en localStorage
- * para que no se pierda el trabajo si se cierra la pestaña, se va la señal
- * o el celular bloquea la página a medio llenar.
+ * DraftStore: guarda/recupera un borrador del formulario en localStorage.
  */
 const DraftStore = {
   _avisoMostrado: false,
@@ -66,7 +59,6 @@ const DraftStore = {
   }
 };
 
-// Aviso visible si el borrador automático deja de poder guardarse
 window.addEventListener('draft-guardado-fallido', () => {
   if (document.getElementById('draftFailBanner')) return;
   const el = document.createElement('div');
@@ -82,7 +74,6 @@ window.addEventListener('draft-guardado-fallido', () => {
   document.body.appendChild(el);
 });
 
-/** debounce: evita guardar en cada tecla; agrupa cambios rápidos en uno solo. */
 function debounce(fn, wait) {
   let t;
   return (...args) => {
@@ -91,7 +82,6 @@ function debounce(fn, wait) {
   };
 }
 
-/** Formatea una fecha ISO a texto legible en español. */
 function formatSavedAt(iso) {
   try {
     const d = new Date(iso);
@@ -120,9 +110,7 @@ const OfflineBanner = {
 };
 
 /**
- * UpdateManager: detecta cuando hay una versión nueva del portal ya
- * descargada (Service Worker "esperando") y muestra un banner para que
- * el usuario decida cuándo actualizar.
+ * UpdateManager: detecta cuando hay una versión nueva del portal.
  */
 const UpdateManager = {
   init() {
@@ -169,8 +157,6 @@ const UpdateManager = {
 
 /**
  * Outbox: cola de permisos que no se pudieron guardar por falta de señal.
- * Usa IndexedDB (no localStorage) porque el Service Worker también debe
- * poder leerla/escribirla en segundo plano vía Background Sync.
  */
 const Outbox = {
   _dbPromise: null,
@@ -284,7 +270,7 @@ const Outbox = {
 window.addEventListener('online', () => Outbox.flush());
 
 /**
- * OutboxBadge: indicador visible ("N permisos pendientes de enviar")
+ * OutboxBadge: indicador visible de permisos pendientes de enviar.
  */
 const OutboxBadge = {
   init() {
@@ -435,7 +421,7 @@ const SignaturePad = {
           
           // Verificar que el canvas tenga tamaño
           if (canvas.width === 0 || canvas.height === 0) {
-            console.warn('setDataUrl: Canvas sin tamaño, forzando resize');
+            console.warn('setDataUrl: Canvas sin tamaño, forzando resize para', canvas.id);
             const rect = canvas.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
               const ratio = window.devicePixelRatio || 1;
@@ -448,11 +434,12 @@ const SignaturePad = {
               ctx2.lineCap = 'round';
               ctx2.strokeStyle = '#1f2a33';
             } else {
-              console.error('setDataUrl: Canvas invisible o sin tamaño');
+              console.error('setDataUrl: Canvas invisible o sin tamaño para', canvas.id);
               return;
             }
           }
           
+          // Marcar como firmado ANTES de cargar la imagen
           hasInk = true;
           markSigned(canvas.id);
           
@@ -461,32 +448,53 @@ const SignaturePad = {
           const ratio2 = window.devicePixelRatio || 1;
           
           img.onload = () => {
-            console.log('setDataUrl: Imagen cargada correctamente', img.width, 'x', img.height);
+            console.log('setDataUrl: Imagen cargada correctamente para', canvas.id, img.width, 'x', img.height);
             ctx2.clearRect(0, 0, canvas.width, canvas.height);
             ctx2.drawImage(img, 0, 0, canvas.width / ratio2, canvas.height / ratio2);
             hasInk = true;
             markSigned(canvas.id);
+            
+            // Verificar que la imagen se dibujó
+            setTimeout(() => {
+              try {
+                const imageData = ctx2.getImageData(0, 0, Math.min(canvas.width, 50), Math.min(canvas.height, 50));
+                const pixels = imageData.data;
+                let hasPixel = false;
+                for (let i = 0; i < pixels.length && !hasPixel; i += 4) {
+                  if (pixels[i] < 250 || pixels[i+1] < 250 || pixels[i+2] < 250) {
+                    hasPixel = true;
+                  }
+                }
+                if (hasPixel) {
+                  console.log('✅ Firma verificada en canvas', canvas.id);
+                } else {
+                  console.warn('⚠️ La firma parece vacía en canvas', canvas.id);
+                }
+              } catch (e) {
+                console.warn('No se pudo verificar la firma:', e);
+              }
+            }, 50);
           };
           
           img.onerror = (e) => {
-            console.error('setDataUrl: Error al cargar la imagen', e);
+            console.error('setDataUrl: Error al cargar la imagen para', canvas.id, e);
             setTimeout(() => {
               const img2 = new Image();
               img2.onload = () => {
-                console.log('setDataUrl: Imagen cargada en reintento');
+                console.log('setDataUrl: Imagen cargada en reintento para', canvas.id);
                 ctx2.clearRect(0, 0, canvas.width, canvas.height);
                 ctx2.drawImage(img2, 0, 0, canvas.width / ratio2, canvas.height / ratio2);
                 hasInk = true;
                 markSigned(canvas.id);
               };
               img2.onerror = () => {
-                console.error('setDataUrl: Falló el reintento de carga de imagen');
+                console.error('setDataUrl: Falló el reintento de carga de imagen para', canvas.id);
               };
               img2.src = url;
             }, 200);
           };
           
-          console.log('setDataUrl: Cargando imagen desde URL (primeros 50 chars):', url.substring(0, 50) + '...');
+          console.log('setDataUrl: Cargando imagen para', canvas.id);
           img.src = url;
         },
         hasInk: () => hasInk,
