@@ -234,61 +234,21 @@ function getWebAppUrl(){ return FIXED_WEBAPP_URL; }
 // Mismos backends usados en el dashboard, para el buscador de permisos abiertos.
 const PERMIT_BACKENDS = getPermitBackends(false);
 
-/* ================= PADS DE FIRMA (misma lógica probada de los permisos) ================= */
-const pads = {};
-function markSigned(id){ const el=document.getElementById('status_'+id); if(el){ el.textContent='Firmado'; el.classList.add('signed'); } }
-function markUnsigned(id){ const el=document.getElementById('status_'+id); if(el){ el.textContent='Sin firmar'; el.classList.remove('signed'); } }
-function setupPad(canvas){
-  const ctx=canvas.getContext('2d');
-  let history=[];
-  function resize(){
-    const rect=canvas.getBoundingClientRect();
-    if(rect.width===0||rect.height===0) return;
-    const ratio=window.devicePixelRatio||1;
-    canvas.width=rect.width*ratio; canvas.height=rect.height*ratio;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(ratio,ratio); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.strokeStyle='#1f2a33';
-    history=[];
-  }
-  resize();
-  let drawing=false,hasInk=false,lastX=0,lastY=0;
-  function pos(e){ const r=canvas.getBoundingClientRect();
-    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
-    return [cx,cy]; }
-  function saveHistory(){ try{ history.push(ctx.getImageData(0,0,canvas.width,canvas.height)); if(history.length>15) history.shift(); }catch(e){} }
-  function start(e){ e.preventDefault(); saveHistory(); drawing=true; [lastX,lastY]=pos(e); }
-  function move(e){ if(!drawing) return; e.preventDefault();
-    const [x,y]=pos(e); ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(x,y); ctx.stroke(); [lastX,lastY]=[x,y]; hasInk=true; markSigned(canvas.id); }
-  function end(){ drawing=false; }
-  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
-  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
-  pads[canvas.id]={
-    clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); history=[]; hasInk=false; markUnsigned(canvas.id); },
-    undo:()=>{
-      if(history.length===0){ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; markUnsigned(canvas.id); return; }
-      const prev=history.pop(); ctx.putImageData(prev,0,0);
-      if(history.length===0){ hasInk=false; markUnsigned(canvas.id); }
-    },
-    getDataUrl:()=> hasInk? canvas.toDataURL('image/png') : null,
-    setDataUrl:(url)=>{ if(!url) return; const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width/(window.devicePixelRatio||1),canvas.height/(window.devicePixelRatio||1)); hasInk=true; markSigned(canvas.id); }; img.src=url; },
-    hasInk:()=>hasInk,
-    refreshSize:resize
-  };
-}
+/* ================= PADS DE FIRMA =================
+   Antes este anexo tenía su propia copia de esta lógica (idéntica a la de
+   permiso-core.js). Ahora usa el mismo módulo compartido (SignaturePad,
+   en common.js) que usan los 4 permisos "gemelos" — un arreglo futuro en
+   el lienzo de firma (como el de firmas invisibles al restaurar varias
+   de golpe) queda hecho para los dos a la vez, no hay que acordarse de
+   repetirlo aquí a mano. */
+const sigMgr = SignaturePad.createManager({ signedLabel: 'Firmado', unsignedLabel: 'Sin firmar' });
+const pads = sigMgr.pads;
+const setupPad = sigMgr.setup;
 document.addEventListener('click', e=>{
   const btn=e.target.closest('button[data-clear]'); if(btn){ pads[btn.dataset.clear] && pads[btn.dataset.clear].clear(); return; }
   const ubtn=e.target.closest('button[data-undo]'); if(ubtn){ pads[ubtn.dataset.undo] && pads[ubtn.dataset.undo].undo(); return; }
 });
-let _rotateTimer=null;
-window.addEventListener('orientationchange', ()=>{
-  clearTimeout(_rotateTimer);
-  _rotateTimer=setTimeout(()=>{
-    Object.keys(pads).forEach(id=>{
-      const pad=pads[id]; const saved=pad.hasInk()?pad.getDataUrl():null;
-      pad.refreshSize(); if(saved) pad.setDataUrl(saved);
-    });
-  },120);
-});
+sigMgr.bindOrientationChange();
 
 /* ================= BASE DE DATOS DE PERSONAL ================= */
 let personalCache = []; // [{cedula, nombre, cargo}]
@@ -410,7 +370,7 @@ async function cargarObras(){
       return;
     }
     listEl.innerHTML = data.obras.map(o=>`
-      <a class="obra-item" href="#" data-obra-id="${o.obraId}">
+      <a class="obra-item" href="#" data-obra-id="${esc(o.obraId)}">
         <div class="nombre">${esc(o.nombre)}</div>
         <div class="meta">${o.area ? esc(o.area) : ''} ${o.fechaInicio ? '· Desde '+esc(o.fechaInicio) : ''}</div>
       </a>`).join('');

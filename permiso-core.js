@@ -31,7 +31,6 @@ const PermisoCore = (function () {
   let locked = false;
   const states = {}; // stateKey -> { chk_0:'C'|'NA'|null, ... } — uno por grupo de checklist
   let execCounter = 0;
-  const pads = {}; // id -> {clear,undo,getDataUrl,setDataUrl,hasInk,refreshSize}
   let execBody = null;
   let personalCache = [];
   let closedPermitsCache = [];
@@ -130,112 +129,22 @@ const PermisoCore = (function () {
     });
   }
 
-  /* ================= SIGNATURE PAD ================= */
-  function setupPad(canvas) {
-    if (canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners — evita doble "escucha" (firma errática)
-    canvas.dataset.sigInit = '1';
-    const ctx = canvas.getContext('2d');
-    let history = [];
-    function resize() {
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return; // aún oculto, se reintentará al mostrarse
-      const ratio = window.devicePixelRatio || 1;
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(ratio, ratio);
-      ctx.lineWidth = 2.2;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#1f2a33';
-      history = [];
-    }
-    resize();
-    let drawing = false,
-      hasInk = false,
-      lastX = 0,
-      lastY = 0;
-    function pos(e) {
-      const r = canvas.getBoundingClientRect();
-      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left,
-        cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-      return [cx, cy];
-    }
-    function saveHistory() {
-      try {
-        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-        if (history.length > 15) history.shift();
-      } catch (e) {}
-    }
-    function start(e) {
-      if (canvas.dataset.locked === '1') return;
-      e.preventDefault();
-      saveHistory();
-      drawing = true;
-      [lastX, lastY] = pos(e);
-    }
-    function move(e) {
-      if (!drawing || canvas.dataset.locked === '1') return;
-      e.preventDefault();
-      const [x, y] = pos(e);
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      [lastX, lastY] = [x, y];
-      hasInk = true;
-      markSigned(canvas.id);
-    }
-    function end() {
-      drawing = false;
-    }
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', end);
-    canvas.addEventListener('touchstart', start, { passive: false });
-    canvas.addEventListener('touchmove', move, { passive: false });
-    canvas.addEventListener('touchend', end);
-    pads[canvas.id] = {
-      clear: () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        history = [];
-        hasInk = false;
-        markUnsigned(canvas.id);
-      },
-      undo: () => {
-        if (history.length === 0) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          hasInk = false;
-          markUnsigned(canvas.id);
-          return;
-        }
-        const prev = history.pop();
-        ctx.putImageData(prev, 0, 0);
-        if (history.length === 0) {
-          hasInk = false;
-          markUnsigned(canvas.id);
-        }
-      },
-      getDataUrl: () => (hasInk ? canvas.toDataURL('image/png') : null),
-      setDataUrl: (url) => {
-        if (!url) return;
-        hasInk = true;
-        markSigned(canvas.id);
-        const img = new Image();
-        img.onload = () => {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
-        };
-        img.src = url;
-      },
-      hasInk: () => hasInk,
-      refreshSize: resize
-    };
+  /* ================= SIGNATURE PAD =================
+     La implementación del lienzo de firma vive ahora en common.js
+     (SignaturePad), compartida con personal-autorizado.html — antes
+     estaba copiada y pegada en los dos archivos por separado. Aquí solo
+     se configura el caso particular de este núcleo: el <span> de estado
+     de los pads de cierre usa el prefijo 'padCierre' en vez de 'status_'. */
+  const sigMgr = SignaturePad.createManager({
+    statusIdFor: (id) => (id.startsWith('padCierre') ? 'status' + id.replace('pad', '') : 'status_' + id)
+  });
+  const pads = sigMgr.pads; // id -> {clear,undo,getDataUrl,setDataUrl,hasInk,refreshSize}
+  const setupPad = sigMgr.setup;
+  const refreshPadsIn = sigMgr.refreshIn;
+  function lockPad(canvas) {
+    SignaturePad.lock(canvas);
   }
-  function refreshPadsIn(container) {
-    container.querySelectorAll('canvas.pad, canvas.mini-pad').forEach((c) => {
-      if (pads[c.id]) pads[c.id].refreshSize();
-    });
-  }
+  sigMgr.bindOrientationChange();
   // Dibuja las firmas de ejecutantes que quedaron pendientes en addExecRow
   // (ver comentario ahí). Se debe llamar SIEMPRE después de refreshPadsIn(execBody),
   // una vez que todas las filas del lote ya están en el DOM y con su tamaño real
@@ -248,45 +157,6 @@ const PermisoCore = (function () {
       if (canvas && pads[canvas.id]) pads[canvas.id].setDataUrl(sig);
       delete card.dataset.pendingSig;
     });
-  }
-  let _rotateTimer = null;
-  function handleOrientationChange() {
-    clearTimeout(_rotateTimer);
-    _rotateTimer = setTimeout(() => {
-      Object.keys(pads).forEach((id) => {
-        const pad = pads[id];
-        const saved = pad.hasInk() ? pad.getDataUrl() : null;
-        pad.refreshSize();
-        if (saved) pad.setDataUrl(saved);
-      });
-    }, 120);
-  }
-  // Busca el <span> de estado ("Sin firmar"/"Firmado ✓") de un pad por su id.
-  // Generalizado a `status_<id>` para TODO pad (antes solo reconocía los
-  // prefijos 'padCierre'/'pad_resp' a mano; los pads de ejecutantes
-  // (execPad1, execPad2...) quedaban fuera de la lista y su "Firmado ✓"
-  // nunca se actualizaba visualmente, aunque el dato sí se guardaba bien).
-  function findStatusFor(id) {
-    if (id.startsWith('padCierre')) return $('status' + id.replace('pad', ''));
-    return $('status_' + id);
-  }
-  function markSigned(id) {
-    const el = findStatusFor(id);
-    if (el) {
-      el.textContent = 'Firmado ✓';
-      el.classList.add('done');
-    }
-  }
-  function markUnsigned(id) {
-    const el = findStatusFor(id);
-    if (el) {
-      el.textContent = 'Sin firmar';
-      el.classList.remove('done');
-    }
-  }
-  function lockPad(canvas) {
-    canvas.dataset.locked = '1';
-    canvas.classList.add('locked');
   }
 
   /* ================= RESPONSABLES ================= */
@@ -1215,7 +1085,6 @@ const PermisoCore = (function () {
       const id = btn.dataset.undo;
       if (pads[id]) pads[id].undo();
     });
-    window.addEventListener('orientationchange', handleOrientationChange);
 
     const addRowBtn = $(cfg.addRowBtnId || 'addRowBtn');
     if (addRowBtn) addRowBtn.addEventListener('click', () => { if (!locked) addExecRow(); });

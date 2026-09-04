@@ -342,6 +342,184 @@ const OutboxBadge = {
 };
 
 /**
+ * SignaturePad: lienzo táctil de firma (dibujar, deshacer trazo, borrar,
+ * cargar una firma ya guardada). Antes esta misma lógica (~80 líneas)
+ * vivía copiada y pegada en permiso-core.js Y en personal-autorizado.html
+ * por separado — un arreglo hecho en un lado (como el bug de firmas que
+ * quedaban invisibles al restaurar varias de golpe) había que acordarse
+ * de repetirlo a mano en el otro. Ahora vive en un solo lugar y ambos
+ * consumidores comparten la misma implementación.
+ *
+ * Cada página que la usa crea SU PROPIO manager (no hay estado global
+ * compartido entre, por ejemplo, un permiso y el anexo de personal):
+ *
+ *   const sigMgr = SignaturePad.createManager({
+ *     statusIdFor: (canvasId) => 'status_' + canvasId  // opcional, este es el default
+ *   });
+ *   sigMgr.setup(canvasEl);
+ *   sigMgr.pads['idDelCanvas'].setDataUrl(firmaGuardada);
+ *   sigMgr.refreshIn(contenedor); // ver nota de refreshSize más abajo
+ *
+ * IMPORTANTE sobre restaurar firmas guardadas en lote (varias filas a la
+ * vez, ej. varios ejecutantes de un permiso ya abierto): llama primero
+ * refreshIn()/setup() para que el lienzo tenga su tamaño real, y solo
+ * después dibuja la firma con setDataUrl — si el <canvas> todavía no está
+ * visible (contenedor recién mostrado, sección aún colapsada) su tamaño
+ * puede ser 0x0 en ese instante y la firma se "dibuja" en un lienzo sin
+ * tamaño, quedando invisible aunque el dato sí se guardó bien.
+ */
+const SignaturePad = {
+  createManager(opts) {
+    opts = opts || {};
+    const statusIdFor = opts.statusIdFor || ((id) => 'status_' + id);
+    const signedLabel = opts.signedLabel || 'Firmado ✓';
+    const unsignedLabel = opts.unsignedLabel || 'Sin firmar';
+    const pads = {};
+
+    function markSigned(id) {
+      const el = document.getElementById(statusIdFor(id));
+      if (el) { el.textContent = signedLabel; el.classList.add('done', 'signed'); }
+    }
+    function markUnsigned(id) {
+      const el = document.getElementById(statusIdFor(id));
+      if (el) { el.textContent = unsignedLabel; el.classList.remove('done', 'signed'); }
+    }
+
+    function setup(canvas) {
+      if (canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners
+      canvas.dataset.sigInit = '1';
+      const ctx = canvas.getContext('2d');
+      let history = [];
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return; // aún oculto, se reintentará al mostrarse
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = rect.width * ratio;
+        canvas.height = rect.height * ratio;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(ratio, ratio);
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#1f2a33';
+        history = [];
+      }
+      resize();
+      let drawing = false, hasInk = false, lastX = 0, lastY = 0;
+      function pos(e) {
+        const r = canvas.getBoundingClientRect();
+        const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+        const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+        return [cx, cy];
+      }
+      function saveHistory() {
+        try {
+          history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+          if (history.length > 15) history.shift();
+        } catch (e) {}
+      }
+      function start(e) {
+        if (canvas.dataset.locked === '1') return;
+        e.preventDefault();
+        saveHistory();
+        drawing = true;
+        [lastX, lastY] = pos(e);
+      }
+      function move(e) {
+        if (!drawing || canvas.dataset.locked === '1') return;
+        e.preventDefault();
+        const [x, y] = pos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        [lastX, lastY] = [x, y];
+        hasInk = true;
+        markSigned(canvas.id);
+      }
+      function end() { drawing = false; }
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', end);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', end);
+      pads[canvas.id] = {
+        clear: () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          history = [];
+          hasInk = false;
+          markUnsigned(canvas.id);
+        },
+        undo: () => {
+          if (history.length === 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasInk = false;
+            markUnsigned(canvas.id);
+            return;
+          }
+          const prev = history.pop();
+          ctx.putImageData(prev, 0, 0);
+          if (history.length === 0) { hasInk = false; markUnsigned(canvas.id); }
+        },
+        getDataUrl: () => (hasInk ? canvas.toDataURL('image/png') : null),
+        setDataUrl: (url) => {
+          if (!url) return;
+          hasInk = true;
+          markSigned(canvas.id);
+          const img = new Image();
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+          };
+          img.src = url;
+        },
+        hasInk: () => hasInk,
+        // ⚠️ A diferencia de la versión anterior (donde solo el manejador de
+        // rotación de pantalla preservaba la firma), refreshSize() SIEMPRE
+        // guarda la firma actual antes de redimensionar y la vuelve a
+        // dibujar después — fijar canvas.width/height limpia el bitmap, así
+        // que sin esto, cualquier llamado a refreshIn() sobre un canvas ya
+        // firmado borraría la firma en silencio (el estado seguiría
+        // diciendo "Firmado ✓" pero el lienzo quedaría en blanco). Ahora es
+        // seguro llamarlo en cualquier momento, sin importar el orden.
+        refreshSize: () => {
+          const saved = hasInk ? pads[canvas.id].getDataUrl() : null;
+          resize();
+          if (saved) pads[canvas.id].setDataUrl(saved);
+        }
+      };
+    }
+
+    function refreshIn(container) {
+      if (!container) return;
+      container.querySelectorAll('canvas.pad, canvas.mini-pad').forEach((c) => {
+        if (pads[c.id]) pads[c.id].refreshSize();
+      });
+    }
+
+    /** Registra el reintento de tamaño al girar el celular (con espera para
+     *  no recalcular a medio giro). Llamar una sola vez por manager. */
+    function bindOrientationChange() {
+      let timer = null;
+      window.addEventListener('orientationchange', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          Object.keys(pads).forEach((id) => pads[id].refreshSize());
+        }, 120);
+      });
+    }
+
+    return { pads, setup, refreshIn, bindOrientationChange };
+  },
+  /** Bloquea un lienzo (modo consulta / permiso ya cerrado) — no depende
+   *  del manager, se puede llamar directo sobre el <canvas>. */
+  lock(canvas) {
+    canvas.dataset.locked = '1';
+    canvas.classList.add('locked');
+  }
+};
+
+/**
  * ScrollProgress: barra fina y fija arriba de la pantalla que muestra
  * cuánto lleva recorrido el usuario del formulario — información real
  * en un documento largo de 10 secciones diligenciado en celular, no
