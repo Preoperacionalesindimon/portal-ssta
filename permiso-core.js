@@ -409,6 +409,8 @@ const PermisoCore = (function () {
     for (let i = 0; i < 3; i++) addExecRow();
     if (cfg.freeformYN) initFreeformYN();
     if (cfg.extraOnInitRender) cfg.extraOnInitRender();
+    initPendingNav();
+    actualizarPendientes();
   }
 
   /* ================= SET / COLLECT / LOCK ================= */
@@ -430,6 +432,7 @@ const PermisoCore = (function () {
   }
   function lockOpenSections() {
     locked = true;
+    actualizarPendientes(); // ya no se puede responder nada: el botón se retira
     document
       .querySelectorAll('#app .section-body input, #app .section-body textarea, #app .section-body select, #app .grid input, #app .grid textarea, #app .grid select')
       .forEach((el) => {
@@ -726,6 +729,73 @@ const PermisoCore = (function () {
   }
 
   /* ================= VALIDACIÓN ================= */
+  /* ================= NAVEGADOR DE PENDIENTES =================
+     Botón flotante que lleva al siguiente ítem sin responder. En permisos con
+     60+ preguntas repartidas en varias secciones, encontrar cuáles faltan
+     obligaba a recorrer el formulario entero a ojo (o a darle Guardar solo
+     para que el validador dijera cuántas faltaban). Cuenta lo mismo que el
+     contador de cada sección, pero además te lleva ahí. Se esconde solo
+     cuando no queda ninguno, cuando el permiso ya está bloqueado, o en el
+     modo de agregar personal (donde el resto del formulario no aplica). */
+  let pendingNavEl = null;
+  let pendingIdx = 0;
+  function itemsPendientes() {
+    const out = [];
+    const visible = (el) => el && el.offsetParent !== null;
+    document.querySelectorAll('#app .check-item').forEach((row) => {
+      if (visible(row) && !row.querySelector('button[aria-pressed="true"]')) out.push(row);
+    });
+    document.querySelectorAll('#app .yn-opts').forEach((group) => {
+      if (!visible(group)) return;
+      if (group.querySelector('button[aria-pressed="true"]')) return;
+      out.push(group.closest('.yn-row') || group.closest('.field') || group);
+    });
+    return out;
+  }
+  function actualizarPendientes() {
+    if (!pendingNavEl) return;
+    const oculto = locked || document.body.classList.contains('modo-agregar-personal') ||
+                   $('app').style.display === 'none';
+    const n = oculto ? 0 : itemsPendientes().length;
+    if (!n) {
+      pendingNavEl.classList.remove('show');
+      return;
+    }
+    pendingNavEl.querySelector('.pn-count').textContent = n;
+    pendingNavEl.querySelector('.pn-text').textContent =
+      n === 1 ? 'pregunta sin responder' : 'preguntas sin responder';
+    pendingNavEl.classList.add('show');
+  }
+  function initPendingNav() {
+    if (pendingNavEl) return;
+    pendingNavEl = document.createElement('button');
+    pendingNavEl.type = 'button';
+    pendingNavEl.id = 'pendingNav';
+    pendingNavEl.innerHTML =
+      '<span class="pn-count">0</span><span class="pn-text">preguntas sin responder</span><span class="pn-arrow">↓</span>';
+    pendingNavEl.setAttribute('aria-label', 'Ir a la siguiente pregunta sin responder');
+    document.body.appendChild(pendingNavEl);
+    pendingNavEl.addEventListener('click', () => {
+      const pend = itemsPendientes();
+      if (!pend.length) { actualizarPendientes(); return; }
+      if (pendingIdx >= pend.length) pendingIdx = 0;
+      const destino = pend[pendingIdx];
+      pendingIdx = (pendingIdx + 1) % pend.length; // el próximo toque sigue de largo
+      destino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Resalte breve para que se note cuál es, sin dejar el formulario marcado.
+      destino.classList.add('pn-target');
+      setTimeout(() => destino.classList.remove('pn-target'), 1600);
+    });
+    // Al responder cualquier pregunta se recalcula. Se usa un solo escucha en
+    // todo el documento en vez de uno por ítem (son cientos).
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#pendingNav')) return;
+      if (e.target.closest('button[data-key], .yn-opts button')) {
+        setTimeout(actualizarPendientes, 0); // deja que el clic marque el botón primero
+      }
+    });
+  }
+
   function scrollToEl(el) {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -1076,6 +1146,7 @@ const PermisoCore = (function () {
     $('app').style.display = 'block';
     $('app').classList.add('modo-agregar-personal');
     document.body.classList.add('modo-agregar-personal');
+    actualizarPendientes(); // aquí solo se agrega gente: el resto del formulario no aplica
     $('statusBanner').className = 'status-banner open';
     $('statusBannerText').textContent = 'Permiso abierto — agregando personal sin cerrarlo';
     $('permitCodeDisplay').textContent = data.permitCode;
