@@ -401,7 +401,31 @@ const SignaturePad = {
       // lienzo). Con willReadFrequently, el navegador usa memoria normal (CPU) en
       // vez de memoria de video, evitando ese vaciado.
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      let history = [];
+      // Historial para "deshacer trazo".
+      // ANTES se guardaba una FOTO completa del lienzo por cada trazo (hasta 15).
+      // En una tablet de pantalla densa cada foto pesa ~7 MB sin comprimir, así
+      // que un solo recuadro podía ocupar ~108 MB y un permiso con 9 firmas casi
+      // 1 GB — suficiente para que el navegador matara y recargara la pestaña sin
+      // avisar. Ahora se guardan los TRAZOS (las coordenadas por donde pasó el
+      // dedo) y el lienzo se redibuja: unos pocos kilobytes, sin tope práctico,
+      // y el deshacer queda exacto en vez de aproximado.
+      let strokes = [];      // trazos dibujados en esta sesión, en píxeles CSS
+      let baseImage = null;  // firma ya existente restaurada de fondo (si la hay)
+      function redibujar() {
+        const ratio = window.devicePixelRatio || 1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (baseImage) {
+          ctx.drawImage(baseImage, 0, 0, canvas.width / ratio, canvas.height / ratio);
+        }
+        strokes.forEach((s) => {
+          if (!s.length) return;
+          ctx.beginPath();
+          ctx.moveTo(s[0][0], s[0][1]);
+          if (s.length === 1) ctx.lineTo(s[0][0], s[0][1]); // toque suelto: punto
+          else for (let i = 1; i < s.length; i++) ctx.lineTo(s[i][0], s[i][1]);
+          ctx.stroke();
+        });
+      }
       function resize() {
         const rect = canvas.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return; // aún oculto, se reintentará al mostrarse
@@ -413,7 +437,6 @@ const SignaturePad = {
         ctx.lineWidth = 2.2;
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#1f2a33';
-        history = [];
       }
       resize();
       let drawing = false, hasInk = false, lastX = 0, lastY = 0;
@@ -423,23 +446,22 @@ const SignaturePad = {
         const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
         return [cx, cy];
       }
-      function saveHistory() {
-        try {
-          history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-          if (history.length > 15) history.shift();
-        } catch (e) {}
-      }
       function start(e) {
         if (canvas.dataset.locked === '1') return;
         e.preventDefault();
-        saveHistory();
+        const [x, y] = pos(e);
+        strokes.push([[x, y]]); // arranca un trazo nuevo
         drawing = true;
-        [lastX, lastY] = pos(e);
+        [lastX, lastY] = [x, y];
       }
       function move(e) {
         if (!drawing || canvas.dataset.locked === '1') return;
         e.preventDefault();
         const [x, y] = pos(e);
+        // Se dibuja el segmento de una vez (rápido) Y se guarda el punto, para
+        // poder redibujar el trazo completo si luego se deshace otro.
+        const actual = strokes[strokes.length - 1];
+        if (actual) actual.push([x, y]);
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(x, y);
@@ -492,20 +514,21 @@ const SignaturePad = {
       pads[canvas.id] = {
         clear: () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          history = [];
+          strokes = [];
+          baseImage = null;
           hasInk = false;
           markUnsigned(canvas.id);
         },
         undo: () => {
-          if (history.length === 0) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // Quita el último trazo y redibuja el resto sobre la firma de fondo
+          // (si el permiso traía una firma ya guardada, esa no se puede deshacer:
+          // deshacer solo aplica a lo dibujado en esta sesión).
+          strokes.pop();
+          redibujar();
+          if (!strokes.length && !baseImage) {
             hasInk = false;
             markUnsigned(canvas.id);
-            return;
           }
-          const prev = history.pop();
-          ctx.putImageData(prev, 0, 0);
-          if (history.length === 0) { hasInk = false; markUnsigned(canvas.id); }
         },
         getDataUrl: () => (hasInk ? exportarFirmaAcotada() : null),
         setDataUrl: (url) => {
@@ -514,8 +537,10 @@ const SignaturePad = {
           markSigned(canvas.id);
           const img = new Image();
           img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+            // Pasa a ser el fondo sobre el que se dibujan los trazos nuevos.
+            baseImage = img;
+            strokes = [];
+            redibujar();
           };
           img.src = url;
         },

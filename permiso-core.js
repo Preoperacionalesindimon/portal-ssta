@@ -37,6 +37,7 @@ const PermisoCore = (function () {
   let addPeopleData = null;
   let baseExecCount = 0; // cuántos ejecutantes ya existían ANTES de esta sesión de "agregar personal"
   let opIdAddWorkers = null; // clave de idempotencia del guardado de personal en curso
+  let opIdApertura = null; // clave de idempotencia del primer guardado del permiso (ver startNewPermit)
 
   const TOGGLE_2STATE = [
     { val: 'C', label: 'C', cls: 'active-c' },
@@ -953,6 +954,13 @@ const PermisoCore = (function () {
     MODE = 'open';
     permitCode = genCode();
     firstSaveDone = false;
+    // Clave de idempotencia del PRIMER guardado de este permiso. Se genera una
+    // sola vez por permiso y NO cambia entre reintentos: si el envío llega al
+    // servidor pero la respuesta se pierde (señal intermitente), el reintento
+    // llega con el mismo opId y el backend lo reconoce como reenvío en vez de
+    // hacer que el cliente genere otro código — que era como se podía terminar
+    // con el mismo permiso duplicado bajo dos códigos distintos.
+    opIdApertura = permitCode + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     goToApp();
     initRender();
     $('statusBanner').className = 'status-banner open';
@@ -1229,6 +1237,10 @@ const PermisoCore = (function () {
       if (MODE === 'open') {
         const data = collectOpenData();
         data.firstSave = !firstSaveDone; // le dice al backend si esto es la primera vez que se guarda este código
+        if (!opIdApertura) {
+          opIdApertura = permitCode + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        }
+        data.opId = opIdApertura;
         let res = await sendToSheet(data);
         let intentosColision = 0;
         // Si el backend detecta que este código ya existe con OTRO permiso distinto
@@ -1239,6 +1251,11 @@ const PermisoCore = (function () {
           permitCode = genCode();
           $('permitCodeDisplay').textContent = permitCode;
           data.permitCode = permitCode;
+          // Código nuevo ⇒ operación distinta: necesita su propia clave. Si se
+          // reusara la anterior, el backend la vería como reenvío ya aplicado y
+          // daría por guardado algo que en realidad no se escribió.
+          opIdApertura = permitCode + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+          data.opId = opIdApertura;
           res = await sendToSheet(data);
         }
         if (res.ok) {
