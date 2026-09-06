@@ -455,6 +455,40 @@ const SignaturePad = {
       canvas.addEventListener('touchstart', start, { passive: false });
       canvas.addEventListener('touchmove', move, { passive: false });
       canvas.addEventListener('touchend', end);
+
+      /* Exporta la firma a una resolución acotada.
+         POR QUÉ: el lienzo en pantalla se crea a (ancho CSS × devicePixelRatio).
+         En una tablet grande de alta densidad eso da un lienzo enorme, y el PNG
+         resultante puede superar los 50.000 caracteres — que es el MÁXIMO que
+         Google Sheets admite en una sola celda. El backend guarda cada firma en
+         una celda (hoja "Firmas", columna C), así que al pasarse, esa escritura
+         falla y la firma se pierde EN SILENCIO: la fila del permiso ya quedó
+         guardada con los nombres, pero sin las imágenes. Ese era el motivo de
+         que las firmas hechas desde el computador (≈18-49k) sí quedaran y las
+         de la tablet (≈63-117k) no.
+         Se reduce el tamaño hasta quedar cómodamente bajo el límite. Una firma
+         es un trazo simple, así que bajar la resolución no afecta su lectura ni
+         su validez como constancia. */
+      function exportarFirmaAcotada() {
+        const MAX_CARACTERES = 45000; // margen de seguridad bajo el tope de 50.000
+        const ANCHO_OBJETIVO = 700;   // px reales; suficiente para un trazo nítido
+        let escala = Math.min(1, ANCHO_OBJETIVO / (canvas.width || 1));
+        let ultima = null;
+        for (let intento = 0; intento < 6; intento++) {
+          const w = Math.max(1, Math.round(canvas.width * escala));
+          const h = Math.max(1, Math.round(canvas.height * escala));
+          const tmp = document.createElement('canvas');
+          tmp.width = w;
+          tmp.height = h;
+          const tctx = tmp.getContext('2d');
+          tctx.drawImage(canvas, 0, 0, w, h);
+          ultima = tmp.toDataURL('image/png');
+          if (ultima.length <= MAX_CARACTERES) return ultima;
+          escala *= 0.75; // todavía muy grande: se reduce otro poco y se reintenta
+        }
+        return ultima;
+      }
+
       pads[canvas.id] = {
         clear: () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -473,7 +507,7 @@ const SignaturePad = {
           ctx.putImageData(prev, 0, 0);
           if (history.length === 0) { hasInk = false; markUnsigned(canvas.id); }
         },
-        getDataUrl: () => (hasInk ? canvas.toDataURL('image/png') : null),
+        getDataUrl: () => (hasInk ? exportarFirmaAcotada() : null),
         setDataUrl: (url) => {
           if (!url) return;
           hasInk = true;
@@ -494,8 +528,10 @@ const SignaturePad = {
         // firmado borraría la firma en silencio (el estado seguiría
         // diciendo "Firmado ✓" pero el lienzo quedaría en blanco). Ahora es
         // seguro llamarlo en cualquier momento, sin importar el orden.
+        // Usa la copia a resolución completa (no la recortada de getDataUrl),
+        // para que girar la pantalla varias veces no degrade la firma.
         refreshSize: () => {
-          const saved = hasInk ? pads[canvas.id].getDataUrl() : null;
+          const saved = hasInk ? canvas.toDataURL('image/png') : null;
           resize();
           if (saved) pads[canvas.id].setDataUrl(saved);
         }
