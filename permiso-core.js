@@ -847,15 +847,70 @@ const PermisoCore = (function () {
   function showMissing(missing) {
     document.querySelectorAll('.field-invalid').forEach((el) => el.classList.remove('field-invalid'));
     const banner = $('validationBanner');
-    banner.innerHTML = '<strong>Faltan los siguientes campos por diligenciar:</strong><ul>' + missing.map((m) => `<li>${m.msg}</li>`).join('') + '</ul>';
+    const total = missing.length;
+    banner.innerHTML =
+      '<strong id="vbTitulo">' +
+      (total === 1 ? 'Falta 1 campo por diligenciar' : 'Faltan ' + total + ' campos por diligenciar') +
+      '</strong><p class="vb-hint">Toca cualquiera de la lista para ir directo a ese campo.</p>' +
+      '<ol class="vb-list">' +
+      missing.map((m, i) => `<li><button type="button" class="vb-item" data-idx="${i}">${esc(m.msg)}</button></li>`).join('') +
+      '</ol>';
     banner.classList.add('show');
-    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    missing.forEach((m) => {
+
+    // Marca en rojo cada campo y deja listo el "tachado" en vivo: apenas la
+    // persona llena uno, su renglón se marca como resuelto y el contador baja,
+    // sin tener que volver a tocar Guardar para saber si va bien. Antes la
+    // lista quedaba congelada y el formulario seguía todo en rojo aunque ya
+    // se hubieran corregido casi todos los campos.
+    missing.forEach((m, i) => {
       if (!m.el) return;
       const target = m.el.type === 'radio' || m.el.type === 'checkbox' ? m.el.closest('.field') || m.el : m.el;
       target.classList.add('field-invalid');
+      const esCampoDeTexto = /^(INPUT|TEXTAREA|SELECT)$/.test(m.el.tagName || '');
+      if (!esCampoDeTexto) return;
+      const alCorregir = () => {
+        if (!m.el.value || !String(m.el.value).trim()) return; // sigue vacío
+        target.classList.remove('field-invalid');
+        marcarResuelto(i);
+        m.el.removeEventListener('input', alCorregir);
+        m.el.removeEventListener('change', alCorregir);
+      };
+      m.el.addEventListener('input', alCorregir);
+      m.el.addEventListener('change', alCorregir);
     });
-    scrollToEl(missing[0].el);
+
+    // Tocar un renglón lleva al campo y le pone el foco.
+    banner.querySelectorAll('.vb-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const m = missing[parseInt(btn.dataset.idx, 10)];
+        if (!m || !m.el) return;
+        scrollToEl(m.el);
+        if (/^(INPUT|TEXTAREA|SELECT)$/.test(m.el.tagName || '')) {
+          setTimeout(() => { try { m.el.focus({ preventScroll: true }); } catch (e) { m.el.focus(); } }, 350);
+        }
+      });
+    });
+
+    // Se lleva a la vista el aviso (no el primer campo): así se alcanza a leer
+    // la lista completa antes de empezar a corregir. Antes saltaba de una al
+    // primer campo y la lista pasaba desapercibida.
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function marcarResuelto(idx) {
+    const banner = $('validationBanner');
+    const btn = banner.querySelector('.vb-item[data-idx="' + idx + '"]');
+    if (btn) btn.classList.add('done');
+    const restantes = banner.querySelectorAll('.vb-item:not(.done)').length;
+    const titulo = $('vbTitulo');
+    if (restantes === 0) {
+      hideValidationBanner();
+      return;
+    }
+    if (titulo) {
+      titulo.textContent = restantes === 1
+        ? 'Falta 1 campo por diligenciar'
+        : 'Faltan ' + restantes + ' campos por diligenciar';
+    }
   }
   function hideValidationBanner() {
     const banner = $('validationBanner');

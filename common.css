@@ -146,3 +146,76 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
   padding:7px 10px;
   letter-spacing:.2px;
 }
+
+/* ── Aviso de campos faltantes ──
+   La lista dejó de ser texto suelto: cada renglón es un botón que lleva
+   directo al campo que falta. En un formulario de 10 secciones llenado en
+   celular, leer "Fila 3 de ejecutantes incompleta" y tener que ir a buscarla
+   a mano era la parte más incómoda de corregir un permiso. Los renglones ya
+   resueltos se tachan solos mientras se llena, sin volver a tocar Guardar. */
+.validation-banner .vb-hint{
+  margin:0 0 8px;
+  font-size:11.5px;
+  opacity:.8;
+}
+.validation-banner .vb-list{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  counter-reset:vb;
+}
+.validation-banner .vb-list li{counter-increment:vb;}
+.validation-banner .vb-item{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  width:100%;
+  text-align:left;
+  background:rgba(255,255,255,.75);
+  border:1px solid #e0a89f;
+  border-radius:var(--radius-sm,7px);
+  color:#7a1f14;
+  font-family:inherit;
+  font-size:12.5px;
+  line-height:1.45;
+  /* Alto cómodo para el dedo: se toca con guantes, en obra, a pleno sol. */
+  padding:10px 12px;
+  min-height:40px;
+  cursor:pointer;
+  transition:.12s;
+}
+.validation-banner .vb-item::before{
+  content:counter(vb);
+  flex:0 0 auto;
+  min-width:17px;
+  height:17px;
+  margin-top:1px;
+  border-radius:50%;
+  background:#c0392b;
+  color:#fff;
+  font-size:10.5px;
+  font-weight:700;
+  text-align:center;
+  line-height:17px;
+}
+.validation-banner .vb-item:hover,
+.validation-banner .vb-item:active{
+  background:#fff;
+  border-color:#c0392b;
+}
+.validation-banner .vb-item.done{
+  background:rgba(29,122,76,.08);
+  border-color:rgba(29,122,76,.35);
+  color:var(--ok,#1d7a4c);
+  text-decoration:line-through;
+  opacity:.7;
+  cursor:default;
+}
+.validation-banner .vb-item.done::before{
+  content:"✓";
+  background:var(--ok,#1d7a4c);
+  font-size:11px;
+}
