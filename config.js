@@ -58,6 +58,13 @@ const PORTAL_CONFIG = {
       url: 'https://script.google.com/macros/s/AKfycbwja-Ja3vYw1os4zP-viSVvS55w2b1b3wQedvJ3XBfv9FTBklQZVQTEjT1SPenGb_qF/exec',
       listQuery: 'list=1'
     },
+    epp: {
+      nombre: 'Inspección de EPP',
+      icono: '🦺',
+      archivo: 'inspeccion-epp.html',
+      url: 'https://script.google.com/macros/s/AKfycbxl32LhwhEkkAIG79LyRNmN1vlI3OtMAacaMPRKu5HoHgNQwCtPKOQBaxbffdWFtil4/exec',
+      listQuery: 'list=1'
+    },
     personal: {
       nombre: 'Personal Autorizado',
       icono: '👷',
