@@ -1117,13 +1117,56 @@ const PermisoCore = (function () {
     $('footerStatus').textContent = 'Revisa los datos de apertura (bloqueados) y diligencia la sección de cierre.';
     $('mainActionBtn').textContent = 'Guardar cierre en la hoja';
     if (data.status === 'CERRADO') {
-      $('cierreFecha').value = data.cierreFecha || '';
-      $('cierreHora').value = data.cierreHora || '';
-      $('motivoCierre').value = data.motivoCierre || '';
+      loadCloseDataIntoForm(data);
+      lockCloseSections();
       $('mainActionBtn').disabled = true;
+      $('mainActionBtn').style.display = 'none';
+      $('draftBanner').classList.remove('show');
+      $('footerStatus').textContent = 'Permiso cerrado — solo consulta. No se puede modificar.';
     } else {
+      $('mainActionBtn').style.display = '';
       checkForCloseDraft(permitCode);
     }
+  }
+
+  /* Rellena la sección de cierre con lo que quedó guardado en la hoja. Antes
+     solo se restauraban fecha, hora y motivo: las 4 preguntas, los nombres de
+     quienes firmaron y sus firmas quedaban en blanco, así que un permiso ya
+     cerrado se veía como si nunca se hubiera cerrado. */
+  function loadCloseDataIntoForm(data) {
+    if ($('cierreFecha')) $('cierreFecha').value = data.cierreFecha || '';
+    if ($('cierreHora')) $('cierreHora').value = data.cierreHora || '';
+    if ($('motivoCierre')) $('motivoCierre').value = data.motivoCierre || '';
+    ['q1', 'q2', 'q3', 'q4'].forEach((q) => {
+      if (!data[q]) return;
+      const r = document.querySelector(`input[name=${q}][value="${data[q]}"]`);
+      if (r) r.checked = true;
+    });
+    const signers = cfg.closeSigners || [
+      { idPrefix: 'cierre1', padKey: 'padCierre1', field: 'cierre1', combined: false },
+      { idPrefix: 'cierre2', padKey: 'padCierre2', field: 'cierre2', combined: false }
+    ];
+    signers.forEach((s) => {
+      const d = data[s.field] || {};
+      if (s.combined) {
+        if ($(s.idPrefix)) $(s.idPrefix).value = d.nombreCedula || '';
+      } else {
+        if ($(s.idPrefix + 'nombre')) $(s.idPrefix + 'nombre').value = d.nombre || '';
+        if ($(s.idPrefix + 'cc')) $(s.idPrefix + 'cc').value = d.cc || '';
+        if ($(s.idPrefix + 'cargo')) $(s.idPrefix + 'cargo').value = d.cargo || '';
+      }
+      if (pads[s.padKey] && d.sig) pads[s.padKey].setDataUrl(d.sig);
+    });
+  }
+
+  /* Bloquea la sección de cierre. lockOpenSections() excluye a propósito todo
+     lo que esté dentro de #closeFields (para poder diligenciarlo); esta función
+     es la contraparte para cuando el permiso YA está cerrado. */
+  function lockCloseSections() {
+    const cf = $('closeFields');
+    if (!cf) return;
+    cf.querySelectorAll('input, textarea, select, button').forEach((el) => (el.disabled = true));
+    cf.querySelectorAll('canvas.pad, canvas.mini-pad').forEach((c) => lockPad(c));
   }
   async function cargarParaAgregarPersonal(code) {
     if (!code) {
@@ -1175,14 +1218,18 @@ const PermisoCore = (function () {
       .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
       .forEach((r) => {
         const div = document.createElement('div');
-        div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#f7f6f2;';
+        div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#f7f6f2;cursor:pointer;';
         const updTxt = r.updatedAt
           ? new Date(r.updatedAt).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : '—';
         div.innerHTML = `<b>${esc(r.permitCode)}</b> <span style="color:var(--ok);float:right;font-weight:700;">CERRADO</span>
           <div style="margin-top:3px;color:var(--steel);">Responsable: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
           ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}
-          <div style="color:var(--muted);font-size:11.5px;">Actualizado: ${updTxt}</div>`;
+          <div style="color:var(--muted);font-size:11.5px;">Actualizado: ${updTxt}</div>
+          <div style="color:var(--muted);font-size:11.5px;margin-top:3px;">Toca para ver el permiso completo</div>`;
+        // Antes estas tarjetas eran solo texto: no había forma de abrir un
+        // permiso ya cerrado desde la lista. Ahora abren el modo consulta.
+        div.addEventListener('click', () => openCloseModeWithCode(r.permitCode));
         listEl.appendChild(div);
       });
   }
