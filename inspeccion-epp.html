@@ -102,6 +102,27 @@
 
   .field-invalid{border-color:#c0392b !important;border-width:2px !important;background:#fdecea !important;}
 
+  /* ── Elemento sin calificar ──
+     Antes el aviso decía solo "3 elemento(s) sin calificar" y tocaba recorrer
+     los 17 a ojo para dar con cuáles eran. Ahora se marcan en la lista y el
+     aviso lleva a cada uno. */
+  .epp-item.pendiente{
+    background:#fdecea;border-left:3px solid #c0392b;
+    padding-left:8px;margin-left:-8px;border-radius:var(--radius-sm);
+  }
+  .epp-item.pendiente p{color:#7a1f14;font-weight:600;}
+  .epp-item.destacado{animation:parpadeo 1.1s ease-out 2;}
+  @keyframes parpadeo{
+    0%,100%{background:#fdecea;}
+    50%{background:#f7c9c2;}
+  }
+  .banner-lista-el{margin:0;padding-left:18px;}
+  .banner-lista-el li{margin-bottom:2px;}
+  .banner-lista-el button{
+    background:none;border:none;padding:0;font:inherit;color:inherit;
+    text-decoration:underline;cursor:pointer;text-align:left;
+  }
+
   .ok-box{display:none;background:rgba(29,122,76,.09);border:1px solid rgba(29,122,76,.4);color:#14603a;border-radius:var(--radius-md);padding:16px;margin-top:16px;font-size:13px;line-height:1.55;}
   .ok-box.show{display:block;}
   .ok-box h3{margin:0 0 6px;font-size:14px;font-family:var(--font-display);}
@@ -483,8 +504,33 @@ document.getElementById('listaEpp').addEventListener('click', e=>{
     btn.setAttribute('aria-pressed','true');
   }
   fila.classList.toggle('malo', estado[el]==='M');
+  // Al calificarlo deja de estar pendiente; si se deselecciona, vuelve a marcarse.
+  fila.classList.toggle('pendiente', !estado[el] && fila.classList.contains('pendiente'));
+  if(estado[el]) fila.classList.remove('pendiente','destacado');
+  actualizarBannerPendientes();
   actualizarResumen();
 });
+
+/* Mientras el aviso de validación está a la vista, se va actualizando a medida
+   que el inspector responde, para que la lista refleje lo que falta de verdad
+   y no lo que faltaba cuando oprimió Guardar. */
+function actualizarBannerPendientes(){
+  const banner = document.getElementById('validationBanner');
+  if(!banner.classList.contains('show')) return;
+  const lista = banner.querySelector('.banner-lista-el');
+  if(!lista) return;
+  lista.querySelectorAll('button[data-ir]').forEach(b=>{
+    if(estado[b.dataset.ir]) b.closest('li').remove();
+  });
+  const quedan = lista.querySelectorAll('button[data-ir]').length;
+  const contenedor = lista.closest('li');
+  if(!quedan && contenedor){
+    contenedor.remove();
+    if(!banner.querySelectorAll('li').length) banner.classList.remove('show');
+  }else if(contenedor){
+    contenedor.firstChild.textContent = 'Sin calificar (' + quedan + '):';
+  }
+}
 
 function actualizarResumen(){
   const respondidos = ELEMENTOS.filter(e=>estado[e]).length;
@@ -574,6 +620,23 @@ async function mostrarHistorial(cedula){
 }
 
 /* ================= GUARDAR ================= */
+/* Busca la fila de un elemento comparando el dataset. No se usa un selector CSS
+   porque los nombres del formato traen tildes, comas y paréntesis. */
+function filaDeElemento(el){
+  return Array.from(document.querySelectorAll('.epp-item')).find(r=>r.dataset.el===el) || null;
+}
+
+/* Lleva la pantalla hasta un elemento sin calificar y lo resalta un momento. */
+function irAElemento(el){
+  const row = filaDeElemento(el);
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'center'});
+  row.classList.remove('destacado');
+  void row.offsetWidth;          // reinicia la animación si ya se había usado
+  row.classList.add('destacado');
+  setTimeout(()=>row.classList.remove('destacado'), 2400);
+}
+
 function validar(){
   const faltan = [];
   document.querySelectorAll('.field-invalid').forEach(el=>el.classList.remove('field-invalid'));
@@ -585,8 +648,10 @@ function validar(){
   if(!pads['padInspector'].hasInk()) faltan.push('Firma del inspector');
   if(!trabNombre.value.trim()){ faltan.push('Nombre del trabajador'); trabNombre.classList.add('field-invalid'); }
   if(!trabCedula.value.trim()){ faltan.push('Cédula del trabajador'); trabCedula.classList.add('field-invalid'); }
+  document.querySelectorAll('.epp-item.pendiente').forEach(r=>r.classList.remove('pendiente'));
   const sinResponder = ELEMENTOS.filter(e=>!estado[e]);
-  if(sinResponder.length) faltan.push(sinResponder.length + ' elemento(s) sin calificar');
+  sinResponder.forEach(el=>{ const row = filaDeElemento(el); if(row) row.classList.add('pendiente'); });
+  if(sinResponder.length) faltan.push({ elementos: sinResponder });
   if(!pads['padTrabajador'].hasInk()) faltan.push('Firma del trabajador');
   return faltan;
 }
@@ -597,9 +662,20 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   okBox.classList.remove('show');
   const faltan = validar();
   if(faltan.length){
-    banner.innerHTML = '<strong>Falta por diligenciar:</strong><ul>'+faltan.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>';
+    const pendientes = (faltan.find(f=>typeof f === 'object') || {}).elementos || [];
+    banner.innerHTML = '<strong>Falta por diligenciar:</strong><ul>' +
+      faltan.map(f=>{
+        if(typeof f === 'string') return '<li>'+esc(f)+'</li>';
+        return '<li>Sin calificar (' + f.elementos.length + '):' +
+               '<ul class="banner-lista-el">' +
+               f.elementos.map(el=>'<li><button type="button" data-ir="'+esc(el)+'">'+esc(el)+'</button></li>').join('') +
+               '</ul></li>';
+      }).join('') + '</ul>';
     banner.classList.add('show');
-    banner.scrollIntoView({behavior:'smooth',block:'center'});
+    // Si lo único que falta son elementos, se va directo al primero en vez de
+    // dejar al inspector buscándolo: es lo que iba a hacer de todas formas.
+    if(pendientes.length && faltan.length === 1) irAElemento(pendientes[0]);
+    else banner.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   banner.classList.remove('show');
@@ -791,6 +867,11 @@ function renderHistorial(){
     </button>`;
   }).join('');
 }
+document.getElementById('validationBanner').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-ir]');
+  if(b) irAElemento(b.dataset.ir);
+});
+
 document.getElementById('buscarHist').addEventListener('input', renderHistorial);
 
 /* Envío manual del resumen del día. El backend recalcula todo desde la hoja;
