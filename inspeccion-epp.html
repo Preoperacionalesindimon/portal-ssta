@@ -349,7 +349,7 @@
     <div class="resumen-dia">
       <div class="resumen-dia-txt">
         <b>Resumen del día</b><br>
-        Envía a la analista un solo correo con todos los elementos en mal estado
+        Envía a la lider de GH-SSTA un solo correo con todos los elementos en mal estado
         registrados hoy, sumados por elemento y con el detalle de cada trabajador.
       </div>
       <button type="button" id="btnResumenDia">📧 Enviar resumen del día</button>
@@ -397,7 +397,7 @@ const WA_NUMERO = '573174045681';          // formato internacional, sin + ni es
 const WA_RESPONSABLE = 'Ana Bohórquez';
 const WA_CARGO = 'Líder GH-SSTA';
 const WA_TEL_LEGIBLE = '+57 317 4045681';
-const CORREO_APROBACION = 'analista.ssta@indimon.com.co';
+const CORREO_APROBACION = 'ana.bohorquez@indimon.com.co';
 
 /** Arma el enlace de WhatsApp con el mensaje ya escrito, para que el inspector
  *  solo tenga que adjuntar las fotos y darle enviar. */
@@ -880,7 +880,7 @@ document.getElementById('buscarHist').addEventListener('input', renderHistorial)
 document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnResumenDia');
   const msg = document.getElementById('resumenDiaMsg');
-  if(!confirm('¿Enviar a la analista el resumen de los elementos en mal estado registrados hoy?')) return;
+  if(!confirm('¿Enviar a la lider de GH-SSTA el resumen de los elementos en mal estado registrados hoy?')) return;
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   msg.classList.remove('show','ok','err');
