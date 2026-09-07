@@ -56,6 +56,30 @@
   .aviso-malos strong{display:block;margin-bottom:5px;font-size:12.5px;}
   .aviso-malos ul{margin:0;padding-left:18px;}
 
+  /* ── Recordatorio y botón de WhatsApp ──
+     El correo deja el registro formal, pero sin la foto no se aprueba el
+     cambio. Por eso el aviso aparece ANTES de guardar (para tomar la foto
+     con el elemento aún en la mano) y el botón queda visible DESPUÉS, en
+     el momento en que el inspector todavía está en el sitio. */
+  .recordatorio-foto{
+    margin-top:9px;padding:9px 11px;background:rgba(255,255,255,.7);
+    border:1px dashed #c0392b;border-radius:var(--radius-sm);
+    font-size:12px;line-height:1.5;
+  }
+  .paso-foto{
+    margin-top:12px;padding:12px 13px;background:#fff;
+    border:1px solid #e08a80;border-radius:var(--radius-sm);
+    font-size:12.5px;line-height:1.55;color:#7a1f14;
+  }
+  .btn-wa{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    margin-top:10px;padding:13px;border-radius:var(--radius-sm);
+    background:#25D366;color:#fff;font-size:14px;font-weight:700;
+    text-decoration:none;box-shadow:0 2px 8px rgba(37,211,102,.3);
+  }
+  .btn-wa:active{transform:scale(.985);}
+  .wa-nota{display:block;margin-top:6px;font-size:11px;color:var(--ink-soft);}
+
   /* ── Firmas ── */
   .sig-block{margin-top:14px;}
   .sig-block h5{margin:0 0 6px;font-size:11.5px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
@@ -88,6 +112,74 @@
   .hist-item{padding:7px 10px;background:var(--bg);border-radius:6px;margin-bottom:5px;line-height:1.45;}
   .hist-item b{color:var(--ink);}
 
+  /* ── Pestañas y pantallas ── */
+  .tabs{display:flex;gap:8px;max-width:820px;margin:14px auto 0;padding:0 14px;}
+  .tab{flex:1;padding:11px 8px;border-radius:var(--radius-md);border:1.5px solid var(--line);background:var(--paper);font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;}
+  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .searchbar{margin-top:16px;}
+  .searchbar input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;font-size:15px;background:var(--paper);font-family:inherit;}
+  .hist-nota{font-size:11.5px;color:var(--ink-soft);margin:10px 0;}
+
+  .hist-card{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:9px;cursor:pointer;font-family:inherit;color:inherit;}
+  /* Con elementos pedidos se marca en rojo: es lo que hay que perseguir. */
+  .hist-card.con-malos{border-left-color:var(--warn);background:linear-gradient(90deg,rgba(192,57,43,.05),transparent 45%);}
+  .hist-card .fila1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .hist-card .quien{font-weight:700;font-size:14px;}
+  .hist-card .cuando{font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap;}
+  .hist-card .meta{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.45;}
+  .hist-card .pedidos{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:700;color:var(--warn);background:rgba(192,57,43,.1);padding:3px 9px;border-radius:20px;}
+  .hist-card .ver-ficha{display:inline-block;margin-top:6px;margin-left:6px;font-size:11.5px;font-weight:700;color:var(--brand-epp);background:rgba(31,111,139,.1);padding:3px 9px;border-radius:20px;}
+  .hist-card .sin-pedidos{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:700;color:var(--ok);background:rgba(29,122,76,.1);padding:3px 9px;border-radius:20px;}
+  .vacio{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-md);padding:2rem;text-align:center;color:var(--ink-soft);font-size:13px;}
+
+  .volver-btn{background:none;border:none;color:var(--brand-epp);font-size:13px;font-weight:700;cursor:pointer;padding:16px 0 4px;font-family:inherit;}
+
+  .det-tabla{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .det-tabla td{padding:7px 4px;border-bottom:1px solid var(--line-soft);}
+  .det-tabla td:last-child{text-align:right;width:56px;}
+  .cal{display:inline-block;min-width:34px;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:700;text-align:center;}
+  .cal.B{background:rgba(29,122,76,.13);color:var(--ok);}
+  .cal.R{background:rgba(224,168,0,.18);color:#8a6800;}
+  .cal.M{background:rgba(192,57,43,.13);color:var(--warn);}
+  .cal.NA{background:rgba(138,151,163,.15);color:#5c6a76;}
+  .det-firma{border:1px solid var(--line);border-radius:8px;background:#fff;max-width:100%;margin-top:5px;}
+
+  /* ── Ficha imprimible del trabajador ── */
+  .ficha-head{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px;margin-top:16px;}
+  .ficha-head h2{font-family:var(--font-display);font-size:17px;margin:0 0 2px;}
+  .ficha-head .sub{font-size:12.5px;color:var(--ink-soft);}
+  .ficha-head .codigo{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+  .ficha-pend{margin-top:12px;padding:11px 13px;border-radius:var(--radius-sm);font-size:12.5px;line-height:1.5;}
+  .ficha-pend.hay{background:#fdecea;border:1px solid #e08a80;color:#7a1f14;}
+  .ficha-pend.no{background:rgba(29,122,76,.09);border:1px solid rgba(29,122,76,.35);color:#14603a;}
+  .ficha-pend strong{display:block;margin-bottom:4px;}
+  .ficha-pend ul{margin:0;padding-left:18px;}
+
+  .ficha-insp{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-md);padding:14px;margin-top:12px;break-inside:avoid;}
+  .ficha-insp .cab{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:10px;}
+  .ficha-insp .cab .f{font-weight:700;font-size:13.5px;}
+  .ficha-insp .cab .q{font-size:12px;color:var(--ink-soft);}
+  .ficha-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+  @media(max-width:560px){ .ficha-cols{grid-template-columns:1fr;} }
+  .ficha-obs{font-size:12px;margin-top:8px;line-height:1.5;}
+  .ficha-firmas{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
+  .ficha-firmas img{max-width:100%;border:1px solid var(--line);border-radius:6px;background:#fff;}
+  .ficha-firmas .cap{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+
+  @media print{
+    /* Las pantallas inactivas ya están ocultas, así que se imprime solo la
+       que se está viendo. Aquí solo se quita lo que no es parte del documento. */
+    .tabs,.no-print,.volver-btn,.searchbar,.hist-nota,.footer-actions,.hdr a{display:none !important;}
+    body{padding:0;background:#fff;}
+    .hdr{background:#fff !important;color:#000 !important;border-bottom:2px solid #000;}
+    .hdr h1{color:#000 !important;}
+    .ficha-head,.ficha-insp,.section{border:1px solid #999 !important;box-shadow:none !important;}
+    .ficha-insp{page-break-inside:avoid;}
+  }
+
   @media print{
     .footer-actions,.sig-actions,.hdr a,.aviso-malos{display:none !important;}
     body{padding-bottom:0;}
@@ -102,7 +194,14 @@
   <a href="index.html">← Volver al portal</a>
 </div>
 
+<div class="tabs">
+  <button type="button" class="tab active" data-screen="screenNueva">Nueva inspección</button>
+  <button type="button" class="tab" data-screen="screenHistorial">Historial</button>
+</div>
+
 <div class="wrap">
+
+<div class="screen active" id="screenNueva">
 
   <!-- ── Datos del inspector: se llenan una vez y quedan para toda la jornada ── -->
   <div class="section">
@@ -194,6 +293,29 @@
     </div>
   </div>
 
+</div><!-- /#screenNueva -->
+
+  <!-- ══ HISTORIAL DE REVISIONES ══ -->
+  <div class="screen" id="screenHistorial">
+    <div class="searchbar">
+      <input type="text" id="buscarHist" placeholder="Buscar por trabajador, cédula, inspector o elemento…">
+    </div>
+    <p class="hist-nota" id="histNota">Cargando…</p>
+    <div id="listaHist"></div>
+  </div>
+
+  <!-- ══ DETALLE DE UNA INSPECCIÓN ══ -->
+  <div class="screen" id="screenDetalle">
+    <button type="button" class="volver-btn" id="btnVolverHist">← Volver al historial</button>
+    <div id="detalleBox"></div>
+  </div>
+
+  <!-- ══ FICHA IMPRIMIBLE DE UN TRABAJADOR (todo su historial) ══ -->
+  <div class="screen" id="screenFicha">
+    <button type="button" class="volver-btn no-print" id="btnVolverDeFicha">← Volver</button>
+    <div id="fichaBox"></div>
+  </div>
+
 </div>
 
 <div class="footer-actions">
@@ -211,6 +333,30 @@ ScrollProgress.init('#1f6f8b');
 const EPP_URL = PORTAL_CONFIG.BACKENDS.epp.url;
 const PERSONAL_URL = PORTAL_CONFIG.BACKENDS.personal.url;
 const TOKEN = PORTAL_CONFIG.API_TOKEN;
+
+/* WhatsApp al que hay que enviar la FOTO del elemento en mal estado.
+   El correo deja el registro formal, pero sin la foto no se aprueba el cambio
+   — por eso se recuerda en pantalla y se ofrece el botón directo, en vez de
+   confiar en que el inspector se acuerde de mandarla después. */
+const WA_NUMERO = '573174045681';          // formato internacional, sin + ni espacios
+const WA_RESPONSABLE = 'Ana Bohórquez';
+const WA_CARGO = 'Líder GH-SSTA';
+const WA_TEL_LEGIBLE = '+57 317 4045681';
+const CORREO_APROBACION = 'analista.ssta@indimon.com.co';
+
+/** Arma el enlace de WhatsApp con el mensaje ya escrito, para que el inspector
+ *  solo tenga que adjuntar las fotos y darle enviar. */
+function enlaceWhatsApp(nombre, cedula, fecha, malos, registro){
+  let msg = 'Solicitud de reposición de EPP (SSTA-F-006)\n\n';
+  msg += 'Trabajador: ' + (nombre || '') + '\n';
+  if(cedula) msg += 'Cédula: ' + cedula + '\n';
+  if(fecha)  msg += 'Inspección: ' + fecha + '\n';
+  if(registro) msg += 'Registro: ' + registro + '\n';
+  msg += '\nElementos en mal estado:\n';
+  malos.forEach((m,i)=>{ msg += (i+1) + '. ' + m + '\n'; });
+  msg += '\nAdjunto las fotos de los elementos para aprobación.';
+  return 'https://wa.me/' + WA_NUMERO + '?text=' + encodeURIComponent(msg);
+}
 
 /* Los 17 elementos del formato SSTA-F-006, en el orden del papel.
    El backend tiene esta misma lista y es quien MANDA: al guardar, recalcula
@@ -234,6 +380,19 @@ const OPCIONES = [
 const estado = {};   // elemento -> 'B' | 'R' | 'M' | 'N/A' | null
 let personalCache = [];
 let opIdGuardado = null; // clave de idempotencia; se renueva por cada persona guardada
+
+/* El registro (EPP-AAAAMMDD-NNNNNN) antes lo generaba solo el servidor, así que
+   no existía hasta después de guardar. Ahora se genera aquí y se manda en el
+   payload (el backend respeta body.inspeccionId), para poder mostrarlo — y
+   armar el mensaje de WhatsApp — desde el momento en que se marca el primer
+   elemento en mal estado, que es cuando el inspector todavía tiene el elemento
+   en la mano. Se renueva con cada trabajador. */
+function genInspeccionIdCliente(){
+  const d = new Date();
+  return 'EPP-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0')
+    + '-' + String(Math.floor(Math.random()*900000)+100000);
+}
+let inspeccionIdActual = genInspeccionIdCliente();
 
 /* ================= FIRMAS (módulo compartido de common.js) ================= */
 const sigMgr = SignaturePad.createManager({ signedLabel:'Firmado ✓', unsignedLabel:'Sin firmar' });
@@ -300,10 +459,26 @@ function actualizarResumen(){
   const box = document.getElementById('avisoMalos');
   if(!malos.length){ box.classList.remove('show'); box.innerHTML=''; return; }
   // Se muestra ANTES de guardar qué se va a pedir, para que no haya sorpresas
-  // con un correo que sale sin que el inspector lo tuviera claro.
+  // con un correo que sale sin que el inspector lo tuviera claro. También se
+  // avisa desde ya lo de la foto, para que la tome mientras todavía tiene el
+  // elemento en la mano y no después, cuando ya se fue del sitio.
+  const nombreTrab = (document.getElementById('trabNombre').value || '').trim();
+  const cedulaTrab = (document.getElementById('trabCedula').value || '').trim();
+  const fechaTrab = formatFechaCorta(document.getElementById('inspFecha').value);
+  const waLink = enlaceWhatsApp(nombreTrab, cedulaTrab, fechaTrab, malos, inspeccionIdActual);
   box.innerHTML = '<strong>Se solicitará la reposición de ' + malos.length +
     (malos.length===1?' elemento:':' elementos:') + '</strong><ul>' +
-    malos.map(m=>'<li>'+esc(m)+'</li>').join('') + '</ul>';
+    malos.map(m=>'<li>'+esc(m)+'</li>').join('') + '</ul>' +
+    '<div class="paso-foto">' +
+      '<b>PARA APROBAR EL CAMBIO</b><br>' +
+      'Enviar la <b>FOTO</b> de cada elemento en mal estado por WhatsApp a<br>' +
+      esc(WA_RESPONSABLE) + ' - ' + esc(WA_CARGO) + ' — ' + esc(WA_TEL_LEGIBLE) + '<br>' +
+      'indicando el nombre del trabajador y el registro <b>' + esc(inspeccionIdActual) + '</b>.<br>' +
+      '<b>Sin la foto no se puede aprobar la reposición.</b>' +
+      '<a class="btn-wa" href="'+waLink+'" target="_blank" rel="noopener">' +
+      '📷 Enviar foto por WhatsApp</a>' +
+      '<span class="wa-nota">Se abre el chat con el mensaje ya escrito — solo adjunta las fotos y envía.</span>' +
+    '</div>';
   box.classList.add('show');
 }
 
@@ -407,6 +582,7 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   const payload = {
     token: TOKEN,
     opId: opIdGuardado,
+    inspeccionId: inspeccionIdActual,
     nombre: document.getElementById('trabNombre').value.trim(),
     cedula: document.getElementById('trabCedula').value.trim(),
     cargo: document.getElementById('trabCargo').value.trim(),
@@ -429,15 +605,31 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
     if(!data.ok) throw new Error(data.error || 'No se pudo guardar.');
 
     const nMalos = (data.malos||[]).length;
+    // Se guardan los datos ANTES de limpiar el formulario: el enlace de
+    // WhatsApp los necesita y abajo se borra todo para la siguiente persona.
+    const waLink = nMalos
+      ? enlaceWhatsApp(payload.nombre, payload.cedula, payload.fechaInspeccion, data.malos, data.inspeccionId)
+      : null;
+
     okBox.innerHTML =
       '<h3>✓ Inspección registrada</h3>' +
       '<div>Registro <span class="id">'+esc(data.inspeccionId)+'</span></div>' +
       '<div style="margin-top:8px;">' +
       (nMalos
-        ? 'Se envió la solicitud de reposición de <b>'+nMalos+'</b> elemento(s).'
+        ? 'Se envió la solicitud de <b>'+nMalos+'</b> elemento(s) a '+esc(CORREO_APROBACION)+'.'
         : 'No hubo elementos en mal estado, así que no se envió ninguna solicitud.') +
       '</div>' +
-      (data.correo ? '<div style="margin-top:6px;font-size:11.5px;opacity:.85;">'+esc(data.correo)+'</div>' : '');
+      (nMalos
+        ? '<div class="paso-foto">' +
+            '<b>Falta un paso:</b> envía la foto de ' + (nMalos===1?'el elemento':'los elementos') +
+            ' a ' + esc(WA_RESPONSABLE) + ' (' + esc(WA_TEL_LEGIBLE) + '). ' +
+            'Sin la foto no se puede aprobar el cambio.' +
+            '<a class="btn-wa" href="'+waLink+'" target="_blank" rel="noopener">' +
+            '📷 Enviar foto por WhatsApp</a>' +
+            '<span class="wa-nota">Se abre el chat con el mensaje ya escrito — solo adjunta las fotos y envía.</span>' +
+          '</div>'
+        : '') +
+      (data.correo ? '<div style="margin-top:8px;font-size:11.5px;opacity:.85;">'+esc(data.correo)+'</div>' : '');
     okBox.classList.add('show');
     okBox.scrollIntoView({behavior:'smooth',block:'center'});
 
@@ -445,6 +637,8 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
     // (misma jornada) y se limpia solo lo del trabajador.
     limpiarTrabajador();
     opIdGuardado = null;
+    inspeccionIdActual = genInspeccionIdCliente(); // registro nuevo para el siguiente trabajador
+    histCache = []; // el historial quedó desactualizado; se recarga al abrirlo
   }catch(err){
     banner.innerHTML = '<strong>No se pudo guardar</strong>' + esc(err.message) +
       '<br>Revisa la señal e intenta de nuevo; lo que llenaste sigue aquí.';
@@ -472,12 +666,258 @@ function limpiarTrabajador(){
   document.querySelectorAll('.field-invalid').forEach(el=>el.classList.remove('field-invalid'));
 }
 
+/* El aviso de aprobación lleva el nombre del trabajador dentro del mensaje de
+   WhatsApp, así que se vuelve a armar si esos datos cambian después de haber
+   marcado elementos en mal estado. */
+['trabNombre','trabCedula','inspFecha'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', actualizarResumen);
+});
+
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   if(!confirm('¿Limpiar los datos del trabajador y las calificaciones? Los datos del inspector se conservan.')) return;
   limpiarTrabajador();
+  inspeccionIdActual = genInspeccionIdCliente();
   document.getElementById('okBox').classList.remove('show');
   document.getElementById('validationBanner').classList.remove('show');
 });
+
+/* ================= NAVEGACIÓN ENTRE PANTALLAS ================= */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  // La barra de guardar solo tiene sentido mientras se diligencia.
+  document.querySelector('.footer-actions').style.display = (id==='screenNueva') ? 'flex' : 'none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    showScreen(t.dataset.screen);
+    if(t.dataset.screen==='screenHistorial') cargarHistorial();
+  });
+});
+document.getElementById('btnVolverHist').addEventListener('click', ()=>{
+  showScreen('screenHistorial');
+});
+
+/* ================= HISTORIAL DE REVISIONES ================= */
+let histCache = [];
+async function cargarHistorial(){
+  const nota = document.getElementById('histNota');
+  const lista = document.getElementById('listaHist');
+  if(!navigator.onLine){
+    nota.textContent = 'Sin conexión — el historial necesita señal para consultarse.';
+    lista.innerHTML = '';
+    return;
+  }
+  nota.textContent = 'Cargando…';
+  try{
+    const res = await fetchWithRetry(EPP_URL + '?list=1&token=' + encodeURIComponent(TOKEN));
+    const data = await res.json();
+    histCache = (data.ok && data.rows) ? data.rows : [];
+    nota.textContent = histCache.length
+      ? histCache.length + ' inspección(es) registrada(s) · más reciente primero'
+      : '';
+    renderHistorial();
+  }catch(e){
+    nota.textContent = 'No se pudo cargar el historial. Revisa la señal e intenta de nuevo.';
+    lista.innerHTML = '';
+  }
+}
+function renderHistorial(){
+  const lista = document.getElementById('listaHist');
+  const q = document.getElementById('buscarHist').value.trim().toLowerCase();
+  let items = histCache;
+  if(q){
+    items = items.filter(r =>
+      String(r.nombre||'').toLowerCase().includes(q) ||
+      String(r.cedula||'').toLowerCase().includes(q) ||
+      String(r.inspector||'').toLowerCase().includes(q) ||
+      String(r.cargo||'').toLowerCase().includes(q) ||
+      String(r.malos||'').toLowerCase().includes(q)
+    );
+  }
+  if(!items.length){
+    lista.innerHTML = '<div class="vacio">'+(q?'No hay inspecciones que coincidan con la búsqueda.':'Todavía no hay inspecciones registradas.')+'</div>';
+    return;
+  }
+  lista.innerHTML = items.map(r=>{
+    const malos = String(r.malos||'').split('|').map(s=>s.trim()).filter(Boolean);
+    return `<button type="button" class="hist-card ${malos.length?'con-malos':''}" data-id="${esc(r.inspeccionId)}">
+      <div class="fila1">
+        <span class="quien">${esc(r.nombre||'—')}</span>
+        <span class="cuando">${esc(r.fechaInspeccion||'—')}</span>
+      </div>
+      <div class="meta">CC ${esc(r.cedula||'—')}${r.cargo?' · '+esc(r.cargo):''}<br>Revisó: <b>${esc(r.inspector||'—')}</b></div>
+      ${malos.length
+        ? `<span class="pedidos">${malos.length} elemento(s) solicitado(s)</span>`
+        : `<span class="sin-pedidos">Sin novedades</span>`}
+      <span class="ver-ficha" data-cedula="${esc(r.cedula||'')}">📄 Ficha completa</span>
+    </button>`;
+  }).join('');
+}
+document.getElementById('buscarHist').addEventListener('input', renderHistorial);
+document.getElementById('listaHist').addEventListener('click', e=>{
+  // "Ficha completa" abre el historial de la persona; el resto de la tarjeta
+  // abre esa inspección puntual.
+  const ficha = e.target.closest('.ver-ficha');
+  if(ficha){ e.stopPropagation(); abrirFicha(ficha.dataset.cedula, 'screenHistorial'); return; }
+  const card = e.target.closest('.hist-card');
+  if(card) abrirDetalle(card.dataset.id);
+});
+
+/* ================= DETALLE DE UNA INSPECCIÓN ================= */
+async function abrirDetalle(id){
+  const box = document.getElementById('detalleBox');
+  box.innerHTML = '<div class="vacio">Cargando inspección…</div>';
+  showScreen('screenDetalle');
+  try{
+    const res = await fetchWithRetry(EPP_URL + '?id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(TOKEN));
+    const d = await res.json();
+    if(!d.ok) throw new Error(d.error||'No se encontró la inspección.');
+    const datos = d.datos || {};
+    const items = datos.items || {};
+    const malos = (datos.malos||[]);
+
+    const filas = ELEMENTOS.map(el=>{
+      const v = items[el] || '—';
+      const cls = v==='N/A' ? 'NA' : (v==='—' ? 'NA' : v);
+      return `<tr><td>${esc(el)}</td><td><span class="cal ${cls}">${esc(v)}</span></td></tr>`;
+    }).join('');
+
+    box.innerHTML = `
+      <div class="section">
+        <div class="section-title"><span>Inspección ${esc(d.inspeccionId)}</span></div>
+        <div class="section-body">
+          <div class="grid2">
+            <div><div class="field"><label>Trabajador</label><div style="font-size:14px;font-weight:600;">${esc(d.nombre||'—')}</div></div></div>
+            <div><div class="field"><label>Cédula</label><div style="font-size:14px;">${esc(d.cedula||'—')}</div></div></div>
+            <div><div class="field"><label>Cargo</label><div style="font-size:14px;">${esc(d.cargo||'—')}</div></div></div>
+            <div><div class="field"><label>Fecha de inspección</label><div style="font-size:14px;">${esc(d.fechaInspeccion||'—')}</div></div></div>
+            <div><div class="field"><label>Quién la realizó</label><div style="font-size:14px;font-weight:600;">${esc(d.inspector||'—')}</div></div></div>
+            <div><div class="field"><label>Registrada</label><div style="font-size:14px;">${formatFechaHora(d.updatedAt)}</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      ${malos.length ? `<div class="section"><div class="section-title" style="background:var(--warn);">Elementos solicitados</div>
+        <div class="section-body"><ul style="margin:0 0 12px;padding-left:18px;font-size:13px;line-height:1.7;">
+        ${malos.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
+        <div class="paso-foto" style="margin-top:0;">
+          <b>Foto para aprobación:</b> ${esc(WA_RESPONSABLE)} (${esc(WA_TEL_LEGIBLE)}).
+          <a class="btn-wa" href="${enlaceWhatsApp(d.nombre, d.cedula, d.fechaInspeccion, malos, d.inspeccionId)}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a>
+        </div></div></div>` : ''}
+
+      <div class="section">
+        <div class="section-title">Estado de los elementos</div>
+        <div class="section-body"><table class="det-tabla">${filas}</table></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Observaciones y firmas</div>
+        <div class="section-body">
+          <div class="field"><label>Observaciones</label>
+            <div style="font-size:13px;line-height:1.5;">${datos.observaciones ? esc(datos.observaciones) : '<span style="color:var(--ink-soft);">Sin observaciones.</span>'}</div>
+          </div>
+          <div class="grid2" style="margin-top:12px;">
+            <div><label style="display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;">Firma del trabajador</label>
+              ${datos.sigTrabajador ? `<img class="det-firma" src="${esc(datos.sigTrabajador)}" alt="Firma del trabajador">` : '<div style="font-size:12px;color:var(--ink-soft);">Sin firma.</div>'}</div>
+            <div><label style="display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;">Firma del inspector</label>
+              ${datos.sigInspector ? `<img class="det-firma" src="${esc(datos.sigInspector)}" alt="Firma del inspector">` : '<div style="font-size:12px;color:var(--ink-soft);">Sin firma.</div>'}</div>
+          </div>
+          <button type="button" class="btn-sec" style="width:100%;margin-top:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-family:inherit;" onclick="window.print()">🖨 Imprimir / guardar PDF</button>
+          <button type="button" class="btn-sec" id="btnFichaDesdeDetalle" data-cedula="${esc(d.cedula||'')}" style="width:100%;margin-top:8px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;font-weight:700;font-family:inherit;">📄 Ver ficha completa de esta persona</button>
+        </div>
+      </div>`;
+    const btnFicha = document.getElementById('btnFichaDesdeDetalle');
+    if(btnFicha) btnFicha.addEventListener('click', ()=> abrirFicha(btnFicha.dataset.cedula, 'screenDetalle'));
+  }catch(err){
+    box.innerHTML = '<div class="vacio">No se pudo cargar: '+esc(err.message)+'</div>';
+  }
+}
+function formatFechaHora(v){
+  const t = new Date(v);
+  if(isNaN(t.getTime())) return '—';
+  return t.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+         t.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ================= FICHA IMPRIMIBLE DEL TRABAJADOR =================
+   Reúne TODO el historial de una persona en un solo documento: sirve para
+   auditoría, para entregarle su hoja de vida de dotación, o para sustentar
+   ante almacén lo que se le ha venido pidiendo. Se exporta con el mismo
+   "Imprimir" del navegador, eligiendo "Guardar como PDF". */
+let volverDeFichaA = 'screenHistorial';
+async function abrirFicha(cedula, origen){
+  volverDeFichaA = origen || 'screenHistorial';
+  const box = document.getElementById('fichaBox');
+  box.innerHTML = '<div class="vacio">Armando la ficha…</div>';
+  showScreen('screenFicha');
+  try{
+    const res = await fetchWithRetry(EPP_URL + '?cedula=' + encodeURIComponent(cedula) + '&full=1&token=' + encodeURIComponent(TOKEN));
+    const d = await res.json();
+    const rows = (d.ok && d.rows) ? d.rows : [];
+    if(!rows.length){ box.innerHTML = '<div class="vacio">Esta persona todavía no tiene inspecciones registradas.</div>'; return; }
+
+    const p = rows[0]; // la más reciente manda para los datos de la persona
+    // Lo pendiente se toma de la ÚLTIMA inspección: es el estado actual de su
+    // dotación. Sumar los malos de todo el historial daría una lista falsa,
+    // porque incluiría lo que ya le repusieron.
+    const pendientes = (rows[0].datos && rows[0].datos.malos) ? rows[0].datos.malos : [];
+
+    const bloques = rows.map(r=>{
+      const items = (r.datos && r.datos.items) ? r.datos.items : {};
+      const mitad = Math.ceil(ELEMENTOS.length/2);
+      const col = (desde,hasta)=> ELEMENTOS.slice(desde,hasta).map(el=>{
+        const v = items[el] || '—';
+        const cls = (v==='N/A'||v==='—') ? 'NA' : v;
+        return `<tr><td>${esc(el)}</td><td><span class="cal ${cls}">${esc(v)}</span></td></tr>`;
+      }).join('');
+      const obs = (r.datos && r.datos.observaciones) ? r.datos.observaciones : '';
+      const sigT = (r.datos && r.datos.sigTrabajador) ? r.datos.sigTrabajador : '';
+      const sigI = (r.datos && r.datos.sigInspector) ? r.datos.sigInspector : '';
+      const malos = String(r.malos||'').split('|').map(s=>s.trim()).filter(Boolean);
+      return `<div class="ficha-insp">
+        <div class="cab">
+          <span class="f">${esc(r.fechaInspeccion||'—')}</span>
+          <span class="q">Revisó: <b>${esc(r.inspector||'—')}</b> · Registro ${esc(r.inspeccionId)}</span>
+        </div>
+        ${malos.length
+          ? `<div style="font-size:12px;color:var(--warn);font-weight:600;margin-bottom:8px;">Se solicitó: ${esc(malos.join(', '))}</div>`
+          : `<div style="font-size:12px;color:var(--ok);font-weight:600;margin-bottom:8px;">Sin elementos en mal estado.</div>`}
+        <div class="ficha-cols">
+          <table class="det-tabla">${col(0,mitad)}</table>
+          <table class="det-tabla">${col(mitad,ELEMENTOS.length)}</table>
+        </div>
+        ${obs ? `<div class="ficha-obs"><b>Observaciones:</b> ${esc(obs)}</div>` : ''}
+        ${(sigT||sigI) ? `<div class="ficha-firmas">
+          <div><div class="cap">Firma del trabajador</div>${sigT?`<img src="${esc(sigT)}" alt="Firma del trabajador">`:'<div style="font-size:11px;color:var(--ink-soft);">Sin firma.</div>'}</div>
+          <div><div class="cap">Firma del inspector</div>${sigI?`<img src="${esc(sigI)}" alt="Firma del inspector">`:'<div style="font-size:11px;color:var(--ink-soft);">Sin firma.</div>'}</div>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
+    box.innerHTML = `
+      <div class="ficha-head">
+        <div class="codigo">SSTA-F-006 · Ficha de inspección de EPP</div>
+        <h2>${esc(p.nombre||'—')}</h2>
+        <div class="sub">CC ${esc(p.cedula||'—')}${p.cargo?' · '+esc(p.cargo):''}</div>
+        <div class="sub" style="margin-top:4px;">${rows.length} inspección(es) registrada(s) · documento generado el ${formatFechaHora(new Date())}</div>
+        ${pendientes.length
+          ? `<div class="ficha-pend hay"><strong>Pendiente de reposición según la última inspección (${esc(p.fechaInspeccion||'')}):</strong><ul>${pendientes.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
+             <div class="no-print" style="margin-top:9px;">Foto para aprobación: ${esc(WA_RESPONSABLE)} (${esc(WA_TEL_LEGIBLE)}).
+             <a class="btn-wa" href="${enlaceWhatsApp(p.nombre, p.cedula, p.fechaInspeccion, pendientes, p.inspeccionId)}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a></div></div>`
+          : `<div class="ficha-pend no"><strong>Sin elementos pendientes de reposición.</strong>Según la última inspección (${esc(p.fechaInspeccion||'')}), su dotación está completa.</div>`}
+        <button type="button" class="no-print" id="btnImprimirFicha" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--brand-epp);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🖨 Exportar a PDF / imprimir</button>
+      </div>
+      ${bloques}`;
+    document.getElementById('btnImprimirFicha').addEventListener('click', ()=> window.print());
+  }catch(err){
+    box.innerHTML = '<div class="vacio">No se pudo armar la ficha: '+esc(err.message)+'</div>';
+  }
+}
+document.getElementById('btnVolverDeFicha').addEventListener('click', ()=> showScreen(volverDeFichaA));
 
 /* ================= ARRANQUE ================= */
 (async function init(){
