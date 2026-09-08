@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v32';
+const CACHE_NAME = 'ssta-portal-v35';
 
 const PAGES = [
   './',
@@ -38,7 +38,8 @@ const STATIC_ASSETS = [
   './permiso-core.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-512-maskable.png'
 ];
 const OFFLINE_PAGE = './offline.html';
 const APP_SHELL = [...PAGES, ...STATIC_ASSETS, OFFLINE_PAGE];
@@ -78,6 +79,30 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   const isOwnOrigin = url.origin === self.location.origin;
   const isBackendCall = url.hostname.includes('script.google.com');
+
+  // Tipografías de Google (la hoja de estilos y los archivos .woff2).
+  // Sin esto, en planta sin señal el portal caía a la tipografía del sistema:
+  // cambiaba el ancho de todo, los textos se reacomodaban y la app se veía
+  // distinta justo donde más se usa. Se guardan la primera vez que hay señal
+  // y de ahí en adelante se sirven desde la caché, con la red solo como
+  // respaldo — las fuentes no cambian, así que no hay nada que refrescar.
+  const isFuente = url.hostname === 'fonts.googleapis.com' ||
+                   url.hostname === 'fonts.gstatic.com';
+  if (isFuente && req.method === 'GET') {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
+          // Las respuestas de gstatic son opacas (no-cors); igual se guardan,
+          // que es justo lo que permite que la fuente aparezca sin señal.
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          return res;
+        }).catch(() => cached);
+      })
+    );
+    return;
+  }
 
   if (!isOwnOrigin || isBackendCall || req.method !== 'GET') {
     return; // deja pasar tal cual (red real, sin caché)

@@ -32,9 +32,40 @@
   --ok:#1d7a4c;
   --warn:#c0392b;
 
-  --brand-index:  #F2C200;
-  --brand-alturas:#0f3a5f;
-  --brand-caliente:#c8461a;
+  /* Gris para texto secundario y estados apagados. #5c6a76 da 5.56:1 sobre
+     blanco; los grises que se venían usando (#aab3ba = 2.13:1, #8a97a3 = 2.98:1)
+     no llegaban al mínimo de 4.5:1 y, más allá de la norma, en una tablet a
+     pleno sol en planta prácticamente desaparecían. */
+  --ink-muted:#5c6a76;
+
+  /* Paleta por tipo de permiso. Antes solo estaban tres aquí y los demás se
+     definían a mano dentro de cada página, así que la paleta había dejado de
+     estar en un solo sitio. */
+  --brand-index:      #F2C200;
+  --brand-alturas:    #0f3a5f;
+  --brand-caliente:   #c8461a;
+  --brand-confinados: #6b4c9a;
+  --brand-izajes:     #8a6d1f;
+  --brand-electrico:  #1f5f8b;
+  --brand-epp:        #1f6f8b;
+
+  /* ── Escala tipográfica ──
+     Había 17 tamaños distintos en el portal, y los cuatro más frecuentes eran
+     11, 11.5, 12 y 12.5px: diferencias de medio píxel que no se perciben como
+     jerarquía, solo como desorden, y un piso demasiado bajo para llenar
+     formularios con guantes y a contraluz. Esta escala tiene 6 pasos y sube el
+     piso de lectura a 13px; 11px queda reservado para etiquetas de sección. */
+  --fs-etiqueta: 11px;   /* SOLO rótulos en mayúsculas de sección */
+  --fs-menor:    12.5px; /* metadatos, notas al pie */
+  --fs-base:     13.5px; /* texto de lectura: preguntas, ítems, descripciones */
+  --fs-campo:    16px;   /* lo que se escribe — evita el zoom automático en iOS */
+  --fs-titulo:   15px;
+  --fs-display:  18px;
+
+  /* Alto mínimo de cualquier cosa que se toque. Se diligencia con guantes de
+     vaqueta, de pie y en movimiento: 44px es el mínimo recomendado y aquí el
+     margen de error importa más que en una app de escritorio. */
+  --touch:44px;
 
   --offline-bg: #7a1f14;
 }
@@ -112,7 +143,7 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
     display:block;
     font-weight:400;
     text-transform:none;
-    color:var(--ink-soft, #8a97a3);
+    color:var(--ink-muted);
     letter-spacing:0;
     font-size:10.5px;
     margin-top:3px;
@@ -131,7 +162,7 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
 .autocomplete-item:last-child{border-bottom:none;}
 .autocomplete-item:hover, .autocomplete-item:active{background:var(--bg,#eef1f4);}
 .autocomplete-item b{font-size:13px;color:var(--ink,#151b24);}
-.autocomplete-item span{font-size:11px;color:var(--ink-soft,#8a97a3);}
+.autocomplete-item span{font-size:11px;color:var(--ink-muted);}
 
 #offlineBanner{
   display:none;
@@ -274,3 +305,158 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
 }
 /* No debe salir en la impresión del permiso. */
 @media print{ #pendingNav{display:none !important;} }
+
+/* ════════════════════════════════════════════════════════════════════
+   CAPA DE AJUSTES TRANSVERSALES
+   --------------------------------------------------------------------
+   Estas reglas corrigen desde un solo archivo cosas que estaban repetidas
+   dentro del <style> de cada página (contraste, tamaños de texto y alto de
+   los botones). Se usa un selector algo más específico (#app …, body …) para
+   ganarle a la regla de la página sin recurrir a !important, de modo que
+   cada página siga pudiendo sobrescribir algo puntual si de verdad lo
+   necesita.
+
+   Cuando haya oportunidad, lo ideal es ir borrando de cada página las reglas
+   que aquí ya quedan cubiertas — así el <style> de cada archivo se reduce a
+   lo que de verdad es propio de ese permiso.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Contraste ──
+   Los botones SI/NO/N-A sin responder se veían en #aab3ba (2.13:1): legibles
+   en una oficina, casi invisibles en la tablet a pleno sol. Es justo el
+   control que más se toca en todo el portal. */
+#app .toggle button,
+#app .yn-btn{ color:var(--ink-muted); }
+
+/* El estado "No aplica" usaba un fondo gris claro con texto blanco encima
+   (2.98:1). Se oscurece el fondo para que el texto blanco se lea. */
+#app .toggle button.active-na,
+#app .yn-btn.active-na{ background:var(--ink-muted); border-color:var(--ink-muted); color:#fff; }
+
+/* ── Alto mínimo de los controles que se tocan ──
+   Espacios confinados tenía estos botones a 36px mientras los otros cuatro
+   permisos los tenían a 44px: la misma acción se tocaba distinto según el
+   formato. Ahora los cinco quedan igual. */
+#app .toggle button,
+#app .yn-btn{
+  min-width:var(--touch);
+  min-height:var(--touch);
+}
+
+/* ── Piso de tamaño de texto ──
+   Se suben los textos que se leen de verdad (preguntas del checklist,
+   etiquetas de campo, botones de acción). Los rótulos de sección en
+   mayúsculas se dejan en 11px: ahí lo pequeño sí ayuda a la jerarquía. */
+#app .chk,
+#app .check-cat h4,
+#app .choice-card p{ font-size:var(--fs-base); }
+
+#app .field label{ font-size:var(--fs-menor); }
+
+body .footer-actions .btn,
+body .footer-actions button{ font-size:var(--fs-base); }
+
+/* Este estado ("Guardando…", "Sin conexión…") llegaba a 10px: es donde el
+   portal avisa si algo falló al guardar, o sea justo lo que no se puede
+   perder de vista. */
+body .footer-actions .status{ font-size:var(--fs-menor); line-height:1.45; }
+
+body .draft-banner{ font-size:var(--fs-menor); }
+body .draft-banner button,
+body .draft-banner .btn{ font-size:var(--fs-menor); min-height:38px; }
+
+/* Los campos donde se escribe van a 16px: por debajo de eso, Safari en iPhone
+   hace zoom automático al enfocar el campo y descuadra el formulario. */
+#app input[type="text"], #app input[type="date"], #app input[type="time"],
+#app input[type="number"], #app input[type="email"], #app input[type="tel"],
+#app textarea, #app select{ font-size:var(--fs-campo); }
+
+/* ════════════════════════════════════════════════════════════════════
+   COMPONENTES COMPARTIDOS DE LOS FORMULARIOS DE PERMISO
+   --------------------------------------------------------------------
+   Estas reglas estaban copiadas TAL CUAL dentro del <style> de los cinco
+   permisos. Un ajuste hecho en uno no llegaba a los otros y las páginas se
+   iban separando sin que nadie lo notara — el mismo problema que ya habíamos
+   tenido con el motor de firmas duplicado.
+
+   Cada permiso conserva su <style> para lo que sí es propio: su color de
+   marca, sus secciones particulares y sus bloques @media (que NO se centralizan:
+   una regla dentro de un @media movida a global aplicaría siempre, y ese error
+   no se ve hasta que alguien gira el celular o imprime).
+
+   Los colores salen de las variables, así que cada página sigue pintando con
+   su acento propio sin repetir la estructura.
+
+   NOTA: ".radio-row label" se dejó a propósito dentro de cada página. Tiene la
+   misma especificidad que ".field label", y en Espacios Confinados hay filas de
+   radio dentro de un .field: al traerla aquí pasaría a ir antes y perdería la
+   pelea, cambiando cómo se ven esas etiquetas.
+   ════════════════════════════════════════════════════════════════════ */
+
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+.wrap{max-width:980px;margin:0 auto;}
+.hdr{background:var(--steel);color:#f4f0e6;border-radius:var(--radius-lg, 14px);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+.hdr-left{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+.hdr-logo{width:44px;height:44px;min-width:44px;border-radius:50%;background:var(--ember);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+.hdr::before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle, rgba(200,70,26,.55), transparent 70%);}
+.hdr .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e2b79c;margin-bottom:4px;}
+.hdr h1{margin:0;font-size:22px;font-weight:700;}
+.hdr .meta{font-size:11.5px;color:#c7cdd2;text-align:right;line-height:1.5;}
+.hdr .meta b{color:#f4f0e6;}
+.status-banner{margin-top:14px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.status-banner.open{background:#fff2e5;color:var(--ember-dark);border:1px solid #f0c19c;}
+.status-banner.closed{background:#e9f5ec;color:var(--ok);border:1px solid #b9dcc2;}
+.status-banner code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;}
+.section{background:var(--paper-panel);border:1px solid var(--line);border-radius:var(--radius-lg, 14px);margin-top:18px;overflow:hidden;}
+body.modo-agregar-personal #app .section:not(#execSection), body.modo-agregar-personal #draftBanner, body.modo-agregar-personal #validationBanner, body.modo-agregar-personal .footer-actions{display:none !important;}
+body.modo-agregar-personal #footerAddPeople{display:flex !important;}
+#footerAddPeople{display:none;position:sticky;bottom:0;margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto; background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px; justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 18px rgba(0,0,0,.18);}
+.section-title{background:linear-gradient(90deg, var(--ember), var(--ember-dark));color:#fff;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.section-title.locked{background:linear-gradient(90deg, var(--steel-mid), var(--steel));}
+.section-body{padding:18px 20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:#fcfbf8;color:var(--ink);}
+.field input.field-invalid,.field textarea.field-invalid,.field select.field-invalid{border-color:#c0392b;border-width:2px;background:#fdecea;}
+.field.field-invalid{box-shadow:inset 3px 0 0 #c0392b;padding-left:8px;}
+.section-body.field-invalid{box-shadow:inset 0 0 0 2px #c0392b;border-radius:0 0 var(--radius-lg,14px) var(--radius-lg,14px);}
+.field input:disabled,.field textarea:disabled,.field select:disabled{background:#f0ede4;color:#7a7466;}
+.radio-row{display:flex;gap:18px;align-items:center;margin-top:4px;flex-wrap:wrap;}
+.check-cat{margin-bottom:16px;}
+.check-cat h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--steel);border-bottom:2px solid var(--line);padding-bottom:6px;text-transform:uppercase;}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:9px 4px;border-bottom:1px dashed var(--line);}
+.check-item:last-child{border-bottom:none;}
+.check-item p{margin:0;font-size:14.5px;line-height:1.5;flex:1;padding-top:2px;}
+.toggle{display:flex;gap:4px;flex-shrink:0;}
+.toggle button:disabled{opacity:.8;cursor:default;}
+.progress-pill{font-size:11px;font-weight:700;color:#fff;background:var(--steel-mid);padding:4px 10px;border-radius:20px;}
+.sig-block{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fcfbf8;}
+.sig-block h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:var(--steel);}
+.sig-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.sig-fields input{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:11px 12px;font-size:15px;min-height:44px;}
+canvas.pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;}
+canvas.pad.locked{cursor:default;}
+.remove-exec-btn{background:none;border:1.5px solid var(--warn);color:var(--warn);font-size:11px;font-weight:700;border-radius:20px;padding:4px 12px;cursor:pointer;white-space:nowrap;}
+.remove-exec-btn:disabled{opacity:.4;cursor:default;}
+.sig-status.done{color:var(--ok);font-weight:700;}
+.exec-cards{margin-top:10px;}
+.exec-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative;}
+.exec-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.exec-card-top .exec-num{font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border-radius:20px;padding:2px 10px;}
+.exec-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;}
+.exec-fields input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:10px 10px;font-size:14.5px;min-height:42px;}
+.exec-card .sig-pad-wrap label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;}
+.exec-card canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.add-row-btn{margin-top:10px;background:var(--steel);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.close-q{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
+.close-q p{margin:0;font-size:14.5px;line-height:1.5;flex:1;}
+.footer-actions .status{color:#e2b79c;font-size:11px;font-weight:600;line-height:1.3;}
+.btn-main{background:var(--ember);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm, 7px);font-size:12.5px;font-weight:700;cursor:pointer;}
+.btn-main:hover{background:var(--ember-dark);}
+#landing{max-width:640px;margin:60px auto;text-align:center;}
+#landing h2{font-size:19px;margin-bottom:6px;}
+#landing p{color:var(--muted);font-size:13.5px;margin-bottom:26px;}
+#app{display:none;}
+.hidden{display:none !important;}
+.draft-banner button{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #a9c9ef;background:#fff;cursor:pointer;color:#1a4a7a;font-weight:600;}
