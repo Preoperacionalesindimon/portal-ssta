@@ -330,6 +330,11 @@
           <span class="sig-status" id="status_padTrabajador">Sin firmar</span>
         </div>
       </div>
+      <!-- El paso de la foto va aquí abajo, y no junto a la lista de elementos,
+           porque el mensaje de WhatsApp incluye las observaciones: si el botón
+           quedara arriba, se tocaría antes de haberlas escrito y saldrían por
+           fuera del mensaje. -->
+      <div class="aviso-malos" id="avisoAprobacion"></div>
       <div class="validation-banner" id="validationBanner"></div>
       <div class="ok-box" id="okBox"></div>
     </div>
@@ -540,20 +545,34 @@ function actualizarResumen(){
   document.getElementById('progresoEpp').textContent = respondidos + '/' + ELEMENTOS.length;
   const malos = ELEMENTOS.filter(e=>estado[e]==='M');
   const box = document.getElementById('avisoMalos');
-  if(!malos.length){ box.classList.remove('show'); box.innerHTML=''; return; }
-  // Se muestra ANTES de guardar qué se va a pedir, para que no haya sorpresas
-  // con un correo que sale sin que el inspector lo tuviera claro. También se
-  // avisa desde ya lo de la foto, para que la tome mientras todavía tiene el
-  // elemento en la mano y no después, cuando ya se fue del sitio.
+  const boxAprob = document.getElementById('avisoAprobacion');
+  if(!malos.length){
+    box.classList.remove('show'); box.innerHTML='';
+    boxAprob.classList.remove('show'); boxAprob.innerHTML='';
+    return;
+  }
+
+  // Arriba, junto a los elementos: qué se va a pedir. Se muestra ANTES de
+  // guardar para que no haya sorpresas con un correo que sale sin que el
+  // inspector lo tuviera claro.
+  box.innerHTML = '<strong>Se solicitará la reposición de ' + malos.length +
+    (malos.length===1?' elemento:':' elementos:') + '</strong><ul>' +
+    malos.map(m=>'<li>'+esc(m)+'</li>').join('') + '</ul>' +
+    '<span class="wa-nota">📷 Toma las fotos ahora, mientras tienes ' +
+    (malos.length===1?'el elemento':'los elementos') + ' a la mano. ' +
+    'El paso para enviarlas está más abajo, después de las observaciones.</span>';
+  box.classList.add('show');
+
+  // Abajo, después de las observaciones: el paso de la foto. Va aquí porque el
+  // mensaje de WhatsApp las incluye, y arriba el botón se tocaría antes de
+  // haberlas escrito.
   const nombreTrab = (document.getElementById('trabNombre').value || '').trim();
   const cedulaTrab = (document.getElementById('trabCedula').value || '').trim();
   const fechaTrab = formatFechaCorta(document.getElementById('inspFecha').value);
   const obsTrab = (document.getElementById('observaciones').value || '').trim();
   const waLink = enlaceWhatsApp(nombreTrab, cedulaTrab, fechaTrab, malos, inspeccionIdActual, obsTrab);
-  box.innerHTML = '<strong>Se solicitará la reposición de ' + malos.length +
-    (malos.length===1?' elemento:':' elementos:') + '</strong><ul>' +
-    malos.map(m=>'<li>'+esc(m)+'</li>').join('') + '</ul>' +
-    '<div class="paso-foto">' +
+  boxAprob.innerHTML =
+    '<div class="paso-foto" style="margin-top:0;">' +
       '<b>PARA APROBAR EL CAMBIO</b><br>' +
       'Enviar la <b>FOTO</b> de cada elemento en mal estado por WhatsApp a<br>' +
       esc(WA_RESPONSABLE) + ' - ' + esc(WA_CARGO) + ' — ' + esc(WA_TEL_LEGIBLE) + '<br>' +
@@ -561,9 +580,10 @@ function actualizarResumen(){
       '<b>Sin la foto no se puede aprobar la reposición.</b>' +
       '<a class="btn-wa" href="'+waLink+'" target="_blank" rel="noopener">' +
       '📷 Enviar foto por WhatsApp</a>' +
-      '<span class="wa-nota">Se abre el chat con el mensaje ya escrito — solo adjunta las fotos y envía.</span>' +
+      '<span class="wa-nota">Se abre el chat con el mensaje ya escrito ' +
+      '(incluye las observaciones) — solo adjunta las fotos y envía.</span>' +
     '</div>';
-  box.classList.add('show');
+  boxAprob.classList.add('show');
 }
 
 /* ================= PERSONAL (misma base que el resto del portal) ================= */
@@ -772,6 +792,8 @@ function formatFechaCorta(valorInput){
 
 function limpiarTrabajador(){
   ['trabNombre','trabCedula','trabCargo','observaciones'].forEach(id=>document.getElementById(id).value='');
+  const bA = document.getElementById('avisoAprobacion');
+  if(bA){ bA.classList.remove('show'); bA.innerHTML=''; }
   ELEMENTOS.forEach(e=> estado[e]=null);
   renderLista();
   actualizarResumen();
@@ -783,7 +805,7 @@ function limpiarTrabajador(){
 /* El aviso de aprobación lleva el nombre del trabajador dentro del mensaje de
    WhatsApp, así que se vuelve a armar si esos datos cambian después de haber
    marcado elementos en mal estado. */
-['trabNombre','trabCedula','inspFecha'].forEach(id=>{
+['trabNombre','trabCedula','inspFecha','observaciones'].forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', actualizarResumen);
 });
