@@ -25,7 +25,7 @@
   .item{display:block;background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:12px;padding:.9rem 1.1rem;border-left:5px solid #F2C200;transition:.15s;text-decoration:none;color:inherit;}
   .item:active{transform:scale(.99);}
   .item.warn{border-left-color:var(--warn,#c0392b);background:linear-gradient(90deg, rgba(192,57,43,.05), transparent 40%);}
-  .item.closed{border-left-color:#8a97a3;}
+  .item.closed{border-left-color:var(--ink-muted,#5c6a76);}
   .item .row1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
   .icon-type{font-size:15px;margin-right:4px;}
   .code{font-family:var(--font-display);font-weight:700;background:var(--ink,#123a63);color:#fff;padding:3px 9px;border-radius:5px;font-size:12px;letter-spacing:.02em;}
@@ -35,9 +35,20 @@
   .tiempo.warn{color:var(--warn,#c0392b);background:rgba(192,57,43,.12);}
   .tiempo.closed{color:#5c6570;background:rgba(90,100,110,.1);}
   .meta{font-size:12px;color:var(--ink-soft,#666);margin-top:6px;}
-  .chevron{font-size:11px;color:var(--ink-soft,#aab3ba);margin-top:2px;}
+  .chevron{font-size:var(--fs-menor,12.5px);color:var(--ink-muted,#5c6a76);margin-top:3px;}
   .empty{background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:14px;padding:2rem;text-align:center;color:var(--ink-soft,#888);font-size:13px;}
   .loading{text-align:center;color:#888;font-size:13px;padding:2rem;}
+
+  /* Tarjeta de persona con EPP pendiente de reponer. Antes esta información
+     solo existía persona por persona dentro del módulo de EPP, o en el correo
+     del día: quien supervisa no tenía dónde ver de una sola vez qué le debe
+     a la cuadrilla. */
+  .item.epp{border-left-color:var(--warn,#c0392b);}
+  .item.epp .elementos{font-size:12.5px;color:var(--ink,#151b24);margin-top:6px;line-height:1.55;}
+  .item.epp .elementos li{margin-bottom:2px;}
+  .item.epp ul{margin:4px 0 0;padding-left:18px;}
+  .desde{font-size:11.5px;color:var(--ink-soft,#5c6a76);margin-top:5px;}
+  .desde b{color:var(--warn,#c0392b);}
 </style>
 </head>
 <body>
@@ -50,6 +61,7 @@
   <div class="tabs">
     <div class="tab active" id="tabAbiertos" data-tab="abiertos">Abiertos <span class="count" id="countAbiertos"></span></div>
     <div class="tab" id="tabCerrados" data-tab="cerrados">Histórico cerrados <span class="count" id="countCerrados"></span></div>
+    <div class="tab" id="tabEpp" data-tab="epp">EPP por reponer <span class="count" id="countEpp"></span></div>
   </div>
 
   <div class="searchbar">
@@ -71,6 +83,10 @@ const HORAS_ALERTA = 8;
 // personal-autorizado.html — ahora los tres lo calculan desde config.js,
 // así cambiar una URL de backend solo implica editar un archivo.
 const PERMIT_BACKENDS = getPermitBackends(false);
+// El dashboard mostraba solo los 5 permisos: las inspecciones de EPP vivían en
+// otra pantalla, así que había que mirar en dos sitios para saber qué estaba
+// pendiente. Aquí se suma la tercera pestaña.
+const EPP_BACKEND = PORTAL_CONFIG.BACKENDS.epp;
 
 function iconoPara(nombre){
   if(nombre.includes('Caliente')) return '🔥';
@@ -98,6 +114,8 @@ function formatFecha(fechaStr){
 let abiertos = [];
 let cerrados = [];
 let tabActual = 'abiertos';
+let eppPendientes = [];   // [{nombre, cedula, cargo, fecha, inspector, elementos[]}]
+let eppCargado = false;
 
 async function cargar(){
   // Si la pestaña está oculta (en segundo plano) o no hay señal, no tiene sentido
@@ -135,6 +153,7 @@ async function cargar(){
       });
     }
   });
+  await cargarEpp();
   abiertos.sort((a,b)=>(horasDesde(a.fechaApertura)||0) < (horasDesde(b.fechaApertura)||0) ? 1 : -1);
   cerrados.sort((a,b)=> new Date(b.fechaCierre||0) - new Date(a.fechaCierre||0));
 
@@ -144,9 +163,75 @@ async function cargar(){
   render();
 }
 
+/* ── EPP pendiente de reponer ──
+   Se toma la ÚLTIMA inspección de cada persona, no la suma de todas: sumar el
+   historial mostraría como pendiente lo que ya le repusieron hace meses, y
+   este es justo el listado que se usa para reclamarle a almacén. */
+async function cargarEpp(){
+  if(!EPP_BACKEND || !EPP_BACKEND.url || EPP_BACKEND.url.indexOf('http')!==0) return;
+  try{
+    const res = await fetchWithRetry(EPP_BACKEND.url + '?list=1&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+    const data = await res.json();
+    if(!data.ok || !Array.isArray(data.rows)) return;
+    const ultimaPorPersona = {};
+    data.rows.forEach(r=>{
+      const cc = String(r.cedula||'').trim() || String(r.nombre||'').trim();
+      if(!cc) return;
+      const previa = ultimaPorPersona[cc];
+      if(!previa || new Date(r.updatedAt) > new Date(previa.updatedAt)) ultimaPorPersona[cc] = r;
+    });
+    eppPendientes = Object.values(ultimaPorPersona)
+      .map(r=>({
+        nombre: r.nombre||'—', cedula: r.cedula||'', cargo: r.cargo||'',
+        fecha: r.fechaInspeccion||'', inspector: r.inspector||'', updatedAt: r.updatedAt,
+        elementos: String(r.malos||'').split('|').map(x=>x.trim()).filter(Boolean)
+      }))
+      .filter(p=>p.elementos.length);
+    eppPendientes.sort((a,b)=> new Date(a.updatedAt) - new Date(b.updatedAt)); // lo más viejo primero: es lo más atrasado
+    eppCargado = true;
+    document.getElementById('countEpp').textContent = eppPendientes.length ? '('+eppPendientes.length+')' : '';
+  }catch(e){ /* sin señal o backend no configurado: la pestaña queda vacía */ }
+}
+
+function diasDesde(v){
+  const t = new Date(v).getTime();
+  if(isNaN(t)) return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+
+function renderEpp(listEl, q){
+  let items = eppPendientes;
+  if(q){
+    items = items.filter(p =>
+      p.nombre.toLowerCase().includes(q) || String(p.cedula).toLowerCase().includes(q) ||
+      p.cargo.toLowerCase().includes(q) || p.inspector.toLowerCase().includes(q) ||
+      p.elementos.join(' ').toLowerCase().includes(q));
+  }
+  if(!items.length){
+    listEl.innerHTML = '<div class="empty">'+(eppCargado
+      ? (q ? 'No hay resultados para la búsqueda.' : 'No hay elementos de protección pendientes de reponer ✓')
+      : 'Cargando inspecciones de EPP…')+'</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(p=>{
+    const d = diasDesde(p.updatedAt);
+    const espera = d===null ? '' : (d===0 ? 'hoy' : (d===1 ? 'hace 1 día' : 'hace '+d+' días'));
+    return `<a class="item epp" href="inspeccion-epp.html">
+      <div class="row1">
+        <span><span class="icon-type">🦺</span><span class="code">${esc(p.nombre)}</span> <span class="tipo">${esc(p.cargo||'')}</span></span>
+        <span class="tiempo warn">${p.elementos.length} elemento(s)</span>
+      </div>
+      <div class="elementos"><ul>${p.elementos.map(e=>'<li>'+esc(e)+'</li>').join('')}</ul></div>
+      <div class="desde">Solicitado <b>${esc(espera)}</b>${p.fecha?' · inspección del '+esc(p.fecha):''}${p.inspector?' · revisó '+esc(p.inspector):''}</div>
+      <div class="chevron">Toca para abrir la inspección de EPP →</div>
+    </a>`;
+  }).join('');
+}
+
 function render(){
   const listEl = document.getElementById('list');
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(tabActual === 'epp'){ renderEpp(listEl, q); return; }
   let items = tabActual === 'abiertos' ? abiertos : cerrados;
   if(q){
     items = items.filter(it =>

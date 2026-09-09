@@ -353,8 +353,11 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
 
 #app .field label{ font-size:var(--fs-menor); }
 
-body .footer-actions .btn,
-body .footer-actions button{ font-size:var(--fs-base); }
+/* Solo se sube el botón chico del pie de los permisos (venía en 11.5px). No se
+   toca "button" en general: la inspección de EPP ya tenía su botón principal en
+   14px y esta regla se lo bajaba a 13.5 — la idea era subir lo pequeño, no
+   achicar lo que ya estaba bien. */
+body .footer-actions .btn{ font-size:var(--fs-base); }
 
 /* Este estado ("Guardando…", "Sin conexión…") llegaba a 10px: es donde el
    portal avisa si algo falló al guardar, o sea justo lo que no se puede
