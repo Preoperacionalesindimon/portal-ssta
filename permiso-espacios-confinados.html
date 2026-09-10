@@ -454,7 +454,6 @@ function renderGasTable(container){
       <div class="gasAlertBanner" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;background:#fbeaea;color:#a1281c;font-size:12.5px;font-weight:700;border:1px solid #e3b3ac;">
         ⚠ Uno o más valores están fuera de rango — no autorizar el ingreso / evacuar si ya se está trabajando.
       </div>
-      <button type="button" class="btnAddLectura btn btn-secondary" style="margin-top:10px;">+ Registrar lectura</button>
     </div>
     <div class="gasLog"></div>
     <div class="radio-row" style="margin-top:8px;"><label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-right:8px;">¿Ventilación forzada instalada?</label>
@@ -483,26 +482,6 @@ function renderGasTable(container){
   }
   grid.addEventListener('input', evaluarEnVivo);
 
-  container.querySelector('.btnAddLectura').addEventListener('click', ()=>{
-    const valores = {};
-    let algunValor = false;
-    gasTypes.forEach(g=>{
-      const v = container.querySelector('[data-gas-val="'+g.key+'"]').value;
-      valores[g.key] = v==='' ? null : parseFloat(v);
-      if(v!=='') algunValor = true;
-    });
-    if(!algunValor){ alert('Ingrese al menos un valor de gas antes de registrar la lectura.'); return; }
-    const lectura = {
-      fase: container.querySelector('.gasFaseInput').value,
-      hora: container.querySelector('.gasHoraInput').value || new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-      fecha: new Date().toISOString(),
-      valores
-    };
-    gasState.lecturas.push(lectura);
-    renderGasLog();
-    gasTypes.forEach(g=>{ container.querySelector('[data-gas-val="'+g.key+'"]').value=''; });
-    evaluarEnVivo();
-  });
   renderGasLog();
 }
 
@@ -513,6 +492,41 @@ function renderGasTable(container){
 // así que el panel rápido leía campos vacíos y su botón no hacía nada — las
 // lecturas que se agregaban ahí simplemente no se guardaban.
 let gasContainerActivo = null;
+
+/* Devuelve la lectura que está escrita en los campos en este momento, o null
+   si no hay ningún valor. Antes había que tocar "+ Registrar lectura" para que
+   contara: quien llenaba los gases y guardaba directamente perdía la lectura
+   sin enterarse, porque el permiso se guardaba igual pero sin ella. */
+function lecturaPendiente(){
+  const c = gasContainerActivo;
+  if(!c) return null;
+  const valores = {};
+  let alguno = false;
+  gasTypes.forEach(g=>{
+    const el = c.querySelector('[data-gas-val="'+g.key+'"]');
+    const v = el ? el.value : '';
+    valores[g.key] = v==='' ? null : parseFloat(v);
+    if(v!=='') alguno = true;
+  });
+  if(!alguno) return null;
+  const fase = c.querySelector('.gasFaseInput');
+  const hora = c.querySelector('.gasHoraInput');
+  return {
+    fase: fase ? fase.value : '',
+    hora: (hora && hora.value) || new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
+    fecha: new Date().toISOString(),
+    valores
+  };
+}
+
+/* ¿Esta lectura es la misma que la última ya registrada? Evita duplicarla:
+   el borrador se guarda solo cada segundo y medio, así que collectGasState()
+   se llama muchas veces con los mismos valores en pantalla. */
+function mismaLectura(a, b){
+  if(!a || !b) return false;
+  if(a.fase !== b.fase || a.hora !== b.hora) return false;
+  return gasTypes.every(g => (a.valores[g.key]??null) === (b.valores[g.key]??null));
+}
 
 function renderGasLog(){
   const log = gasContainerActivo ? gasContainerActivo.querySelector('.gasLog') : null;
@@ -550,7 +564,15 @@ function collectGasState(){
   const c = gasContainerActivo || document;
   const vent = c.querySelector('input[name=ventForzada]:checked');
   const tipo = c.querySelector('.tipoVentilacion');
-  return { lecturas: gasState.lecturas, ventForzada: (vent||{}).value||'No', tipoVentilacion: (tipo||{}).value||'' };
+  // Lo que esté escrito en los campos cuenta como una lectura más, sin tener
+  // que registrarla aparte. No se muta gasState: así llamar a esta función
+  // varias veces (el borrador automático lo hace) no duplica nada.
+  const pend = lecturaPendiente();
+  const ultima = gasState.lecturas[gasState.lecturas.length - 1];
+  const lecturas = (pend && !mismaLectura(pend, ultima))
+    ? gasState.lecturas.concat([pend])
+    : gasState.lecturas.slice();
+  return { lecturas, ventForzada: (vent||{}).value||'No', tipoVentilacion: (tipo||{}).value||'' };
 }
 function restoreGasState(data){
   if(!data) return;
@@ -704,6 +726,17 @@ document.getElementById('readingSaveBtn').addEventListener('click', async ()=>{
   const res = await PermisoCore.sendToSheet(quickReadingData);
   btn.disabled = false;
   if(res.ok){
+    // La lectura que estaba escrita ya quedó guardada: pasa a la bitácora y se
+    // limpian los campos. Sin esto, al registrar la siguiente lectura los
+    // valores viejos seguirían en pantalla y se guardarían otra vez.
+    gasState.lecturas = quickReadingData.gases.lecturas || [];
+    gasTypes.forEach(g=>{
+      const el = gasContainerActivo && gasContainerActivo.querySelector('[data-gas-val="'+g.key+'"]');
+      if(el) el.value = '';
+    });
+    const horaEl = gasContainerActivo && gasContainerActivo.querySelector('.gasHoraInput');
+    if(horaEl) horaEl.value = '';
+    renderGasLog();
     statusEl.textContent = '✓ Lectura guardada — ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   } else {
     statusEl.textContent = res.error || 'No se pudo guardar. Verifique su conexión e intente de nuevo.';
