@@ -1,0 +1,801 @@
+// ===== Backend de Google Sheets para el Permiso SSTA-F-117 (Espacios Confinados) =====
+//
+// Pega este código en Extensiones > Apps Script de tu Google Sheet, reemplazando el actual.
+//
+// Cambios sobre la versión anterior:
+//  1. VALIDA EL TOKEN (antes se recibía pero nunca se comparaba — cualquiera con la
+//     URL /exec podía leer o escribir permisos sin conocer el token real).
+//  2. Evita que un cierre ya guardado se sobrescriba por una condición de carrera o
+//     por un reintento del Outbox — si ya estaba CERRADO y llega la misma info,
+//     responde "ok" sin tocar la fila; si llega info distinta, la rechaza.
+//  3. Usa LockService para que dos guardados casi simultáneos no se pisen.
+//  4. Guarda "openedAt" (fecha real de apertura) por separado de "updatedAt"
+//     (última vez que se tocó la fila por cualquier motivo). openedAt se fija una
+//     sola vez y no se vuelve a tocar. Compatible con filas antiguas sin esa columna.
+//
+//  5. ===== NUEVO: REGISTRO INMUTABLE (bitácora de eventos) =====
+//     Este es el cambio importante de esta versión.
+//
+//     El problema que resuelve: el token vive en config.js, que el navegador
+//     tiene que descargar para funcionar. O sea que NO es un secreto: cualquiera
+//     que abra el portal puede leerlo y mandar peticiones directas a esta URL.
+//     Mientras la hoja "Permisos" fuera la única fuente de verdad y sus filas se
+//     sobrescribieran, alguien con el token podía ALTERAR un permiso ya firmado
+//     y no quedaba rastro. Para un documento con valor probatorio, eso es lo
+//     grave — no que alguien meta datos basura, sino que se pueda cambiar lo que
+//     ya se firmó sin que se note.
+//
+//     Cómo funciona ahora:
+//       · La hoja "Eventos" recibe UNA FILA POR CADA INTENTO DE ESCRITURA, con
+//         marca de tiempo. Solo se agregan filas: este código nunca hace
+//         setValues, update ni delete sobre ella. Ahí está la historia completa.
+//       · También se registran los intentos RECHAZADOS. Si alguien trata de
+//         modificar un permiso cerrado, queda constancia de qué mandó y cuándo.
+//       · La hoja "Permisos" pasa a ser una PROYECCIÓN: un resumen del estado
+//         actual, para que el dashboard siga siendo rápido. Si se corrompiera
+//         (por manipulación o por un error), se reconstruye entera desde
+//         "Eventos" con reconstruirPermisosDesdeEventos() — ver más abajo.
+//       · verificarIntegridad() compara la proyección contra la bitácora y
+//         avisa por correo si alguna no cuadra.
+//
+//     Qué NO cambia: la respuesta de doGet es idéntica a la anterior, así que el
+//     frontend (permiso-core.js, dashboard.html) no necesita ningún ajuste.
+//
+//  6. El token ya no se guarda en la hoja. Antes el JSON almacenado era el body
+//     completo, token incluido, así que el token quedaba escrito en cada fila.
+//
+// ---------------------------------------------------------------------------
+// DESPUÉS DE PEGAR ESTE CÓDIGO, HAZ ESTO UNA SOLA VEZ:
+//   1. Ejecuta la función  migrarHistorialExistente()  desde el editor
+//      (menú Ejecutar). Crea los eventos de las filas que ya tienes, para que
+//      la bitácora arranque completa y no en blanco.
+//   2. Despliega como "Nueva versión" (NO "Nueva implementación"), para que la
+//      URL de config.js siga siendo la misma.
+//   3. Opcional pero recomendado: en la hoja de cálculo, clic derecho sobre la
+//      pestaña "Eventos" → Proteger hoja, y quítale permiso de edición a todo
+//      el mundo excepto a ti. El script sigue pudiendo escribir; las personas no.
+// ---------------------------------------------------------------------------
+
+const SHEET_NAME = 'Permisos';
+const EVENTOS_SHEET_NAME = 'Eventos';
+const API_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1'; // debe ser IDÉNTICO al del cliente (config.js)
+
+function getSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(['permitCode', 'status', 'dataJson', 'updatedAt', 'openedAt', 'responsable', 'sitio']);
+  }
+  return sheet;
+}
+
+function checkToken_(token) {
+  return token === API_TOKEN;
+}
+
+/* ============================================================
+   LECTURA EFICIENTE DE LA HOJA
+   ------------------------------------------------------------
+   Antes, cada guardado, apertura y listado hacía
+   getDataRange().getValues(), que trae TODAS las filas con TODAS
+   las columnas — incluida la C (dataJson), donde vive el permiso
+   completo. Con 200 permisos de 4 KB, eso son ~800 KB que Sheets
+   le entrega al script cada vez que alguien abre el dashboard,
+   solo para leer códigos y fechas. Y crece sin techo con el
+   histórico: el sistema se iba poniendo más lento cada mes.
+   Ahora se lee únicamente lo que se necesita.
+   ============================================================ */
+
+/** Busca la fila de un permiso leyendo SOLO la columna A. Devuelve el número de
+ *  fila (base 1) o -1. Reemplaza al recorrido sobre la hoja completa. */
+function buscarFilaPorCodigo_(sheet, code) {
+  const last = sheet.getLastRow();
+  if (last < 2) return -1;
+  const codigos = sheet.getRange(2, 1, last - 1, 1).getValues();
+  for (let i = 0; i < codigos.length; i++) {
+    if (codigos[i][0] === code) return i + 2; // +2: fila 1 es encabezado, índice base 0
+  }
+  return -1;
+}
+
+/** Trae una fila puntual completa (7 columnas). Se usa solo tras localizarla. */
+function leerFila_(sheet, rowIndex) {
+  return sheet.getRange(rowIndex, 1, 1, 7).getValues()[0];
+}
+
+/* ============================================================
+   BITÁCORA INMUTABLE (hoja "Eventos")
+   ------------------------------------------------------------
+   Regla única y no negociable de esta sección: aquí SOLO se
+   agregan filas. Ninguna función de este archivo modifica ni
+   borra una fila ya escrita en "Eventos". Si algún día alguien
+   necesita "corregir" un evento, la forma correcta es agregar
+   otro evento que lo corrija, no editar el anterior.
+   ============================================================ */
+
+function getEventosSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(EVENTOS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(EVENTOS_SHEET_NAME);
+    sheet.appendRow(['ts', 'permitCode', 'accion', 'resultado', 'detalle', 'opId', 'responsable', 'sitio', 'dataJson']);
+    sheet.setFrozenRows(1);
+    SpreadsheetApp.flush();
+  }
+  return sheet;
+}
+
+/**
+ * Agrega un evento a la bitácora. Se llama SIEMPRE, tanto si la operación se
+ * aplicó como si se rechazó — un intento rechazado de tocar un permiso cerrado
+ * es justo lo que uno querría poder demostrar después.
+ *
+ * accion:    'ABRIR' | 'ACTUALIZAR' | 'CERRAR' | 'ADD_WORKERS' | 'MIGRACION'
+ * resultado: 'APLICADO' | 'RECHAZADO' | 'DUPLICADO'
+ * detalle:   motivo del rechazo o nota corta (texto libre)
+ * dataJson:  el contenido enviado, ya sin firmas (llevan SIGREF) y sin token
+ */
+function registrarEvento_(code, accion, resultado, detalle, opId, responsable, sitio, dataJson) {
+  try {
+    getEventosSheet_().appendRow([
+      new Date(),
+      code || '',
+      accion || '',
+      resultado || '',
+      detalle || '',
+      opId || '',
+      responsable || '',
+      sitio || '',
+      dataJson || ''
+    ]);
+  } catch (err) {
+    // Si la bitácora falla no se tumba la operación del usuario en obra, pero sí
+    // queda en el log de ejecución de Apps Script para poder revisarlo.
+    console.error('No se pudo registrar el evento: ' + err);
+  }
+}
+
+// ===== Firmas guardadas aparte (evita superar el límite de 50.000 =====
+// ===== caracteres por celda de Google Sheets cuando hay muchas firmas) =====
+// En vez de guardar cada firma (imagen base64, ~10.000-30.000 caracteres)
+// dentro del mismo JSON del permiso, se guarda en la hoja "Firmas" y en el
+// JSON principal solo queda una referencia corta tipo "SIGREF:ab12cd34".
+// Esta hoja también es de solo-agregar: una firma guardada nunca se sobrescribe.
+/** Devuelve los números de fila donde `columna` vale exactamente `valor`.
+ *  Usa TextFinder, que resuelve la búsqueda del lado de Google y devuelve solo
+ *  las coincidencias — a diferencia de traerse la columna entera al script,
+ *  que era lo que hacía que todo se fuera poniendo lento a medida que la hoja
+ *  crecía. Devuelve [] si la hoja está vacía. */
+function filasPorValor_(sheet, columna, valor) {
+  const last = sheet.getLastRow();
+  if (last < 2 || !valor) return [];
+  const encontrados = sheet.getRange(2, columna, last - 1, 1)
+    .createTextFinder(String(valor))
+    .matchEntireCell(true)
+    .matchCase(true)
+    .findAll();
+  return encontrados.map(r => r.getRow());
+}
+
+function getFirmasSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Firmas');
+  if (!sheet) {
+    sheet = ss.insertSheet('Firmas');
+    sheet.appendRow(['permitCode', 'sigKey', 'dataUrl', 'updatedAt']);
+    SpreadsheetApp.flush();
+  }
+  return sheet;
+}
+
+// Clave corta y determinística basada en el contenido de la firma (no aleatoria):
+// así, la MISMA firma reenviada (ej. un reintento sin conexión) siempre produce
+// la misma referencia, sin duplicar filas ni romper la detección de reenvíos.
+function sigKeyFromDataUrl_(dataUrl) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, dataUrl);
+  return digest.map(b => ((b < 0 ? b + 256 : b).toString(16)).padStart(2, '0')).join('').substring(0, 12);
+}
+
+// Recorre el objeto a guardar y saca cualquier campo de firma (imagen base64)
+// que encuentre en cualquier nivel, sin importar la forma exacta del permiso
+// (ejecutantes, responsables, cierre, trabajadores, roles, etc.).
+function extraerFirmas_(obj, mapaFirmas) {
+  if (Array.isArray(obj)) {
+    return obj.map(item => extraerFirmas_(item, mapaFirmas));
+  }
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const key in obj) {
+      const val = obj[key];
+      if (typeof val === 'string' && val.indexOf('data:image') === 0 &&
+          key.toLowerCase().indexOf('sig') !== -1) {
+        const sigKey = sigKeyFromDataUrl_(val);
+        mapaFirmas.push({ sigKey: sigKey, dataUrl: val });
+        out[key] = 'SIGREF:' + sigKey;
+      } else {
+        out[key] = extraerFirmas_(val, mapaFirmas);
+      }
+    }
+    return out;
+  }
+  return obj;
+}
+
+// Máximo de caracteres que Google Sheets admite en UNA celda. Si una firma
+// supera esto, la escritura falla y la firma se pierde en silencio (la fila del
+// permiso queda con los nombres pero sin imágenes). Se deja margen bajo el tope
+// real de 50.000 para no quedar al borde.
+const MAX_CHARS_CELDA = 45000;
+
+// Parte una firma larga en trozos que sí quepan en una celda. Cada trozo se
+// guarda en su propia fila, con la clave marcada como "abc123~2/5" (trozo 2 de
+// 5). Una firma que cabe entera se guarda como siempre, con su clave a secas —
+// por eso las firmas ya guardadas antes de este cambio se siguen leyendo bien.
+function trocearFirma_(sigKey, dataUrl) {
+  if (dataUrl.length <= MAX_CHARS_CELDA) return [{ key: sigKey, texto: dataUrl }];
+  const total = Math.ceil(dataUrl.length / MAX_CHARS_CELDA);
+  const trozos = [];
+  for (let i = 0; i < total; i++) {
+    trozos.push({
+      key: sigKey + '~' + (i + 1) + '/' + total,
+      texto: dataUrl.substr(i * MAX_CHARS_CELDA, MAX_CHARS_CELDA)
+    });
+  }
+  return trozos;
+}
+
+// Devuelve la clave base de una fila, sin la marca de trozo: "abc123~2/5" → "abc123".
+function claveBaseFirma_(key) {
+  const pos = String(key).indexOf('~');
+  return pos === -1 ? String(key) : String(key).substring(0, pos);
+}
+
+function guardarFirmas_(code, mapaFirmas) {
+  if (!mapaFirmas.length) return;
+  const sheet = getFirmasSheet_();
+  const last = sheet.getLastRow();
+  // Qué firmas de ESTE permiso ya están guardadas. Antes se recorría la hoja
+  // completa (todas las firmas de todos los permisos) solo para averiguarlo;
+  // ahora se piden únicamente las filas de este código.
+  // Se compara por clave BASE: si una firma ya está guardada en trozos, no debe
+  // volver a escribirse al reenviarse la misma operación.
+  const existentes = {};
+  const filasDelCodigo = filasPorValor_(sheet, 1, code);
+  if (filasDelCodigo.length) {
+    const minR = Math.min.apply(null, filasDelCodigo);
+    const maxR = Math.max.apply(null, filasDelCodigo);
+    const claves = sheet.getRange(minR, 2, maxR - minR + 1, 1).getValues();
+    filasDelCodigo.forEach(r => {
+      existentes[code + '|' + claveBaseFirma_(claves[r - minR][0])] = true;
+    });
+  }
+  const ahora = new Date();
+  const filas = [];
+  mapaFirmas.forEach(f => {
+    if (existentes[code + '|' + f.sigKey]) return; // ya guardada antes
+    trocearFirma_(f.sigKey, f.dataUrl).forEach(t => {
+      filas.push([code, t.key, t.texto, ahora]);
+    });
+  });
+  if (filas.length) {
+    sheet.getRange(last + 1, 1, filas.length, 4).setValues(filas);
+  }
+}
+
+// Hace el proceso inverso al leer: reemplaza cada "SIGREF:xxxx" por la
+// imagen real, buscándola en el mapa de firmas de ese permiso.
+function inyectarFirmas_(obj, mapaPorKey) {
+  if (Array.isArray(obj)) {
+    return obj.map(item => inyectarFirmas_(item, mapaPorKey));
+  }
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const key in obj) {
+      const val = obj[key];
+      if (typeof val === 'string' && val.indexOf('SIGREF:') === 0) {
+        out[key] = mapaPorKey[val.substring(7)] || null;
+      } else {
+        out[key] = inyectarFirmas_(val, mapaPorKey);
+      }
+    }
+    return out;
+  }
+  return obj;
+}
+
+function cargarFirmasPorCodigo_(code) {
+  const sheet = getFirmasSheet_();
+  const mapa = {};
+  // Paso 1: pedir directamente las filas de este permiso, en vez de recorrer
+  // toda la hoja para irlas filtrando.
+  const rows = filasPorValor_(sheet, 1, code);
+  if (!rows.length) return mapa;
+  rows.sort((a, b) => a - b);
+  const minK = rows[0], maxK = rows[rows.length - 1];
+  const clavesRango = sheet.getRange(minK, 2, maxK - minK + 1, 1).getValues();
+  const filas = rows.map(r => ({ row: r, key: clavesRango[r - minK][0] }));
+  // Paso 2: traer los base64 de un solo rango que cubra esas filas. Las firmas
+  // de un mismo permiso se escriben juntas, así que en la práctica el rango es
+  // pequeño. En el peor caso abarca la hoja entera, que es exactamente lo que
+  // hacía antes SIEMPRE — de modo que nunca queda peor que como estaba.
+  const minRow = filas[0].row, maxRow = filas[filas.length - 1].row;
+  const urls = sheet.getRange(minRow, 3, maxRow - minRow + 1, 1).getValues();
+  // Reensambla las firmas que se guardaron partidas en varios trozos (claves
+  // tipo "abc123~2/5"), y deja tal cual las que caben en una sola celda. Los
+  // trozos se ordenan por su número, no por el orden en que aparezcan las filas.
+  const partes = {};
+  filas.forEach(f => {
+    const texto = urls[f.row - minRow][0];
+    const key = String(f.key);
+    const pos = key.indexOf('~');
+    if (pos === -1) { mapa[key] = texto; return; }
+    const base = key.substring(0, pos);
+    const n = parseInt(key.substring(pos + 1).split('/')[0], 10) || 1;
+    if (!partes[base]) partes[base] = [];
+    partes[base].push({ n: n, texto: texto });
+  });
+  for (const base in partes) {
+    partes[base].sort((a, b) => a.n - b.n);
+    mapa[base] = partes[base].map(p => p.texto).join('');
+  }
+  return mapa;
+}
+
+/** ¿Este opId ya se aplicó antes? Se consulta contra la bitácora, que es donde
+ *  queda constancia de la primera vez. Sirve para reconocer un reenvío (mismo
+ *  envío repetido por un reintento de red) y no volver a aplicarlo. */
+function opIdYaAplicado_(opId) {
+  if (!opId) return false;
+  const sheet = getEventosSheet_();
+  // Se piden solo las filas con este opId (columna F), en vez de recorrer la
+  // bitácora entera — que es la hoja que más rápido crece de todas.
+  const rows = filasPorValor_(sheet, 6, opId);
+  for (let i = 0; i < rows.length; i++) {
+    if (sheet.getRange(rows[i], 4).getValue() === 'APLICADO') return true; // col D = resultado
+  }
+  return false;
+}
+
+/* ================= ESCRITURA ================= */
+
+function doPost(e) {
+  const body = JSON.parse(e.postData.contents);
+  if (!checkToken_(body.token)) {
+    // Se registra el intento, pero SIN el contenido enviado: si alguien está
+    // probando tokens al azar, no tiene sentido llenar la bitácora con su basura.
+    registrarEvento_(body.permitCode, 'DESCONOCIDA', 'RECHAZADO', 'Token inválido', '', '', '', '');
+    return jsonOut_({ ok: false, error: 'Token inválido.' });
+  }
+  const code = body.permitCode;
+  if (!code) {
+    return jsonOut_({ ok: false, error: 'permitCode requerido' });
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    // Se localiza la fila leyendo solo la columna A, y después se trae esa fila
+    // puntual. Antes se cargaba la hoja entera (con todos los dataJson) en cada
+    // guardado, incluso cuando el permiso era nuevo y no había nada que buscar.
+    const rowIndex = buscarFilaPorCodigo_(sheet, code);
+    const fila = rowIndex === -1 ? null : leerFila_(sheet, rowIndex);
+
+    // "addWorkers": agrega ejecutantes a un permiso ya abierto SIN reescribir
+    // el registro completo — antes, "Agregar personal" reenviaba TODO el
+    // permiso (collectOpenData() completo), lo que permitía que dos personas
+    // agregando gente al mismo permiso a la vez se pisaran, o que un reintento
+    // del Outbox sobrescribiera con datos viejos si la respuesta original se
+    // había perdido pero el envío sí llegó. Esta acción solo AGREGA, leyendo
+    // el estado más reciente del permiso (no el que el celular tenía cargado),
+    // y es segura de reintentar gracias a opId.
+    if (body.action === 'addWorkers') {
+      if (rowIndex === -1) {
+        registrarEvento_(code, 'ADD_WORKERS', 'RECHAZADO', 'Permiso no encontrado', body.opId, '', '', '');
+        return jsonOut_({ ok: false, error: 'Permiso no encontrado' });
+      }
+      const estadoActual = fila[1];
+      if (estadoActual === 'CERRADO') {
+        registrarEvento_(code, 'ADD_WORKERS', 'RECHAZADO', 'El permiso ya estaba cerrado', body.opId, '', '', '');
+        return jsonOut_({ ok: false, error: 'Este permiso ya fue cerrado, no se puede agregar personal.' });
+      }
+      let registroActual;
+      try { registroActual = JSON.parse(fila[2]); }
+      catch (err) {
+        registrarEvento_(code, 'ADD_WORKERS', 'RECHAZADO', 'JSON del permiso ilegible', body.opId, '', '', '');
+        return jsonOut_({ ok: false, error: 'No se pudo leer el registro actual del permiso.' });
+      }
+      registroActual._appliedOps = registroActual._appliedOps || [];
+      if (body.opId && registroActual._appliedOps.indexOf(body.opId) !== -1) {
+        // Esta MISMA operación ya se aplicó antes (reintento del Outbox u otro) — no se duplica.
+        registrarEvento_(code, 'ADD_WORKERS', 'DUPLICADO', 'opId ya aplicado; no se repite', body.opId, '', '', '');
+        return jsonOut_({ ok: true, permitCode: code });
+      }
+      const mapaFirmasNuevas = [];
+      const nuevasFilasSinFirmas = extraerFirmas_(body.newWorkers || [], mapaFirmasNuevas);
+      registroActual.ejecutantes = (registroActual.ejecutantes || []).concat(nuevasFilasSinFirmas);
+      if (body.opId) {
+        registroActual._appliedOps.push(body.opId);
+        if (registroActual._appliedOps.length > 30) registroActual._appliedOps = registroActual._appliedOps.slice(-30);
+      }
+      guardarFirmas_(code, mapaFirmasNuevas);
+      // La bitácora se escribe ANTES de tocar la proyección: si el script se
+      // quedara sin tiempo justo aquí, preferimos un evento registrado sin
+      // aplicar (detectable y reconstruible) que un cambio aplicado sin rastro.
+      registrarEvento_(code, 'ADD_WORKERS', 'APLICADO', nuevasFilasSinFirmas.length + ' ejecutante(s) agregado(s)',
+                       body.opId, '', '', JSON.stringify(nuevasFilasSinFirmas));
+      sheet.getRange(rowIndex, 3, 1, 2).setValues([[JSON.stringify(registroActual), new Date()]]);
+      return jsonOut_({ ok: true, permitCode: code });
+    }
+
+    // El token NO se guarda: antes el JSON almacenado era el body completo, así
+    // que el token quedaba escrito en cada fila de la hoja y de la bitácora.
+    const cuerpoLimpio = {};
+    for (const k in body) { if (k !== 'token') cuerpoLimpio[k] = body[k]; }
+
+    const mapaFirmas = [];
+    const cuerpoSinFirmas = extraerFirmas_(cuerpoLimpio, mapaFirmas);
+    const json = JSON.stringify(cuerpoSinFirmas);
+    const ahora = new Date();
+    const esCierre = body.status === 'CERRADO';
+
+    if (rowIndex === -1) {
+      // Fila nueva: openedAt se fija aquí, una sola vez.
+      guardarFirmas_(code, mapaFirmas);
+      registrarEvento_(code, esCierre ? 'CERRAR' : 'ABRIR', 'APLICADO', 'Primer registro del permiso',
+                       body.opId, body.responsable || '', body.sitio || '', json);
+      sheet.appendRow([code, body.status || 'ABIERTO', json, ahora, ahora, body.responsable || '', body.sitio || '']);
+      return jsonOut_({ ok: true, permitCode: code });
+    }
+
+    const existingStatus = fila[1];
+    const existingJson = fila[2];
+
+    // El cliente manda firstSave:true únicamente en el primer guardado de un
+    // permiso recién creado. Si en ese momento YA existe una fila con este
+    // código, es una colisión real (dos permisos distintos generaron por azar
+    // el mismo código) — se rechaza para que el cliente genere uno nuevo y
+    // reintente, en vez de mezclar los datos de dos permisos diferentes.
+    if (body.firstSave === true) {
+      // Antes de tratarlo como colisión: ¿es simplemente un REENVÍO de este
+      // mismo guardado? Pasa cuando el envío llegó al servidor pero la respuesta
+      // se perdió por señal intermitente y el cliente reintentó. El opId no
+      // cambia entre reintentos del mismo permiso, así que si ya está aplicado
+      // en la bitácora, esta fila la creó este mismo envío: se confirma ok en
+      // vez de mandar al cliente a generar otro código (lo que duplicaba el
+      // permiso con dos códigos distintos).
+      if (body.opId && opIdYaAplicado_(body.opId)) {
+        registrarEvento_(code, 'ABRIR', 'DUPLICADO', 'Reenvío del mismo guardado inicial (opId ya aplicado)',
+                         body.opId, body.responsable || '', body.sitio || '', '');
+        return jsonOut_({ ok: true, permitCode: code });
+      }
+      registrarEvento_(code, 'ABRIR', 'RECHAZADO', 'Código ya existe (colisión); el cliente genera otro',
+                       body.opId, '', '', '');
+      return jsonOut_({ ok: false, error: 'CODE_COLLISION' });
+    }
+
+    if (existingStatus === 'CERRADO') {
+      // Un permiso cerrado no se puede modificar de NINGUNA forma — ni reabrir
+      // enviando status:'ABIERTO', ni cambiar sus datos. Dos excepciones, ambas
+      // reenvíos del mismo cierre y no errores reales:
+      //   a) mismo opId ya aplicado (el cliente ahora manda opId en el cierre,
+      //      así que un reintento del Outbox se reconoce aunque el JSON difiera
+      //      en algún detalle menor);
+      //   b) JSON idéntico (respaldo para clientes viejos sin opId).
+      let opsAplicadas = [];
+      try { opsAplicadas = (JSON.parse(existingJson)._appliedOps) || []; } catch (err) { /* JSON viejo o ilegible */ }
+      if (body.opId && opsAplicadas.indexOf(body.opId) !== -1) {
+        registrarEvento_(code, 'CERRAR', 'DUPLICADO', 'Reenvío del mismo cierre (opId ya aplicado)', body.opId, '', '', '');
+        return jsonOut_({ ok: true, permitCode: code });
+      }
+      if (existingJson === json && esCierre) {
+        registrarEvento_(code, 'CERRAR', 'DUPLICADO', 'Reenvío del mismo cierre (JSON idéntico)', body.opId, '', '', '');
+        return jsonOut_({ ok: true, permitCode: code });
+      }
+      // Intento real de modificar un permiso cerrado. Se rechaza Y SE GUARDA
+      // lo que se intentó escribir: si alguna vez hay que investigar algo, esta
+      // es la fila que importa.
+      registrarEvento_(code, esCierre ? 'CERRAR' : 'ACTUALIZAR', 'RECHAZADO',
+                       'Intento de modificar un permiso ya CERRADO', body.opId,
+                       body.responsable || '', body.sitio || '', json);
+      return jsonOut_({ ok: false, error: 'Este permiso ya fue cerrado, no se puede modificar.' });
+    }
+
+    // Se arrastran las operaciones ya aplicadas para que el opId del cierre
+    // quede registrado y un reintento posterior se reconozca como duplicado.
+    let opsPrevias = [];
+    try { opsPrevias = (JSON.parse(existingJson)._appliedOps) || []; } catch (err) { /* fila vieja */ }
+    if (body.opId && opsPrevias.indexOf(body.opId) === -1) opsPrevias.push(body.opId);
+    if (opsPrevias.length > 30) opsPrevias = opsPrevias.slice(-30);
+    cuerpoSinFirmas._appliedOps = opsPrevias;
+    const jsonFinal = JSON.stringify(cuerpoSinFirmas);
+
+    guardarFirmas_(code, mapaFirmas);
+    registrarEvento_(code, esCierre ? 'CERRAR' : 'ACTUALIZAR', 'APLICADO', '',
+                     body.opId, body.responsable || '', body.sitio || '', jsonFinal);
+
+    // Solo se actualizan columnas B, C, D (status, dataJson, updatedAt).
+    // La columna E (openedAt) nunca se vuelve a tocar tras la primera vez.
+    sheet.getRange(rowIndex, 2, 1, 3).setValues([[body.status || 'ABIERTO', jsonFinal, ahora]]);
+    // Columnas F/G (responsable, sitio) — solo lectura rápida para el dashboard;
+    // se recalculan en cada guardado por si cambian con "Agregar personal" u otros ajustes.
+    sheet.getRange(rowIndex, 6, 1, 2).setValues([[body.responsable || '', body.sitio || '']]);
+    return jsonOut_({ ok: true, permitCode: code });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ================= LECTURA ================= */
+
+function doGet(e) {
+  if (!checkToken_(e.parameter.token)) {
+    return jsonOut_({ ok: false, error: 'Token inválido.' });
+  }
+  const code = e.parameter.code;
+
+  // Bitácora de un permiso: ?action=history&code=XXX&token=...
+  // No lo usa el portal todavía; sirve para auditar un permiso puntual desde el
+  // navegador sin tener que abrir la hoja de cálculo.
+  if (e.parameter.action === 'history') {
+    if (!code) return jsonOut_({ ok: false, error: 'code requerido' });
+    const hojaEv = getEventosSheet_();
+    const lastEv = hojaEv.getLastRow();
+    if (lastEv < 2) return jsonOut_({ ok: true, permitCode: code, eventos: [] });
+    // Solo A:F — se omite la columna I (dataJson), que es la pesada y que este
+    // listado no muestra. Para ver el contenido de un evento puntual se abre
+    // la hoja "Eventos" directamente.
+    const ev = hojaEv.getRange(2, 1, lastEv - 1, 6).getValues();
+    const eventos = [];
+    for (let i = 0; i < ev.length; i++) {
+      if (ev[i][1] !== code) continue;
+      eventos.push({
+        ts: ev[i][0], accion: ev[i][2], resultado: ev[i][3],
+        detalle: ev[i][4], opId: ev[i][5]
+      });
+    }
+    return jsonOut_({ ok: true, permitCode: code, eventos: eventos });
+  }
+
+  const sheet = getSheet_();
+  const last = sheet.getLastRow();
+
+  if (e.parameter.list === '1') {
+    if (last < 2) return jsonOut_({ ok: true, rows: [] });
+    // Se leen DOS rangos que saltan deliberadamente la columna C (dataJson):
+    // A:B (código, estado) y D:G (fechas, responsable, sitio). El listado no
+    // necesita el contenido del permiso, y esa columna es la que pesa. Antes se
+    // traía completa para todas las filas, en cada refresco del dashboard, por
+    // cada uno de los 5 backends, cada 2 minutos.
+    const n = last - 1;
+    const colAB = sheet.getRange(2, 1, n, 2).getValues(); // permitCode, status
+    const colDG = sheet.getRange(2, 4, n, 4).getValues(); // updatedAt, openedAt, responsable, sitio
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      if (!colAB[i][0]) continue;
+      // Camino rápido: responsable y sitio salen de sus propias columnas.
+      let responsable = colDG[i][2] || '', sitio = colDG[i][3] || '';
+      if (!responsable && !sitio) {
+        // Respaldo solo para filas antiguas guardadas antes de que existieran
+        // estas columnas. Aquí sí se lee el JSON, pero de UNA celda puntual y
+        // solo para esas filas viejas — no para toda la hoja.
+        try {
+          const parsed = JSON.parse(sheet.getRange(i + 2, 3).getValue());
+          responsable = parsed.responsable || '';
+          sitio = parsed.sitio || '';
+        } catch (err) { /* fila sin JSON válido, se ignora */ }
+      }
+      rows.push({
+        permitCode: colAB[i][0],
+        status: colAB[i][1],
+        updatedAt: colDG[i][0],
+        openedAt: colDG[i][1] || colDG[i][0], // filas antiguas sin columna E: se usa updatedAt
+        responsable: responsable,
+        sitio: sitio
+      });
+    }
+    return jsonOut_({ ok: true, rows });
+  }
+
+  if (!code) {
+    return jsonOut_({ ok: false, error: 'code requerido' });
+  }
+  // Se localiza por la columna A y se trae solo la celda del JSON de esa fila.
+  const rowIndex = buscarFilaPorCodigo_(sheet, code);
+  if (rowIndex === -1) return jsonOut_({ ok: false, error: 'Permiso no encontrado' });
+  const raw = sheet.getRange(rowIndex, 3).getValue();
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (err) {
+    return ContentService.createTextOutput(raw).setMimeType(ContentService.MimeType.JSON);
+  }
+  return jsonOut_(inyectarFirmas_(parsed, cargarFirmasPorCodigo_(code)));
+}
+
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ============================================================
+   HERRAMIENTAS DE AUDITORÍA
+   Estas funciones NO se exponen por la web: se ejecutan a mano
+   desde el editor de Apps Script (menú Ejecutar). Nadie con el
+   token puede invocarlas.
+   ============================================================ */
+
+/**
+ * Reconstruye el estado de cada permiso a partir ÚNICAMENTE de la bitácora,
+ * ignorando por completo la hoja "Permisos". Es la función que le da sentido a
+ * todo esto: si la proyección se corrompiera, aquí está la verdad.
+ * Devuelve un objeto { permitCode: {status, dataJson, openedAt, updatedAt} }.
+ */
+function reconstruirDesdeEventos_() {
+  const ev = getEventosSheet_().getDataRange().getValues();
+  const estados = {};
+  for (let i = 1; i < ev.length; i++) {
+    const ts = ev[i][0], code = ev[i][1], accion = ev[i][2], resultado = ev[i][3], dataJson = ev[i][8];
+    if (!code || resultado !== 'APLICADO') continue; // los rechazados no cambian el estado
+    if (!estados[code]) estados[code] = { status: 'ABIERTO', dataJson: '', openedAt: ts, updatedAt: ts };
+    const est = estados[code];
+    est.updatedAt = ts;
+    if (accion === 'ADD_WORKERS') {
+      // Solo agrega ejecutantes sobre lo que ya había.
+      try {
+        const actual = JSON.parse(est.dataJson || '{}');
+        actual.ejecutantes = (actual.ejecutantes || []).concat(JSON.parse(dataJson || '[]'));
+        est.dataJson = JSON.stringify(actual);
+      } catch (err) { /* evento ilegible; se conserva el estado anterior */ }
+    } else if (accion === 'ABRIR' || accion === 'ACTUALIZAR' || accion === 'CERRAR' || accion === 'MIGRACION') {
+      if (dataJson) est.dataJson = dataJson;
+      if (accion === 'CERRAR') est.status = 'CERRADO';
+    }
+  }
+  return estados;
+}
+
+/**
+ * Compara la hoja "Permisos" con lo que dice la bitácora y reporta diferencias.
+ * Ejecútala de vez en cuando (o con un activador semanal). Si una fila de
+ * "Permisos" fue alterada por fuera del portal, aparece aquí.
+ */
+function verificarIntegridad() {
+  const estados = reconstruirDesdeEventos_();
+  const data = getSheet_().getDataRange().getValues();
+  const problemas = [];
+  const vistos = {};
+  for (let i = 1; i < data.length; i++) {
+    const code = data[i][0];
+    if (!code) continue;
+    vistos[code] = true;
+    const esperado = estados[code];
+    if (!esperado) {
+      problemas.push(code + ': existe en "Permisos" pero NO tiene eventos. Fila agregada por fuera del portal.');
+      continue;
+    }
+    if (esperado.status !== data[i][1]) {
+      problemas.push(code + ': estado "' + data[i][1] + '" en la hoja, pero la bitácora dice "' + esperado.status + '".');
+    }
+    if (esperado.dataJson && esperado.dataJson !== data[i][2]) {
+      problemas.push(code + ': el contenido de la fila no coincide con el último evento registrado.');
+    }
+  }
+  for (const code in estados) {
+    if (!vistos[code]) problemas.push(code + ': tiene eventos pero desapareció de "Permisos". Fila borrada.');
+  }
+
+  const resumen = problemas.length
+    ? 'Se encontraron ' + problemas.length + ' diferencia(s):\n\n' + problemas.join('\n')
+    : 'Todo cuadra: la hoja "Permisos" coincide con la bitácora de eventos.';
+  console.log(resumen);
+  if (problemas.length && CORREOS_AVISO.length) {
+    CORREOS_AVISO.forEach(correo => {
+      MailApp.sendEmail(correo, '⚠ Revisión de integridad — Permisos de Espacios Confinados', resumen);
+    });
+  }
+  return resumen;
+}
+
+/**
+ * Reescribe la hoja "Permisos" entera desde la bitácora. Úsala solo si
+ * verificarIntegridad() reportó diferencias y decidiste que la bitácora tiene
+ * la razón. Antes de reescribir, deja una copia de la hoja actual con la fecha,
+ * para no perder nada por si acaso.
+ */
+function reconstruirPermisosDesdeEventos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getSheet_();
+  const sello = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm');
+  sheet.copyTo(ss).setName('Permisos-respaldo-' + sello);
+
+  const estados = reconstruirDesdeEventos_();
+  const filas = [];
+  for (const code in estados) {
+    const est = estados[code];
+    let responsable = '', sitio = '';
+    try {
+      const parsed = JSON.parse(est.dataJson || '{}');
+      responsable = parsed.responsable || '';
+      sitio = parsed.sitio || '';
+    } catch (err) { /* sin JSON legible */ }
+    filas.push([code, est.status, est.dataJson, est.updatedAt, est.openedAt, responsable, sitio]);
+  }
+  sheet.clear();
+  sheet.appendRow(['permitCode', 'status', 'dataJson', 'updatedAt', 'openedAt', 'responsable', 'sitio']);
+  if (filas.length) sheet.getRange(2, 1, filas.length, 7).setValues(filas);
+  SpreadsheetApp.flush();
+  const msg = 'Reconstruidos ' + filas.length + ' permiso(s) desde la bitácora. La hoja anterior quedó como "Permisos-respaldo-' + sello + '".';
+  console.log(msg);
+  return msg;
+}
+
+/**
+ * EJECUTAR UNA SOLA VEZ tras instalar esta versión.
+ * Crea un evento por cada permiso que ya existía antes de que hubiera bitácora,
+ * para que el histórico no arranque vacío. Si detecta que ya hay eventos, no
+ * hace nada — es seguro ejecutarla dos veces por error.
+ */
+function migrarHistorialExistente() {
+  const eventos = getEventosSheet_();
+  if (eventos.getLastRow() > 1) {
+    const msg = 'La bitácora ya tiene eventos; no se migra nada para no duplicar.';
+    console.log(msg);
+    return msg;
+  }
+  const data = getSheet_().getDataRange().getValues();
+  const filas = [];
+  for (let i = 1; i < data.length; i++) {
+    const code = data[i][0];
+    if (!code) continue;
+    const openedAt = data[i][4] || data[i][3] || new Date();
+    const updatedAt = data[i][3] || openedAt;
+    // Evento de apertura, con la fecha real que ya tenías registrada.
+    filas.push([openedAt, code, 'MIGRACION', 'APLICADO',
+                'Permiso existente antes de la bitácora', '', data[i][5] || '', data[i][6] || '', data[i][2]]);
+    // Si ya estaba cerrado, un segundo evento de cierre con la última fecha conocida.
+    if (data[i][1] === 'CERRADO') {
+      filas.push([updatedAt, code, 'CERRAR', 'APLICADO',
+                  'Cierre existente antes de la bitácora', '', data[i][5] || '', data[i][6] || '', data[i][2]]);
+    }
+  }
+  if (filas.length) {
+    eventos.getRange(2, 1, filas.length, 9).setValues(filas);
+    SpreadsheetApp.flush();
+  }
+  const msg = 'Migrados ' + filas.length + ' evento(s) desde ' + (data.length - 1) + ' permiso(s) existentes.';
+  console.log(msg);
+  return msg;
+}
+
+// ===== Recordatorio automático de permisos abiertos =====
+// Configura un trigger de tiempo (menú del reloj ⏰ en el editor de Apps Script →
+// Activadores → Añadir activador → función "recordatorioPermisosAbiertos" →
+// basado en tiempo → cada 1 hora).
+const HORAS_ALERTA = 8;
+const CORREOS_AVISO = ['pon-aqui-el-correo@indimon.com']; // agrega los que necesites, separados por coma
+
+function recordatorioPermisosAbiertos() {
+  const sheet = getSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return;
+  // Solo A:B y D:E. Este trigger corre cada hora en cada uno de los 5 backends;
+  // leer la hoja completa con todos los dataJson 120 veces al día, para revisar
+  // fechas, era gasto puro de cuota de ejecución.
+  const colAB = sheet.getRange(2, 1, last - 1, 2).getValues();
+  const colDE = sheet.getRange(2, 4, last - 1, 2).getValues();
+  const ahora = new Date();
+  const pendientes = [];
+  for (let i = 0; i < colAB.length; i++) {
+    if (colAB[i][1] !== 'ABIERTO') continue;
+    const abierto = new Date(colDE[i][1] || colDE[i][0]);
+    const horas = (ahora - abierto) / 36e5;
+    if (horas >= HORAS_ALERTA) {
+      pendientes.push(colAB[i][0] + ' — abierto hace ' + horas.toFixed(1) + ' h');
+    }
+  }
+  if (pendientes.length === 0) return; // nada que avisar
+  const cuerpo = 'Estos permisos de Espacios Confinados (SSTA-F-117) llevan abiertos '
+    + HORAS_ALERTA + ' horas o más sin cerrarse:\n\n' + pendientes.join('\n');
+  CORREOS_AVISO.forEach(correo => {
+    MailApp.sendEmail(correo, 'Permisos de Espacios Confinados pendientes de cierre', cuerpo);
+  });
+}
