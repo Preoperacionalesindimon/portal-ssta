@@ -151,7 +151,14 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
     border-bottom:1px solid var(--line-soft);
   }
   .grid{padding:12px 14px;display:grid;gap:10px;}
-  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+  /* stretch + control pegado abajo: antes, cuando una etiqueta ocupaba dos
+     líneas ("Bordes desprotegidos, techos, laderas…") y la de al lado una sola,
+     sus controles quedaban a distinta altura y la fila se veía descuadrada. */
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch;}
+  .row > .field > input,
+  .row > .field > select,
+  .row > .field > textarea,
+  .row > .field > .yn-opts{margin-top:auto;}
   /* Fecha/hora de inicio y culminación: dos columnas iguales, sin importar
      que el campo de fecha sea más ancho que el de hora. */
   .fechas-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
@@ -483,6 +490,17 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
         <div class="field"><label>Área(s)</label><input type="text" id="areaAlt" placeholder="Área donde se realiza el trabajo"></div>
       </div>
       <div class="field"><label>Descripción de la actividad</label><textarea id="descripcionAlt" placeholder="Describa la actividad a realizar"></textarea></div>
+      <!-- Mismo bloque que los otros cuatro permisos: alturas era el único que
+           no preguntaba si el trabajo requiere además otro permiso. -->
+      <div style="margin-top:14px;">
+        <label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">¿Requiere un permiso adicional?</label>
+        <div class="radio-row">
+          <label><input type="radio" name="permAdicional" value="No" checked> No</label>
+          <label><input type="radio" name="permAdicional" value="Si"> Sí</label>
+        </div>
+        <div id="cualPermisoSel" style="margin-top:8px;"></div>
+        <input type="hidden" id="cualPermiso">
+      </div>
     </div>
   </div>
 
@@ -652,6 +670,14 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
               <select id="motivoCierre"><option value="">Seleccione…</option><option>Actividad Finalizada</option><option>Actividad Cancelada</option><option>Evento no deseado</option><option>Lluvia / Tormenta</option><option>Condiciones y/o actos inseguros</option></select>
             </div>
           </div>
+          <!-- Mismas cuatro preguntas de cierre que los otros cuatro permisos:
+               alturas era el único que cerraba sin verificarlas. -->
+          <div style="margin-top:14px;">
+            <div class="close-q"><p>¿Se aplicaron las tres primeras "S" en el área antes de entregar el equipo?</p><div class="radio-row"><label><input type="radio" name="q1" value="Si"> Sí</label><label><input type="radio" name="q1" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿El personal que se encontraba interviniendo el equipo fue retirado?</p><div class="radio-row"><label><input type="radio" name="q2" value="Si"> Sí</label><label><input type="radio" name="q2" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿Se han inspeccionado y almacenado correctamente los EPP utilizados?</p><div class="radio-row"><label><input type="radio" name="q3" value="Si"> Sí</label><label><input type="radio" name="q3" value="No"> No</label></div></div>
+            <div class="close-q"><p>¿Se han recogido y almacenado correctamente las herramientas usadas?</p><div class="radio-row"><label><input type="radio" name="q4" value="Si"> Sí</label><label><input type="radio" name="q4" value="No"> No</label></div></div>
+          </div>
           <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
             <div class="sig-block">
               <h5>Coordinador trabajo en alturas — VoBo antes de archivar</h5>
@@ -660,7 +686,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
               <div class="sig-actions"><button type="button" data-clear="padCoordCierre">Borrar firma</button><button type="button" data-undo="padCoordCierre">Deshacer trazo</button><span class="sig-status" id="statusCoordCierre">Sin firmar</span></div>
             </div>
             <div class="sig-block">
-              <h5>Supervisor de proyecto</h5>
+              <h5>Trabajador autorizado responsable del trabajo</h5>
               <div class="field" style="margin-bottom:10px;"><label>Nombre completo / Cédula</label><input type="text" id="supCierre" placeholder="Nombre completo (escribe para buscar) — Cédula"></div>
               <canvas class="pad" id="padSupCierre"></canvas>
               <div class="sig-actions"><button type="button" data-clear="padSupCierre">Borrar firma</button><button type="button" data-undo="padSupCierre">Deshacer trazo</button><span class="sig-status" id="statusSupCierre">Sin firmar</span></div>
@@ -827,9 +853,10 @@ const cfg = {
   // campo combinado "Nombre / Cédula"), en vez del par genérico de los otros 4 permisos.
   closeSigners: [
     { idPrefix:'coordCierre', padKey:'padCoordCierre', field:'coordCierre', label:'Coordinador trabajo en alturas', combined:true },
-    { idPrefix:'supCierre',   padKey:'padSupCierre',   field:'supCierre',   label:'Supervisor de proyecto',        combined:true }
+    { idPrefix:'supCierre',   padKey:'padSupCierre',   field:'supCierre',   label:'Trabajador autorizado responsable del trabajo', combined:true }
   ],
-  closeQuestions: false, // Alturas no tiene las 4 preguntas de cierre que sí tienen los otros 4
+  cualPermisoLabel: '¿Cuál permiso adicional? (sección 2)',
+  closeQuestions: true, // Unificado con los otros cuatro permisos
 
   // Campos propios de alturas que también deben traer el personal registrado,
   // para que el nombre quede escrito igual que en el resto del permiso.
@@ -838,6 +865,7 @@ const cfg = {
   ],
 
   extraOnInitRender(){
+    initSelCualPermiso();
     buildEpccTable();
     ['calc-at','calc-rc','calc-dcl','calc-da','calc-amt'].forEach(id=>{
       const el = document.getElementById(id);
@@ -867,6 +895,11 @@ const cfg = {
     };
   },
   extraSetFieldValues(vals){
+    initSelCualPermiso();
+    if (selCualPermiso) {
+      selCualPermiso.set(vals.cualPermiso || '');
+      document.getElementById('cualPermiso').value = selCualPermiso.get();
+    }
     applyEpccAlt(vals.epcc);
     document.getElementById('calc-at').value = vals.calcAt || '0.00';
     document.getElementById('calc-rc').value = vals.calcRc || '1.00';
@@ -889,6 +922,21 @@ const cfg = {
 };
 
 PermisoCore.init(cfg);
+
+/* ── Permisos adicionales (mismo componente que los otros permisos) ──
+   #cualPermiso queda oculto con el texto combinado, así permiso-core.js lo lee
+   y lo valida sin cambios. */
+let selCualPermiso = null;
+function initSelCualPermiso(){
+  const cont = document.getElementById('cualPermisoSel');
+  if(!cont || selCualPermiso) return;
+  const oculto = document.getElementById('cualPermiso');
+  selCualPermiso = SeleccionMultiple.crear(cont, {
+    opciones: ['Trabajo en caliente','Espacios confinados','Izaje de cargas','Trabajo eléctrico','Bloqueo y etiquetado (LOTO)'],
+    placeholderLibre: 'Otro permiso (escribe aquí)…',
+    onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
 </script>
 </body>
 </html>

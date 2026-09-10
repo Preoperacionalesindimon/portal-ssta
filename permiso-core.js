@@ -884,10 +884,12 @@ const PermisoCore = (function () {
     if (!cierreFecha.value) missing.push({ msg: 'Fecha real del cierre', el: cierreFecha });
     if (!cierreHora.value) missing.push({ msg: 'Hora de cierre', el: cierreHora });
     if (!motivo.value) missing.push({ msg: 'Motivo del cierre', el: motivo });
-    // cfg.closeQuestions === false: para permisos (como Alturas) que no
-    // tienen estas 4 preguntas puntuales en su sección de cierre — sin este
-    // guard, se bloqueaba el guardado pidiendo respuestas a preguntas que
-    // ni siquiera existían en la pantalla.
+    // cfg.closeQuestions === false: para un permiso que no tenga estas 4
+    // preguntas en su sección de cierre — sin este guard se bloquearía el
+    // guardado pidiendo respuestas a preguntas que ni siquiera están en
+    // pantalla. Hoy los cinco permisos las tienen (alturas era la excepción
+    // y se unificó), pero el guard se conserva por si se agrega un formato
+    // nuevo con otra estructura de cierre.
     if (cfg.closeQuestions !== false) {
       ['q1', 'q2', 'q3', 'q4'].forEach((q, i) => {
         if (!document.querySelector(`input[name=${q}]:checked`)) {
