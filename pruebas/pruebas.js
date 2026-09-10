@@ -164,6 +164,19 @@ grupo('Permisos de trabajo', () => {
   ok('las escrituras quedan en la bitácora',
      core.includes('registrarEvento_'));
 
+  // Regresión: el backend llegó a guardar firstSave y opId DENTRO del permiso.
+  // Como el panel de lectura de gases descarga el permiso y lo reenvía, esos
+  // campos volvían al servidor, que lo leía como un reintento del guardado
+  // inicial: respondía ok y descartaba el cambio. Las lecturas se perdían y en
+  // pantalla decía "guardado". En la bitácora quedaba como ABRIR/DUPLICADO.
+  ok('el backend NO guarda firstSave ni opId dentro del permiso',
+     /k === 'token' \|\| k === 'firstSave' \|\| k === 'opId'/.test(core),
+     'Sin esto, cualquier reenvío de un permiso descargado se descarta en silencio.');
+
+  ok('el navegador los descarta al descargar un permiso',
+     front.includes('delete data.firstSave') && front.includes('delete data.opId'),
+     'Protege a los permisos guardados antes del arreglo del backend.');
+
   ok('las búsquedas en las hojas son dirigidas, no recorridos completos',
      core.includes('createTextFinder'),
      'Sin esto, guardar se vuelve más lento a medida que crecen las hojas.');

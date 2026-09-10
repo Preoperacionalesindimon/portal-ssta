@@ -441,10 +441,20 @@ function doPost(e) {
       return jsonOut_({ ok: true, permitCode: code });
     }
 
-    // El token NO se guarda: antes el JSON almacenado era el body completo, así
-    // que el token quedaba escrito en cada fila de la hoja y de la bitácora.
+    // No se guardan token, firstSave ni opId: son datos DEL ENVÍO, no del
+    // permiso.
+    //
+    // Guardarlos causó un fallo serio: el panel de lectura de gases descarga el
+    // permiso y lo reenvía con la lectura nueva, así que arrastraba de vuelta el
+    // firstSave:true y el opId del guardado original. El servidor lo leía como
+    // "reintento del mismo envío inicial", respondía ok y NO escribía nada — la
+    // lectura se perdía y el usuario veía "guardado" igual. Lo mismo le pasaba a
+    // cualquier reenvío de un permiso ya descargado.
     const cuerpoLimpio = {};
-    for (const k in body) { if (k !== 'token') cuerpoLimpio[k] = body[k]; }
+    for (const k in body) {
+      if (k === 'token' || k === 'firstSave' || k === 'opId') continue;
+      cuerpoLimpio[k] = body[k];
+    }
 
     const mapaFirmas = [];
     const cuerpoSinFirmas = extraerFirmas_(cuerpoLimpio, mapaFirmas);

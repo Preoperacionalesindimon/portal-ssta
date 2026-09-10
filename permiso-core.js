@@ -642,6 +642,15 @@ const PermisoCore = (function () {
         alert(data.error || 'Permiso no encontrado');
         return null;
       }
+      // firstSave y opId describen el ENVÍO que creó el permiso, no el permiso.
+      // Los backends viejos los dejaron guardados dentro del JSON, así que al
+      // descargar un permiso vienen de vuelta; si luego se reenvía (por ejemplo
+      // al registrar una lectura de gases), el servidor lo toma por un reintento
+      // del guardado inicial, responde ok y descarta el cambio en silencio.
+      // Se quitan aquí para que los permisos ya guardados también queden a salvo,
+      // sin depender de volver a desplegar el backend.
+      delete data.firstSave;
+      delete data.opId;
       return data;
     } catch (err) {
       alert('No se pudo conectar con el backend. Verifique su conexión e intente de nuevo.');
