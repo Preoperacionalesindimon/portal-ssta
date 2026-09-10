@@ -61,7 +61,6 @@
   <div class="tabs">
     <div class="tab active" id="tabAbiertos" data-tab="abiertos">Abiertos <span class="count" id="countAbiertos"></span></div>
     <div class="tab" id="tabCerrados" data-tab="cerrados">Histórico cerrados <span class="count" id="countCerrados"></span></div>
-    <div class="tab" id="tabEpp" data-tab="epp">EPP por reponer <span class="count" id="countEpp"></span></div>
   </div>
 
   <div class="searchbar">
@@ -153,7 +152,6 @@ async function cargar(){
       });
     }
   });
-  await cargarEpp();
   abiertos.sort((a,b)=>(horasDesde(a.fechaApertura)||0) < (horasDesde(b.fechaApertura)||0) ? 1 : -1);
   cerrados.sort((a,b)=> new Date(b.fechaCierre||0) - new Date(a.fechaCierre||0));
 

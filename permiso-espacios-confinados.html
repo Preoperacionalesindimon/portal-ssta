@@ -184,6 +184,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         <div class="file-input-wrap">
           <input type="text" id="readingCodeInput" placeholder="Ej. PT-20260715-4821" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
           <button class="btn-secondary" id="loadReadingBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Cargar permiso y registrar lectura</button>
+          <button class="btn-secondary" id="listOpenForReadingBtn" type="button" style="margin-top:8px;width:100%;color:var(--steel);border-color:var(--line);">Ver permisos abiertos</button>
+          <div id="openListForReading" style="margin-top:10px;text-align:left;font-size:12.5px;"></div>
         </div>
       </div>
 
@@ -250,7 +252,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         </div>
         <div class="field" style="margin-top:6px;"><label>Actividad a realizar</label><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
         <div class="grid2" style="margin-top:6px;">
-          <div class="field"><label>Herramientas y/o equipos a utilizar</label><input type="text" id="herramientas" placeholder="Llaves, destornilladores, alicates, bisturí, taladro, pulidora, martillos, flexómetro, nivel, otros"></div>
+          <div class="field"><label>Herramientas y/o equipos a utilizar</label><div id="herramientasSel"></div><input type="hidden" id="herramientas"></div>
           <div class="field"><label>¿Qué gases detecta el equipo de medición?</label><input type="text" id="gasesDetecta" placeholder="Oxígeno, LEL, H2S, CO, Metano, Cloro…"></div>
         </div>
         <div class="grid3" style="margin-top:6px;">
@@ -260,7 +262,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
           <div class="field"><label>¿Requiere un permiso adicional?</label>
             <div class="radio-row"><label><input type="radio" name="permAdicional" value="No" checked> No</label><label><input type="radio" name="permAdicional" value="Si"> Sí</label></div>
           </div>
-          <div class="field"><label>¿Cuál?</label><input type="text" id="cualPermiso" placeholder="Alturas, trabajo en caliente, otro…"></div>
+          <div class="field"><label>¿Cuál?</label><div id="cualPermisoSel" style="margin-top:8px;"></div><input type="hidden" id="cualPermiso"></div>
         </div>
       </div>
     </div>
@@ -416,7 +418,7 @@ const eppData = [
   "Fullface","Equipo de suministro de aire","Escafandra","Línea de guía","Compresor","Equipo de rescate",
   "Camilla y botiquín de primeros auxilios"
 ];
-const gasPhases = ['Preingreso','Por difusión','Estratificada'];
+const gasPhases = ['Lectura preingreso','Lectura durante el trabajo'];
 const gasTypes = [
   {key:'oxigeno', label:'Oxígeno', unidad:'%', min:19.5, max:23.5},
   {key:'lel', label:'Inflamabilidad LEL', unidad:'%', min:0, max:9.99},
@@ -433,6 +435,7 @@ function evaluarGas(gas, valor){
 
 /* ================= TABLA DE MEDICIÓN DE GASES (propia de este tipo) ================= */
 function renderGasTable(container){
+  gasContainerActivo = container;
   container.innerHTML = `
     <div class="check-cat" style="margin-bottom:12px;">
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px;">
@@ -441,70 +444,79 @@ function renderGasTable(container){
       </div>
       <div class="grid2">
         <div class="field"><label>Fase de la lectura</label>
-          <select id="gasFaseInput" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
+          <select class="gasFaseInput" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;">
             ${gasPhases.map(p=>`<option>${p}</option>`).join('')}
           </select>
         </div>
-        <div class="field"><label>Hora de la lectura</label><input type="time" id="gasHoraInput"></div>
+        <div class="field"><label>Hora de la lectura</label><input type="time" class="gasHoraInput"></div>
       </div>
-      <div id="gasInputsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;"></div>
-      <div id="gasAlertBanner" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;background:#fbeaea;color:#a1281c;font-size:12.5px;font-weight:700;border:1px solid #e3b3ac;">
+      <div class="gasInputsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;"></div>
+      <div class="gasAlertBanner" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;background:#fbeaea;color:#a1281c;font-size:12.5px;font-weight:700;border:1px solid #e3b3ac;">
         ⚠ Uno o más valores están fuera de rango — no autorizar el ingreso / evacuar si ya se está trabajando.
       </div>
-      <button type="button" id="btnAddLectura" class="btn btn-secondary" style="margin-top:10px;">+ Registrar lectura</button>
+      <button type="button" class="btnAddLectura btn btn-secondary" style="margin-top:10px;">+ Registrar lectura</button>
     </div>
-    <div id="gasLog"></div>
+    <div class="gasLog"></div>
     <div class="radio-row" style="margin-top:8px;"><label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-right:8px;">¿Ventilación forzada instalada?</label>
       <label><input type="radio" name="ventForzada" value="Si"> Sí</label><label><input type="radio" name="ventForzada" value="No" checked> No</label>
-      <select id="tipoVentilacion" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;"><option value="">Tipo de ventilación…</option><option>Positiva</option><option>Negativa</option><option>Mixta</option><option>Natural (airear)</option></select></div>`;
+      <select class="tipoVentilacion" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;"><option value="">Tipo de ventilación…</option><option>Positiva</option><option>Negativa</option><option>Mixta</option><option>Natural (airear)</option></select></div>`;
 
-  const grid = document.getElementById('gasInputsGrid');
+  const grid = container.querySelector('.gasInputsGrid');
   grid.innerHTML = gasTypes.map(g=>`
-    <div class="field" id="gasField_${g.key}" style="border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;transition:.15s;">
+    <div class="field" data-gas-field="${g.key}" style="border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;transition:.15s;">
       <label style="margin-bottom:2px;">${g.label} <span style="font-weight:400;color:var(--muted);">(${g.unidad})</span></label>
-      <input type="number" step="0.01" inputmode="decimal" id="gasVal_${g.key}" placeholder="0.0">
+      <input type="number" step="0.01" inputmode="decimal" data-gas-val="${g.key}" placeholder="0.0">
       <div style="font-size:10.5px;color:var(--muted);margin-top:3px;">Rango seguro: ${g.min} – ${g.max} ${g.unidad}</div>
     </div>`).join('');
 
   function evaluarEnVivo(){
     let hayAlerta = false;
     gasTypes.forEach(g=>{
-      const inp = document.getElementById('gasVal_'+g.key);
-      const field = document.getElementById('gasField_'+g.key);
+      const inp = container.querySelector('[data-gas-val="'+g.key+'"]');
+      const field = container.querySelector('[data-gas-field="'+g.key+'"]');
       const estado = evaluarGas(g, inp.value);
       field.style.borderColor = estado==='ok' ? 'var(--ok)' : estado==='alerta' ? '#c0392b' : 'var(--line)';
       field.style.background = estado==='ok' ? 'rgba(29,122,76,.06)' : estado==='alerta' ? 'rgba(192,57,43,.07)' : '';
       if(estado==='alerta') hayAlerta = true;
     });
-    document.getElementById('gasAlertBanner').style.display = hayAlerta ? 'block' : 'none';
+    container.querySelector('.gasAlertBanner').style.display = hayAlerta ? 'block' : 'none';
   }
   grid.addEventListener('input', evaluarEnVivo);
 
-  document.getElementById('btnAddLectura').addEventListener('click', ()=>{
+  container.querySelector('.btnAddLectura').addEventListener('click', ()=>{
     const valores = {};
     let algunValor = false;
     gasTypes.forEach(g=>{
-      const v = document.getElementById('gasVal_'+g.key).value;
+      const v = container.querySelector('[data-gas-val="'+g.key+'"]').value;
       valores[g.key] = v==='' ? null : parseFloat(v);
       if(v!=='') algunValor = true;
     });
     if(!algunValor){ alert('Ingrese al menos un valor de gas antes de registrar la lectura.'); return; }
     const lectura = {
-      fase: document.getElementById('gasFaseInput').value,
-      hora: document.getElementById('gasHoraInput').value || new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
+      fase: container.querySelector('.gasFaseInput').value,
+      hora: container.querySelector('.gasHoraInput').value || new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
       fecha: new Date().toISOString(),
       valores
     };
     gasState.lecturas.push(lectura);
     renderGasLog();
-    gasTypes.forEach(g=>{ document.getElementById('gasVal_'+g.key).value=''; });
+    gasTypes.forEach(g=>{ container.querySelector('[data-gas-val="'+g.key+'"]').value=''; });
     evaluarEnVivo();
   });
   renderGasLog();
 }
 
+// Se recuerda cuál es el último contenedor donde se dibujó la tabla, para que
+// renderGasLog() actualice ese y no otro. Antes todo iba por id y, como la
+// tabla se dibuja DOS veces (en el formulario y en el panel de lectura rápida),
+// los ids quedaban duplicados: el navegador siempre encontraba los del primero,
+// así que el panel rápido leía campos vacíos y su botón no hacía nada — las
+// lecturas que se agregaban ahí simplemente no se guardaban.
+let gasContainerActivo = null;
+
 function renderGasLog(){
-  const log = document.getElementById('gasLog'); if(!log) return;
+  const log = gasContainerActivo ? gasContainerActivo.querySelector('.gasLog') : null;
+  if(!log) return;
   if(!gasState.lecturas.length){ log.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aún no hay lecturas registradas.</div>`; return; }
   log.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px;">Lecturas registradas (${gasState.lecturas.length})</div>` +
     gasState.lecturas.slice().reverse().map((l, revIdx)=>{
@@ -535,14 +547,19 @@ function renderGasLog(){
 }
 
 function collectGasState(){
-  return { lecturas: gasState.lecturas, ventForzada:(document.querySelector('input[name=ventForzada]:checked')||{}).value||'No', tipoVentilacion:(document.getElementById('tipoVentilacion')||{}).value||'' };
+  const c = gasContainerActivo || document;
+  const vent = c.querySelector('input[name=ventForzada]:checked');
+  const tipo = c.querySelector('.tipoVentilacion');
+  return { lecturas: gasState.lecturas, ventForzada: (vent||{}).value||'No', tipoVentilacion: (tipo||{}).value||'' };
 }
 function restoreGasState(data){
   if(!data) return;
   gasState.lecturas = data.lecturas || [];
   renderGasLog();
-  if(data.ventForzada){ const r=document.querySelector(`input[name=ventForzada][value="${data.ventForzada}"]`); if(r) r.checked=true; }
-  if(data.tipoVentilacion && document.getElementById('tipoVentilacion')) document.getElementById('tipoVentilacion').value = data.tipoVentilacion;
+  const c = gasContainerActivo || document;
+  if(data.ventForzada){ const r=c.querySelector(`input[name=ventForzada][value="${data.ventForzada}"]`); if(r) r.checked=true; }
+  const tipo = c.querySelector('.tipoVentilacion');
+  if(data.tipoVentilacion && tipo) tipo.value = data.tipoVentilacion;
 }
 
 /* ================= EPP (checkboxes, no reusa el toggle genérico) ================= */
@@ -602,10 +619,23 @@ const cfg = {
   dateRange: { desdeFecha:'desdeFecha', desdeHora:'desdeHora', hastaFecha:'hastaFecha', hastaHora:'hastaHora', sectionLabel:'sección 2' },
 
   extraOnInitRender(){
+    initSel_herramientas();
+    initSelCualPermiso();
     renderGasTable(document.getElementById('gasTableContainer'));
     renderEpp(document.getElementById('eppContainer'));
   },
   extraSetFieldValues(vals){
+    initSel_herramientas();
+    if (sel_herramientas) {
+      sel_herramientas.set(vals.herramientas || '');
+      document.getElementById('herramientas').value = sel_herramientas.get();
+    }
+    // Fichas de permisos adicionales (ver initSelCualPermiso más abajo)
+    initSelCualPermiso();
+    if (selCualPermiso) {
+      selCualPermiso.set(vals.cualPermiso || '');
+      document.getElementById('cualPermiso').value = selCualPermiso.get();
+    }
     document.getElementById('herramientas').value = vals.herramientas || '';
     document.getElementById('gasesDetecta').value = vals.gasesDetecta || '';
     document.querySelectorAll('input[name=cuentaPlaneacion]').forEach(r=>{ r.checked = (r.value===vals.cuentaPlaneacion); });
@@ -647,6 +677,18 @@ document.getElementById('loadReadingBtn').addEventListener('click', async ()=>{
   renderGasTable(document.getElementById('gasTableContainerQuick'));
   restoreGasState(data.gases);
 });
+// Antes había que saberse el código de memoria o buscarlo en otra pantalla para
+// registrar una lectura. Se reusa la misma lista de abiertos de los otros
+// botones, en vez de duplicar la consulta.
+document.getElementById('listOpenForReadingBtn').addEventListener('click', async ()=>{
+  const listEl = document.getElementById('openListForReading');
+  listEl.innerHTML = 'Buscando…';
+  const rows = await PermisoCore.fetchOpenList();
+  PermisoCore.renderOpenList(listEl, rows, (code)=>{
+    document.getElementById('readingCodeInput').value = code;
+    document.getElementById('loadReadingBtn').click();
+  });
+});
 document.getElementById('readingBackBtn').addEventListener('click', ()=>{
   document.getElementById('readingApp').style.display='none';
   document.getElementById('landing').style.display='block';
@@ -667,6 +709,37 @@ document.getElementById('readingSaveBtn').addEventListener('click', async ()=>{
     statusEl.textContent = res.error || 'No se pudo guardar. Verifique su conexión e intente de nuevo.';
   }
 });
+
+/* ── Permisos adicionales: fichas en vez de escribir a mano ──
+   El campo #cualPermiso sigue existiendo (oculto) con el texto combinado, así
+   que permiso-core.js lo lee y lo valida igual que antes, sin cambios, y lo ya
+   guardado en la hoja se sigue leyendo tal cual. */
+let selCualPermiso = null;
+function initSelCualPermiso(){
+  const cont = document.getElementById('cualPermisoSel');
+  if(!cont || selCualPermiso) return;
+  const oculto = document.getElementById('cualPermiso');
+  selCualPermiso = SeleccionMultiple.crear(cont, {
+    opciones: ['Trabajo en alturas', 'Trabajo en caliente', 'Izaje de cargas', 'Trabajo eléctrico', 'Bloqueo y etiquetado (LOTO)'],
+    placeholderLibre: 'Otro permiso (escribe aquí)…',
+    onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
+
+/* ── Herramientas y/o equipos a utilizar: fichas + campo libre ──
+   Se conserva #herramientas oculto con el texto combinado, para que lo que ya está
+   guardado en la hoja se siga leyendo igual y el resto del código no cambie. */
+let sel_herramientas = null;
+function initSel_herramientas(){
+  const cont = document.getElementById('herramientasSel');
+  if(!cont || sel_herramientas) return;
+  const oculto = document.getElementById('herramientas');
+  sel_herramientas = SeleccionMultiple.crear(cont, {
+    opciones: ['Llaves', 'Destornilladores', 'Alicates', 'Bisturí', 'Taladro', 'Pulidora', 'Martillo', 'Flexómetro', 'Nivel', 'Extensión eléctrica', 'Andamio', 'Escalera'],
+    placeholderLibre: 'Otras herramientas o equipos…',
+    onChange: ()=>{ oculto.value = sel_herramientas.get(); }
+  });
+}
 </script>
 </body>
 </html>

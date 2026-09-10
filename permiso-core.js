@@ -1537,7 +1537,50 @@ const PermisoCore = (function () {
       DraftStore.save(draftKeyClose(permitCode), collectCloseData());
     }, 1200);
     wireEvents();
+    conectarPersonalACamposComunes();
     if (new URLSearchParams(location.search).get('debug') === '1') initDebugPanel_();
+  }
+
+  /* Conecta la base de personal a los campos donde antes había que escribir el
+     nombre completo a mano: responsable del trabajo y los firmantes del cierre.
+     Es la misma lista que ya usan los ejecutantes, así que los nombres quedan
+     escritos igual en todo el permiso — antes el mismo trabajador podía aparecer
+     de tres formas distintas según quién lo escribiera. */
+  function conectarPersonalACamposComunes() {
+    const responsable = $('responsable');
+    if (responsable) {
+      attachPersonalAutocomplete(responsable, (p) => { responsable.value = p.nombre; });
+    }
+    const signers = cfg.closeSigners || [
+      { idPrefix: 'cierre1', combined: false },
+      { idPrefix: 'cierre2', combined: false }
+    ];
+    signers.forEach((s) => {
+      if (s.combined) {
+        // Campo único "Nombre — Cédula": se rellenan los dos de una vez.
+        const el = $(s.idPrefix);
+        if (el) attachPersonalAutocomplete(el, (p) => { el.value = p.nombre + ' — ' + p.cedula; });
+      } else {
+        const nom = $(s.idPrefix + 'nombre');
+        if (!nom) return;
+        attachPersonalAutocomplete(nom, (p) => {
+          nom.value = p.nombre;
+          const cc = $(s.idPrefix + 'cc'); if (cc) cc.value = p.cedula;
+          const cargo = $(s.idPrefix + 'cargo'); if (cargo && !cargo.value) cargo.value = p.cargo || '';
+        });
+      }
+    });
+    // Campos propios de un tipo de permiso (ej. el inspector de accesos en
+    // alturas): cada página los declara en cfg.personalFields.
+    (cfg.personalFields || []).forEach((f) => {
+      const nom = $(f.nombre);
+      if (!nom) return;
+      attachPersonalAutocomplete(nom, (p) => {
+        nom.value = p.nombre;
+        if (f.cc && $(f.cc)) $(f.cc).value = p.cedula;
+        if (f.cargo && $(f.cargo)) $(f.cargo).value = p.cargo || '';
+      });
+    });
   }
 
   // ================= PANEL DE DIAGNÓSTICO (solo con ?debug=1 en la URL) =================
@@ -1606,6 +1649,10 @@ const PermisoCore = (function () {
     // genérico open/close.
     getWebAppUrl,
     sendToSheet,
-    fetchFromSheet
+    fetchFromSheet,
+    // La lista de permisos abiertos también se reusa desde esas pantallas
+    // propias, para no duplicar la consulta ni el formato de la lista.
+    fetchOpenList,
+    renderOpenList
   };
 })();

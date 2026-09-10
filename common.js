@@ -280,7 +280,19 @@ const Outbox = {
               Outbox._avisarFallidoDefinitivo(item, json.error);
             }
           }
-        } catch (e) { /* sigue sin señal; se reintenta después, sin contar como intento fallido */ }
+        } catch (e) {
+          // No hubo respuesta. Puede ser que no haya señal… o que el envío SÍ
+          // llegara y se perdiera la respuesta de vuelta: en ese caso el permiso
+          // ya está guardado y este pendiente quedaría en cola para siempre,
+          // mostrando un aviso que no corresponde. Se comprueba preguntándole al
+          // servidor si ese código ya existe.
+          const yaEsta = await Outbox._yaFueGuardado(item);
+          if (yaEsta) {
+            await this.remove(item.id);
+            Outbox._avisarEnviado(item);
+          }
+          // Si no se pudo comprobar, se deja en cola y se reintenta luego.
+        }
       }
     } finally {
       this._flushing = false;
@@ -289,6 +301,24 @@ const Outbox = {
   },
   async count() {
     return (await this.list()).length;
+  },
+  /** ¿El permiso de este pendiente ya está guardado en el servidor? Se usa para
+   *  no dejar en cola algo que en realidad ya se envió. Devuelve false ante
+   *  cualquier duda (sin señal, respuesta rara): más vale reintentar de más que
+   *  descartar un permiso que no se guardó. */
+  async _yaFueGuardado(item) {
+    try {
+      const code = item.body && (item.body.permitCode || item.body.code);
+      const token = item.body && item.body.token;
+      if (!code || !token) return false;
+      const res = await fetch(item.url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
+      const json = await res.json();
+      if (!json || !json.ok) return false;
+      // Si el pendiente era un CIERRE, solo cuenta como guardado si allá ya
+      // figura cerrado; si no, el cierre todavía tiene que salir.
+      if (item.body.status === 'CERRADO') return json.status === 'CERRADO';
+      return true;
+    } catch (e) { return false; }
   },
   _avisar() {
     window.dispatchEvent(new CustomEvent('outbox-cambio'));
@@ -337,7 +367,99 @@ const OutboxBadge = {
       actualizar();
       alert('No se pudo enviar un permiso guardado en cola, incluso con señal (' + (e.detail.error || 'error del servidor') + '). Revisa ese permiso manualmente — puede que haya que volver a intentarlo desde el formulario.');
     });
+
+    // El aviso ahora se puede TOCAR para ver qué hay en cola. Antes solo decía
+    // "N pendientes" sin forma de saber cuáles ni de quitarlos: si alguno se
+    // quedaba trabado, el aviso se volvía permanente y dejaba de significar algo.
+    el.style.cursor = 'pointer';
+    el.title = 'Toca para ver qué está pendiente';
+    el.addEventListener('click', () => OutboxBadge.verPendientes());
+
     actualizar();
+  },
+
+  async verPendientes() {
+    const items = await Outbox.list();
+    if (!items.length) { alert('No hay nada pendiente de enviar.'); return; }
+
+    const fondo = document.createElement('div');
+    fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10002;display:flex;align-items:center;justify-content:center;padding:16px;';
+    const caja = document.createElement('div');
+    caja.style.cssText = 'background:#fff;border-radius:14px;max-width:460px;width:100%;max-height:80vh;overflow:auto;padding:18px;font-family:var(--font-family,sans-serif);';
+    fondo.appendChild(caja);
+
+    const pinta = (lista) => {
+      caja.innerHTML =
+        '<h3 style="margin:0 0 4px;font-size:16px;">Pendientes de enviar</h3>' +
+        '<p style="margin:0 0 14px;font-size:12.5px;color:#5c6a76;line-height:1.5;">' +
+        'Estos permisos se guardaron en el celular pero no se ha confirmado que llegaran al servidor. ' +
+        'Si ya los ves en el dashboard, es que sí llegaron y la confirmación se perdió: usa «Comprobar» para limpiarlos.</p>' +
+        lista.map((it,i)=>{
+          const code = (it.body && (it.body.permitCode || it.body.code)) || 'sin código';
+          const cierre = it.body && it.body.status === 'CERRADO';
+          const f = new Date(it.savedAt);
+          const cuando = isNaN(f.getTime()) ? '' : f.toLocaleDateString('es-CO') + ' ' + f.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+          return '<div style="border:1px solid #dde3e8;border-radius:9px;padding:11px;margin-bottom:9px;font-size:12.5px;line-height:1.5;">' +
+            '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:#c0392b;">(cierre)</span>' : ' (apertura)') +
+            '<br><span style="color:#5c6a76;">Guardado: ' + esc(cuando) + (it.intentos ? ' · ' + it.intentos + ' intento(s)' : '') + '</span>' +
+            '<div style="display:flex;gap:7px;margin-top:9px;">' +
+            '<button data-comprobar="' + it.id + '" style="flex:1;padding:9px;border:1px solid #1f6f8b;background:#fff;color:#1f6f8b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Comprobar</button>' +
+            '<button data-descartar="' + it.id + '" style="padding:9px 12px;border:1px solid #e08a80;background:#fff;color:#c0392b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Descartar</button>' +
+            '</div></div>';
+        }).join('') +
+        '<div style="display:flex;gap:8px;margin-top:6px;">' +
+        '<button id="obxTodos" style="flex:1;padding:12px;border:none;background:#151b24;color:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Comprobar todos</button>' +
+        '<button id="obxCerrar" style="padding:12px 16px;border:1px solid #dde3e8;background:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>' +
+        '</div>';
+
+      caja.querySelector('#obxCerrar').onclick = () => fondo.remove();
+
+      const comprobar = async (item) => {
+        const ya = await Outbox._yaFueGuardado(item);
+        if (ya) { await Outbox.remove(item.id); return true; }
+        return false;
+      };
+
+      caja.querySelectorAll('[data-comprobar]').forEach(b=>{
+        b.onclick = async () => {
+          b.disabled = true; b.textContent = 'Comprobando…';
+          const item = lista.find(x=>String(x.id)===b.dataset.comprobar);
+          const ya = await comprobar(item);
+          if (ya) { alert('Ese permiso SÍ está guardado en el servidor. Se quita de la cola.'); }
+          else { alert('Todavía no aparece en el servidor. Se deja en cola para reintentarlo.'); }
+          Outbox._avisar();
+          const quedan = await Outbox.list();
+          quedan.length ? pinta(quedan) : fondo.remove();
+        };
+      });
+
+      caja.querySelectorAll('[data-descartar]').forEach(b=>{
+        b.onclick = async () => {
+          if (!confirm('¿Descartar este pendiente? Si el permiso no llegó al servidor, se pierde y habrá que volver a diligenciarlo.')) return;
+          await Outbox.remove(b.dataset.descartar);
+          Outbox._avisar();
+          const quedan = await Outbox.list();
+          quedan.length ? pinta(quedan) : fondo.remove();
+        };
+      });
+
+      const btnTodos = caja.querySelector('#obxTodos');
+      btnTodos.onclick = async () => {
+        btnTodos.disabled = true; btnTodos.textContent = 'Comprobando…';
+        let limpiados = 0;
+        for (const it of lista) { if (await comprobar(it)) limpiados++; }
+        Outbox._avisar();
+        const quedan = await Outbox.list();
+        alert(limpiados
+          ? limpiados + ' de ' + lista.length + ' ya estaban guardados en el servidor y se quitaron de la cola.'
+          : 'Ninguno aparece todavía en el servidor. Se dejan en cola.');
+        quedan.length ? pinta(quedan) : fondo.remove();
+      };
+    };
+
+    pinta(items);
+    fondo.addEventListener('click', (e)=>{ if (e.target === fondo) fondo.remove(); });
+    document.body.appendChild(fondo);
   }
 };
 
@@ -630,5 +752,90 @@ const OfflineBanner = {
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
     update();
+  }
+};
+
+/**
+ * SeleccionMultiple: fichas que se tocan para elegir varias opciones, con un
+ * campo libre al final para lo que no esté en la lista.
+ *
+ * Reemplaza a los campos de texto donde había que escribir a mano cosas que
+ * casi siempre son las mismas ("¿cuál permiso adicional?", "herramientas a
+ * utilizar"): en obra, con guantes y de pie, escribir es lo más incómodo del
+ * formulario. Además, al quedar los valores normalizados se pueden contar y
+ * filtrar después, cosa imposible con texto libre.
+ *
+ * Se guarda como un solo texto separado por " · " para que lo que ya está
+ * registrado en la hoja siga leyéndose igual y no haya que migrar nada.
+ *
+ *   const sel = SeleccionMultiple.crear(document.getElementById('x'), {
+ *     opciones: ['Taladro','Pulidora'],
+ *     placeholderLibre: 'Otras herramientas…'
+ *   });
+ *   sel.get();          // "Taladro · Pulidora · lo que se escribió"
+ *   sel.set(texto);     // reconstruye la selección desde ese texto
+ */
+const SeleccionMultiple = {
+  crear(contenedor, opts) {
+    opts = opts || {};
+    const opciones = opts.opciones || [];
+    const seleccion = new Set();
+
+    const fichas = document.createElement('div');
+    fichas.className = 'sm-fichas';
+    const libre = document.createElement('input');
+    libre.type = 'text';
+    libre.className = 'sm-libre';
+    libre.placeholder = opts.placeholderLibre || 'Otro (escribe aquí)…';
+
+    opciones.forEach((op) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sm-ficha';
+      b.textContent = op;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => {
+        if (seleccion.has(op)) { seleccion.delete(op); b.classList.remove('on'); b.setAttribute('aria-pressed','false'); }
+        else { seleccion.add(op); b.classList.add('on'); b.setAttribute('aria-pressed','true'); }
+        if (opts.onChange) opts.onChange();
+      });
+      fichas.appendChild(b);
+    });
+    if (opts.onChange) libre.addEventListener('input', opts.onChange);
+
+    contenedor.innerHTML = '';
+    contenedor.appendChild(fichas);
+    contenedor.appendChild(libre);
+
+    return {
+      get() {
+        const partes = opciones.filter(o => seleccion.has(o));
+        const extra = libre.value.trim();
+        if (extra) partes.push(extra);
+        return partes.join(' · ');
+      },
+      set(texto) {
+        seleccion.clear();
+        fichas.querySelectorAll('.sm-ficha').forEach(b => {
+          b.classList.remove('on'); b.setAttribute('aria-pressed','false');
+        });
+        libre.value = '';
+        if (!texto) return;
+        // Lo que coincida con una opción se marca como ficha; el resto vuelve
+        // al campo libre. Así un permiso guardado antes de este cambio, con
+        // texto escrito a mano, se sigue viendo completo.
+        const sueltos = [];
+        String(texto).split('·').map(x => x.trim()).filter(Boolean).forEach(parte => {
+          const op = opciones.find(o => o.toLowerCase() === parte.toLowerCase());
+          if (op) { seleccion.add(op); }
+          else sueltos.push(parte);
+        });
+        fichas.querySelectorAll('.sm-ficha').forEach(b => {
+          if (seleccion.has(b.textContent)) { b.classList.add('on'); b.setAttribute('aria-pressed','true'); }
+        });
+        libre.value = sueltos.join(' · ');
+      },
+      vacio() { return !this.get(); }
+    };
   }
 };

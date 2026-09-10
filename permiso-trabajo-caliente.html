@@ -221,8 +221,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
           <div class="radio-row">
             <label><input type="radio" name="permAdicional" value="No" checked> No</label>
             <label><input type="radio" name="permAdicional" value="Si"> Sí</label>
-            <input type="text" id="cualPermiso" placeholder="¿Cuál?" style="flex:1;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;">
           </div>
+          <div id="cualPermisoSel" style="margin-top:8px;"></div><input type="hidden" id="cualPermiso">
         </div>
       </div>
     </div>
@@ -433,7 +433,16 @@ const cfg = {
   cualPermisoLabel: '¿Cuál permiso adicional? (sección 1)',
   dateRange: { desdeFecha:'desdeFecha', desdeHora:'desdeHora', hastaFecha:'hastaFecha', hastaHora:'hastaHora', sectionLabel:'sección 2' },
 
+  extraOnInitRender(){
+    initSelCualPermiso();
+  },
   extraSetFieldValues(vals){
+    // Fichas de permisos adicionales (ver initSelCualPermiso más abajo)
+    initSelCualPermiso();
+    if (selCualPermiso) {
+      selCualPermiso.set(vals.cualPermiso || '');
+      document.getElementById('cualPermiso').value = selCualPermiso.get();
+    }
     document.getElementById('mantDia').value=vals.mantDia||'';
     document.getElementById('mantMes').value=vals.mantMes||'';
     document.getElementById('mantAnio').value=vals.mantAnio||'';
@@ -454,6 +463,22 @@ const cfg = {
 };
 
 PermisoCore.init(cfg);
+
+/* ── Permisos adicionales: fichas en vez de escribir a mano ──
+   El campo #cualPermiso sigue existiendo (oculto) con el texto combinado, así
+   que permiso-core.js lo lee y lo valida igual que antes, sin cambios, y lo ya
+   guardado en la hoja se sigue leyendo tal cual. */
+let selCualPermiso = null;
+function initSelCualPermiso(){
+  const cont = document.getElementById('cualPermisoSel');
+  if(!cont || selCualPermiso) return;
+  const oculto = document.getElementById('cualPermiso');
+  selCualPermiso = SeleccionMultiple.crear(cont, {
+    opciones: ['Trabajo en alturas', 'Espacios confinados', 'Izaje de cargas', 'Trabajo eléctrico', 'Bloqueo y etiquetado (LOTO)'],
+    placeholderLibre: 'Otro permiso (escribe aquí)…',
+    onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
 </script>
 </body>
 </html>

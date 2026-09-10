@@ -463,3 +463,38 @@ canvas.pad.locked{cursor:default;}
 #app{display:none;}
 .hidden{display:none !important;}
 .draft-banner button{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #a9c9ef;background:#fff;cursor:pointer;color:#1a4a7a;font-weight:600;}
+
+/* ── Fichas de selección múltiple ──
+   Para campos donde antes tocaba escribir a mano lo mismo de siempre. Alto
+   táctil completo: se usan con guantes. */
+.sm-fichas{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px;}
+.sm-ficha{
+  min-height:var(--touch);
+  padding:9px 14px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink-muted);
+  border-radius:22px;
+  font-family:inherit;
+  font-size:var(--fs-menor);
+  font-weight:600;
+  cursor:pointer;
+  transition:.12s;
+}
+.sm-ficha.on{
+  background:var(--ink);
+  border-color:var(--ink);
+  color:#fff;
+}
+.sm-ficha:active{transform:scale(.97);}
+.sm-libre{
+  width:100%;
+  box-sizing:border-box;
+  border:1.5px solid var(--line);
+  border-radius:var(--radius-sm,7px);
+  padding:11px 12px;
+  font-size:var(--fs-campo);
+  font-family:inherit;
+  background:var(--paper);
+  color:var(--ink);
+}

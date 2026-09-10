@@ -221,8 +221,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
           <div class="radio-row">
             <label><input type="radio" name="permAdicional" value="No" checked> No</label>
             <label><input type="radio" name="permAdicional" value="Si"> Sí</label>
-            <input type="text" id="cualPermiso" placeholder="¿Cuál?" style="flex:1;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;">
           </div>
+          <div id="cualPermisoSel" style="margin-top:8px;"></div><input type="hidden" id="cualPermiso">
         </div>
       </div>
     </div>
@@ -246,7 +246,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         <div class="grid3" style="margin-top:6px;">
           <div class="field"><label>Fecha última verificación de la diferencial</label><input type="date" id="fechaVerifDiferencial"></div>
           <div class="field"><label>Longitud entre los dos apoyos del riel (mts)</label><input type="text" id="longRiel"></div>
-          <div class="field"><label>Equipos requeridos (troller, estrobos, manilas, riel, cáncamos — tipo y cantidad)</label><input type="text" id="equiposReq"></div>
+          <div class="field"><label>Equipos requeridos (troller, estrobos, manilas, riel, cáncamos — tipo y cantidad)</label><div id="equiposReqSel"></div><input type="hidden" id="equiposReq"></div>
         </div>
       </div>
     </div>
@@ -420,7 +420,22 @@ const cfg = {
   cualPermisoLabel: '¿Cuál permiso adicional? (sección 1)',
   dateRange: { desdeFecha:'desdeFecha', desdeHora:'desdeHora', hastaFecha:'hastaFecha', hastaHora:'hastaHora', sectionLabel:'sección 2' },
 
+  extraOnInitRender(){
+    initSel_equiposReq();
+    initSelCualPermiso();
+  },
   extraSetFieldValues(vals){
+    initSel_equiposReq();
+    if (sel_equiposReq) {
+      sel_equiposReq.set(vals.equiposReq || '');
+      document.getElementById('equiposReq').value = sel_equiposReq.get();
+    }
+    // Fichas de permisos adicionales (ver initSelCualPermiso más abajo)
+    initSelCualPermiso();
+    if (selCualPermiso) {
+      selCualPermiso.set(vals.cualPermiso || '');
+      document.getElementById('cualPermiso').value = selCualPermiso.get();
+    }
     document.getElementById('pesoCarga').value=vals.pesoCarga||'';
     document.getElementById('dimCarga').value=vals.dimCarga||'';
     document.getElementById('capDiferencial').value=vals.capDiferencial||'';
@@ -441,6 +456,37 @@ const cfg = {
 };
 
 PermisoCore.init(cfg);
+
+/* ── Permisos adicionales: fichas en vez de escribir a mano ──
+   El campo #cualPermiso sigue existiendo (oculto) con el texto combinado, así
+   que permiso-core.js lo lee y lo valida igual que antes, sin cambios, y lo ya
+   guardado en la hoja se sigue leyendo tal cual. */
+let selCualPermiso = null;
+function initSelCualPermiso(){
+  const cont = document.getElementById('cualPermisoSel');
+  if(!cont || selCualPermiso) return;
+  const oculto = document.getElementById('cualPermiso');
+  selCualPermiso = SeleccionMultiple.crear(cont, {
+    opciones: ['Trabajo en alturas', 'Trabajo en caliente', 'Espacios confinados', 'Trabajo eléctrico', 'Bloqueo y etiquetado (LOTO)'],
+    placeholderLibre: 'Otro permiso (escribe aquí)…',
+    onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
+
+/* ── Equipos requeridos (troller, estrobos, manilas, riel, cáncamos — tipo y cantidad): fichas + campo libre ──
+   Se conserva #equiposReq oculto con el texto combinado, para que lo que ya está
+   guardado en la hoja se siga leyendo igual y el resto del código no cambie. */
+let sel_equiposReq = null;
+function initSel_equiposReq(){
+  const cont = document.getElementById('equiposReqSel');
+  if(!cont || sel_equiposReq) return;
+  const oculto = document.getElementById('equiposReq');
+  sel_equiposReq = SeleccionMultiple.crear(cont, {
+    opciones: ['Troller', 'Estrobos', 'Manilas', 'Riel', 'Cáncamos', 'Grilletes', 'Eslingas', 'Diferencial', 'Poleas', 'Tecle'],
+    placeholderLibre: 'Otros equipos, tipo y cantidad…',
+    onChange: ()=>{ oculto.value = sel_equiposReq.get(); }
+  });
+}
 </script>
 </body>
 </html>

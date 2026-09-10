@@ -152,6 +152,11 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
   }
   .grid{padding:12px 14px;display:grid;gap:10px;}
   .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+  /* Fecha/hora de inicio y culminación: dos columnas iguales, sin importar
+     que el campo de fecha sea más ancho que el de hora. */
+  .fechas-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .fechas-grid .field{min-width:0;}
+  .fechas-grid input{width:100%;box-sizing:border-box;}
   .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;}
   .field label{font-size:12.5px;color:var(--muted);font-weight:600;}
   .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],.field textarea,.field select{
@@ -464,7 +469,11 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
   <div class="section">
     <div class="section-title">2. Autorización del trabajo seguro en alturas</div>
     <div class="grid">
-      <div class="row">
+      <!-- Rejilla pareja en vez de flex: con flex, cada campo se ajustaba a su
+           contenido y las fechas quedaban más anchas que las horas, dejando la
+           fila descuadrada. Además se agrupa por parejas: inicio arriba,
+           culminación abajo, que es como se lee. -->
+      <div class="fechas-grid">
         <div class="field"><label>Fecha inicio</label><input type="date" id="fechaInicioAlt"></div>
         <div class="field"><label>Hora inicio</label><input type="time" id="horaInicioAlt"></div>
         <div class="field"><label>Fecha culminación</label><input type="date" id="fechaCulminacionAlt"></div>
@@ -509,8 +518,8 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
       <div class="yn-row"><div class="yn-label">Superficie de apoyo adecuada en espacio, resistencia, inclinación y antideslizante</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Trabajadores capacitados sobre uso y cuidado de los sistemas de acceso</div><div class="yn-opts" data-yn></div></div>
       <div class="row">
-        <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text" id="inspectorNombreInput"></div>
-        <div class="field"><label>Cédula</label><input type="text" inputmode="numeric"></div>
+        <div class="field"><label>Persona que realizó la inspección — Nombre</label><input type="text" id="inspectorNombreInput" autocomplete="off" placeholder="Escribe para buscar en el personal"></div>
+        <div class="field"><label>Cédula</label><input type="text" inputmode="numeric" id="inspectorCedulaInput"></div>
       </div>
       <div class="sig-pad-wrap">
         <label>Firma inspector de acceso</label>
@@ -739,7 +748,11 @@ function applyEpccAlt(data){
 
 /* ================= Cálculo DTR/AMT (sección 6) ================= */
 function updateCalcAlturas(){
-  const v = (id)=> parseFloat(document.getElementById(id).value)||0;
+  // Se acepta coma Y punto como separador decimal: el teclado numérico de
+  // Android en español suele ofrecer coma, y en algunos ni siquiera muestra el
+  // punto — así que escribir "1,5" tiene que valer igual que "1.5". Antes
+  // parseFloat("1,5") devolvía 1 y el cálculo salía mal sin avisar.
+  const v = (id)=> parseFloat(String(document.getElementById(id).value).replace(',', '.'))||0;
   const dtr = v('calc-at')+v('calc-rc')+v('calc-dcl')+v('calc-da');
   document.getElementById('calc-dtr').textContent = dtr.toFixed(2)+' m';
   const amtVal = v('calc-amt');
@@ -818,10 +831,25 @@ const cfg = {
   ],
   closeQuestions: false, // Alturas no tiene las 4 preguntas de cierre que sí tienen los otros 4
 
+  // Campos propios de alturas que también deben traer el personal registrado,
+  // para que el nombre quede escrito igual que en el resto del permiso.
+  personalFields: [
+    { nombre: 'inspectorNombreInput', cc: 'inspectorCedulaInput' }
+  ],
+
   extraOnInitRender(){
     buildEpccTable();
     ['calc-at','calc-rc','calc-dcl','calc-da','calc-amt'].forEach(id=>{
-      document.getElementById(id).addEventListener('input', updateCalcAlturas);
+      const el = document.getElementById(id);
+      el.addEventListener('input', updateCalcAlturas);
+      // Al salir del campo se normaliza a punto y dos decimales, para que lo
+      // que quede guardado sea siempre del mismo formato sin importar con qué
+      // teclado se escribió.
+      el.addEventListener('blur', ()=>{
+        const n = parseFloat(String(el.value).replace(',', '.'));
+        el.value = isNaN(n) ? '0.00' : n.toFixed(2);
+        updateCalcAlturas();
+      });
     });
     updateCalcAlturas();
     updateSectionPills();
