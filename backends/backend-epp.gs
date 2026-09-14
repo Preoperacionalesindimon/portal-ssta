@@ -25,10 +25,10 @@
 const API_TOKEN = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1'; // debe ser IDÉNTICO al del cliente (config.js)
 
 // A quién le llega la solicitud de reposición cuando algo se marca como MALO.
-// La analista SSTA recibe la solicitud formal; la aprobación del cambio la
-// da Ana Bohórquez por WhatsApp, con la foto del elemento. Se puede agregar más de uno
-// separado por coma si en el futuro debe llegarle a alguien más.
-const CORREOS_REPOSICION = ['analista.ssta@indimon.com.co'];
+// Ana Bohórquez recibe tanto la solicitud formal por correo como la foto del
+// elemento por WhatsApp, y es quien aprueba el cambio. Se puede agregar más de
+// uno separado por coma si en el futuro debe llegarle a alguien más.
+const CORREOS_REPOSICION = ['ana.bohorquez@indimon.com.co'];
 
 // WhatsApp al que hay que mandar la FOTO del elemento en mal estado. El correo
 // deja el registro formal, pero la foto es lo que permite aprobar el cambio sin
@@ -365,7 +365,7 @@ function doPost(e) {
   // antes del lock porque no escribe en la hoja de inspecciones: solo lee y
   // manda el correo, así que no necesita bloquear a nadie.
   if (body.action === 'resumenDiario') {
-    const resultado = enviarResumenDiario(body.fecha || '');
+    const resultado = enviarResumenDiario(body.fecha || '', body.inspector || '');
     const seEnvio = resultado.indexOf('Resumen enviado') === 0;
     return jsonOut_({ ok: seEnvio, mensaje: resultado });
   }
@@ -581,8 +581,16 @@ function instalarResumenDiario_() {
 /* La llama el disparador. También se puede ejecutar a mano para probar.
    Sin argumento usa el día de hoy; se le puede pasar 'dd/MM/yyyy' para
    reenviar el resumen de un día anterior. */
-function enviarResumenDiario(fechaTexto) {
+/**
+ * Resumen del día. Si se pasa `inspectorFiltro`, solo incluye las inspecciones
+ * hechas por esa persona — útil cuando varios revisan el mismo día y cada uno
+ * quiere mandar lo suyo, en vez de un consolidado donde no se distingue quién
+ * revisó qué. Sin filtro incluye a todos, que es como lo manda el disparador
+ * automático de la tarde.
+ */
+function enviarResumenDiario(fechaTexto, inspectorFiltro) {
   const hoy = fechaTexto || Utilities.formatDate(new Date(), 'America/Bogota', 'dd/MM/yyyy');
+  const filtro = String(inspectorFiltro || '').trim().toLowerCase();
   const sheet = getSheet_();
   const last = sheet.getLastRow();
   if (last < 2) return 'Hoja vacía.';
@@ -601,6 +609,7 @@ function enviarResumenDiario(fechaTexto) {
       ? Utilities.formatDate(f[4], 'America/Bogota', 'dd/MM/yyyy')
       : String(f[4] || '').trim();
     if (fecha !== hoy) return;
+    if (filtro && String(f[5] || '').trim().toLowerCase() !== filtro) return; // F = inspector
     totalInspecciones++;
 
     const malos = String(f[6] || '').split('|').map(s => s.trim()).filter(Boolean);
@@ -668,7 +677,9 @@ function enviarResumenDiario(fechaTexto) {
   const html = armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
                                        totalUnidades, elementos, conteo, quienes);
 
-  const asunto = 'Resumen EPP ' + hoy + ' — ' + totalUnidades + ' elemento(s) por reponer';
+  const asunto = 'Resumen EPP ' + hoy
+    + (filtro ? ' — ' + (inspectorFiltro || '') : '')
+    + ' — ' + totalUnidades + ' elemento(s) por reponer';
   try {
     MailApp.sendEmail({
       to: destinatarios.join(','),

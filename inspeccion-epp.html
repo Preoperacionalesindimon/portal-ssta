@@ -139,6 +139,13 @@
     margin:12px 0 16px;padding:13px;background:#fff;
     border:1px solid var(--line);border-radius:var(--radius-sm);
   }
+  .resumen-dia select{
+    width:100%;box-sizing:border-box;margin-bottom:8px;
+    border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    padding:11px 12px;font-size:var(--fs-campo);font-family:inherit;
+    background:var(--paper);color:var(--ink);min-height:var(--touch);
+  }
+  .resumen-dia select:disabled{opacity:.55;}
   .resumen-dia-txt{font-size:12.5px;line-height:1.55;color:var(--muted);}
   .resumen-dia-txt b{color:var(--ink);font-size:13px;}
   .resumen-dia button{
@@ -355,9 +362,15 @@
     <div class="resumen-dia">
       <div class="resumen-dia-txt">
         <b>Resumen del día</b><br>
-        Envía a la analista un solo correo con todos los elementos en mal estado
-        registrados hoy, sumados por elemento y con el detalle de cada trabajador.
+        Envía un solo correo con todos los elementos en mal estado registrados
+        hoy, sumados por elemento y con el detalle de cada trabajador.
       </div>
+      <!-- Cuando varios inspeccionan el mismo día, un consolidado no deja ver
+           quién revisó qué. Aquí se elige de quién es el resumen; el desplegable
+           se llena con los inspectores que registraron algo hoy. -->
+      <select id="selInspectorResumen">
+        <option value="">Todos los inspectores de hoy</option>
+      </select>
       <button type="button" id="btnResumenDia">📧 Enviar resumen del día</button>
       <div class="resumen-dia-msg" id="resumenDiaMsg"></div>
     </div>
@@ -856,12 +869,34 @@ async function cargarHistorial(){
     nota.textContent = histCache.length
       ? histCache.length + ' inspección(es) registrada(s) · más reciente primero'
       : '';
+    llenarInspectoresDeHoy();
     renderHistorial();
   }catch(e){
     nota.textContent = 'No se pudo cargar el historial. Revisa la señal e intenta de nuevo.';
     lista.innerHTML = '';
   }
 }
+/* Llena el desplegable con los inspectores que registraron algo HOY. Solo los
+   de hoy: el resumen es del día, así que ofrecer a alguien que no inspeccionó
+   hoy solo llevaría a mandar un correo vacío. */
+function llenarInspectoresDeHoy(){
+  const sel = document.getElementById('selInspectorResumen');
+  if(!sel) return;
+  const hoy = new Date();
+  const hoyTxt = String(hoy.getDate()).padStart(2,'0') + '/' +
+                 String(hoy.getMonth()+1).padStart(2,'0') + '/' + hoy.getFullYear();
+  const nombres = [...new Set(
+    histCache.filter(r => String(r.fechaInspeccion||'').trim() === hoyTxt)
+             .map(r => String(r.inspector||'').trim())
+             .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+  const previo = sel.value;
+  sel.innerHTML = '<option value="">Todos los inspectores de hoy</option>' +
+    nombres.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(nombres.includes(previo)) sel.value = previo;
+  sel.disabled = nombres.length === 0;
+}
+
 function renderHistorial(){
   const lista = document.getElementById('listaHist');
   const q = document.getElementById('buscarHist').value.trim().toLowerCase();
@@ -907,7 +942,10 @@ document.getElementById('buscarHist').addEventListener('input', renderHistorial)
 document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnResumenDia');
   const msg = document.getElementById('resumenDiaMsg');
-  if(!confirm('¿Enviar a la analista el resumen de los elementos en mal estado registrados hoy?')) return;
+  const sel = document.getElementById('selInspectorResumen');
+  const inspector = sel ? sel.value : '';
+  const quien = inspector ? 'de ' + inspector : 'de todos los inspectores';
+  if(!confirm('¿Enviar el resumen ' + quien + ' con los elementos en mal estado registrados hoy?')) return;
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   msg.classList.remove('show','ok','err');
@@ -915,7 +953,7 @@ document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
     const res = await fetchWithRetry(EPP_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ token: TOKEN, action:'resumenDiario' })
+      body: JSON.stringify({ token: TOKEN, action:'resumenDiario', inspector })
     });
     const data = await res.json();
     msg.textContent = data.mensaje || (data.ok ? 'Resumen enviado.' : 'No se pudo enviar.');
