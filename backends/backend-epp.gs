@@ -811,7 +811,7 @@ function getAuditoriaSheetEpp_() {
 function auditarIntegridad() {
   const sheet = getSheet_();
   const last = sheet.getLastRow();
-  if (last < 2) return 'No hay inspecciones registradas.';
+  if (last < 2) { console.log('No hay inspecciones registradas en esta hoja.'); return 'No hay inspecciones registradas.'; }
 
   const datos = sheet.getRange(2, 1, last - 1, 9).getValues();
   const ahora = new Date();
@@ -888,5 +888,14 @@ function auditarIntegridad() {
       'Auditoría de inspecciones EPP — ' + conProblemas.length + ' con problemas de ' + total, cuerpo);
   } catch (e) {}
 
-  return total + ' inspecciones revisadas · ' + conProblemas.length + ' con problemas. Ver hoja "Auditoria".';
+  const resumen = total + ' inspecciones revisadas · ' + conProblemas.length + ' con problemas.';
+  console.log(resumen);
+  console.log('Detalle completo en la hoja "Auditoria" y en el correo enviado.');
+  if (conProblemas.length) {
+    console.log('--- inspecciones con problemas ---');
+    conProblemas.slice().reverse().forEach(p => {
+      console.log('  ' + p.id + ' ' + (p.fecha || '') + ' ' + (p.nombre || '') + ' → ' + p.problemas.join(' · '));
+    });
+  }
+  return resumen;
 }

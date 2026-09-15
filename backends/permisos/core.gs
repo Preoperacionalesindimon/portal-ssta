@@ -895,7 +895,7 @@ function clasificarFirmas_(obj, mapaFirmas, acc) {
 function auditarIntegridad() {
   const sheet = getSheet_();
   const last = sheet.getLastRow();
-  if (last < 2) return 'No hay permisos registrados.';
+  if (last < 2) { console.log('No hay permisos registrados en esta hoja.'); return 'No hay permisos registrados.'; }
 
   const datos = sheet.getRange(2, 1, last - 1, 7).getValues();
   const ahora = new Date();
@@ -987,7 +987,19 @@ function auditarIntegridad() {
                       conProblemas.length + ' con problemas de ' + total, cuerpo);
   } catch (e) { /* si falla el correo, el reporte igual quedó en la hoja */ }
 
-  return total + ' permisos revisados · ' + conProblemas.length + ' con problemas. Ver hoja "Auditoria".';
+  // console.log además del return: el registro de ejecución de Apps Script
+  // solo muestra lo que se escribe explícitamente, así que devolver el
+  // resultado no sirve de nada para quien la ejecuta a mano.
+  const resumen = total + ' permisos revisados · ' + conProblemas.length + ' con problemas.';
+  console.log(resumen);
+  console.log('Detalle completo en la hoja "Auditoria" y en el correo enviado a ' + correo);
+  if (conProblemas.length) {
+    console.log('--- permisos con problemas ---');
+    conProblemas.slice().reverse().forEach(p => {
+      console.log('  ' + p.code + ' [' + p.status + '] ' + (p.fecha || '') + ' → ' + p.problemas.join(' · '));
+    });
+  }
+  return resumen;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1015,7 +1027,9 @@ function instalarVigilancia() {
     if (t.getHandlerFunction() === 'revisarIntentosSospechosos') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('revisarIntentosSospechosos').timeBased().everyDays(1).atHour(7).create();
-  return 'Vigilancia instalada: revisa cada día a las 7 a.m.';
+  const msg = 'Vigilancia instalada: revisa cada día a las 7 a.m.';
+  console.log(msg);
+  return msg;
 }
 
 function revisarIntentosSospechosos() {
@@ -1038,7 +1052,7 @@ function revisarIntentosSospechosos() {
     }
   });
 
-  if (!sospechosos.length) return 'Sin intentos sospechosos en las últimas 24 horas.';
+  if (!sospechosos.length) { console.log('Sin intentos sospechosos en las últimas 24 horas.'); return 'Sin intentos sospechosos en las últimas 24 horas.'; }
 
   let cuerpo = 'INTENTOS DE ACCESO CON TOKEN INVÁLIDO\n';
   cuerpo += PERMISO_NOMBRE + ' (' + PERMISO_CODIGO + ')\n';
@@ -1062,5 +1076,7 @@ function revisarIntentosSospechosos() {
     MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
       '⚠ ' + sospechosos.length + ' intento(s) con token inválido — ' + PERMISO_NOMBRE, cuerpo);
   } catch (e) {}
-  return sospechosos.length + ' intento(s) sospechoso(s). Se envió aviso por correo.';
+  const m = sospechosos.length + ' intento(s) sospechoso(s). Se envió aviso por correo.';
+  console.log(m);
+  return m;
 }

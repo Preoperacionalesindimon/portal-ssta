@@ -197,6 +197,13 @@ grupo('Permisos de trabajo', () => {
      front.includes("estado: 'sin-verificar'"),
      'Una alarma que salta sin motivo deja de creerse, y entonces no sirve.');
 
+  // El registro de ejecución de Apps Script solo muestra lo que se escribe con
+  // console.log: devolver el resultado no le sirve a quien la ejecuta a mano y
+  // deja la impresión de que no hizo nada.
+  ok('la auditoría escribe su resultado en el registro de ejecución',
+     /console\.log\(resumen\)/.test(core),
+     'Sin esto, ejecutarla parece no hacer nada.');
+
   ok('existe la auditoría de lo ya guardado',
      core.includes('function auditarIntegridad'),
      'Es la única forma de saber qué quedó incompleto antes de los arreglos.');
