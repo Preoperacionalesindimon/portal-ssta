@@ -1123,14 +1123,25 @@ function investigarPermiso() {
       let d = null;
       try { d = JSON.parse(f[8]); } catch (e) {}
       if (d) {
-        // Se cuentan las firmas TAL COMO quedaron en esa escritura concreta.
         const cuenta = (lista) => {
-          if (!Array.isArray(lista)) return '0/0';
+          if (!Array.isArray(lista)) return null;
           const con = lista.filter(x => x && typeof x.sig === 'string' && x.sig.length > 10).length;
           return con + '/' + lista.length;
         };
-        resumen = 'ejecutantes con firma: ' + cuenta(d.ejecutantes) +
-                  ' · responsables con firma: ' + cuenta(d.responsablesSigs);
+        if (Array.isArray(d)) {
+          // ADD_WORKERS guarda SOLO las filas nuevas, no el permiso entero. Sin
+          // esta rama el contador no encontraba d.ejecutantes y mostraba "0/0",
+          // que parecía una pérdida de firmas cuando no lo era.
+          resumen = 'solo las filas agregadas en esta operación — con firma: ' + cuenta(d);
+        } else {
+          const e = cuenta(d.ejecutantes), r = cuenta(d.responsablesSigs);
+          if (e === null && r === null) {
+            resumen = '(esta operación no guarda el permiso completo)';
+          } else {
+            resumen = 'ejecutantes con firma: ' + (e || 'n/d') +
+                      ' · responsables con firma: ' + (r || 'n/d');
+          }
+        }
       }
     }
     console.log(ts + '  ' + accion + ' / ' + resultado);
@@ -1139,6 +1150,10 @@ function investigarPermiso() {
   });
 
   console.log('='.repeat(64));
-  console.log('Cómo leerlo: si una operación muestra firmas y la SIGUIENTE muestra');
-  console.log('0, esa operación las borró. Si nunca aparecen, nunca se guardaron.');
+  console.log('Cómo leerlo:');
+  console.log('  · Compara ABRIR con CERRAR: si ABRIR muestra firmas y CERRAR');
+  console.log('    muestra 0, esa operación las borró.');
+  console.log('  · ADD_WORKERS solo registra las filas que se agregaron, no el');
+  console.log('    permiso completo: ahí no hay nada que comparar.');
+  console.log('  · Si las firmas no aparecen desde el ABRIR, nunca se guardaron.');
 }
