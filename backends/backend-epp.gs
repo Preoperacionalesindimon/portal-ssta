@@ -783,3 +783,107 @@ function armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
   h += '</div>';
   return h;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   AUDITORÍA DE INTEGRIDAD — inspecciones de EPP
+   Mismo propósito que la de los permisos: revisar lo YA guardado para
+   saber qué quedó incompleto por los fallos que se corrigieron después.
+   No modifica nada; escribe en la hoja "Auditoria" y manda el resumen.
+   Se ejecuta a mano desde el editor: elegir auditarIntegridad → Ejecutar.
+   ══════════════════════════════════════════════════════════════════ */
+
+function getAuditoriaSheetEpp_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Auditoria');
+  if (!sheet) {
+    sheet = ss.insertSheet('Auditoria');
+    sheet.appendRow(['revisadoEl', 'inspeccionId', 'fecha', 'trabajador', 'inspector',
+                     'elementosCalificados', 'firmaTrabajador', 'firmaInspector', 'problemas']);
+    sheet.setFrozenRows(1);
+    SpreadsheetApp.flush();
+  }
+  return sheet;
+}
+
+function auditarIntegridad() {
+  const sheet = getSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return 'No hay inspecciones registradas.';
+
+  const datos = sheet.getRange(2, 1, last - 1, 9).getValues();
+  const ahora = new Date();
+  const filas = [], conProblemas = [];
+  let total = 0, sanas = 0;
+
+  datos.forEach(f => {
+    const id = f[0];
+    if (!id) return;
+    total++;
+    let d = {};
+    try { d = JSON.parse(f[7] || '{}'); } catch (e) { d = null; }
+    const problemas = [];
+    if (d === null) {
+      problemas.push('JSON ilegible');
+      filas.push([ahora, id, f[4], f[2], f[5], '', '', '', problemas.join(' · ')]);
+      conProblemas.push({ id: id, fecha: f[4], nombre: f[2], problemas: problemas });
+      return;
+    }
+
+    const mapa = cargarFirmasPorId_(id);
+    const estado = (s) => {
+      if (!s) return 'sin firmar';
+      if (String(s).indexOf('SIGREF:') === 0) {
+        const img = mapa[String(s).substring(7)];
+        return (img && String(img).length > 100) ? 'ok' : 'imagen perdida';
+      }
+      return String(s).length > 100 ? 'ok' : 'sin firmar';
+    };
+    const ft = estado(d.sigTrabajador), fi = estado(d.sigInspector);
+    const calificados = d.items ? Object.keys(d.items).filter(k => d.items[k]).length : 0;
+
+    if (ft === 'imagen perdida') problemas.push('la firma del trabajador se perdió');
+    if (fi === 'imagen perdida') problemas.push('la firma del inspector se perdió');
+    if (ft === 'sin firmar') problemas.push('el trabajador no firmó');
+    if (fi === 'sin firmar') problemas.push('el inspector no firmó');
+    if (calificados < ELEMENTOS_EPP.length) {
+      problemas.push('solo ' + calificados + ' de ' + ELEMENTOS_EPP.length + ' elementos calificados');
+    }
+
+    filas.push([ahora, id, f[4], f[2], f[5], calificados, ft, fi,
+                problemas.length ? problemas.join(' · ') : 'OK']);
+    if (problemas.length) conProblemas.push({ id: id, fecha: f[4], nombre: f[2], problemas: problemas });
+    else sanas++;
+  });
+
+  if (filas.length) {
+    const h = getAuditoriaSheetEpp_();
+    h.getRange(h.getLastRow() + 1, 1, filas.length, 9).setValues(filas);
+  }
+
+  let cuerpo = 'AUDITORÍA DE INSPECCIONES DE EPP (SSTA-F-006)\n';
+  cuerpo += Utilities.formatDate(ahora, 'America/Bogota', 'dd/MM/yyyy HH:mm') + '\n';
+  cuerpo += '------------------------------------------------------------\n\n';
+  cuerpo += 'Inspecciones revisadas : ' + total + '\n';
+  cuerpo += 'Sin problemas          : ' + sanas + '\n';
+  cuerpo += 'Con problemas          : ' + conProblemas.length + '\n\n';
+  if (conProblemas.length) {
+    cuerpo += 'DETALLE:\n\n';
+    conProblemas.slice().reverse().forEach(p => {
+      cuerpo += '  ' + p.id + '  ' + (p.fecha || '') + '  ' + (p.nombre || '') + '\n';
+      p.problemas.forEach(x => { cuerpo += '      - ' + x + '\n'; });
+    });
+    cuerpo += '\n"Se perdió" significa que la inspección guardó la referencia a la\n';
+    cuerpo += 'firma pero la imagen nunca llegó a escribirse. No se recupera: esa\n';
+    cuerpo += 'inspección queda sin el respaldo de la firma.\n';
+  } else {
+    cuerpo += 'No se encontraron inspecciones incompletas.\n';
+  }
+  cuerpo += '\nEl detalle completo quedó en la hoja "Auditoria".\n';
+
+  try {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
+      'Auditoría de inspecciones EPP — ' + conProblemas.length + ' con problemas de ' + total, cuerpo);
+  } catch (e) {}
+
+  return total + ' inspecciones revisadas · ' + conProblemas.length + ' con problemas. Ver hoja "Auditoria".';
+}

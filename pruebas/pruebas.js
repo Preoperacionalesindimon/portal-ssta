@@ -177,6 +177,45 @@ grupo('Permisos de trabajo', () => {
      front.includes('delete data.firstSave') && front.includes('delete data.opId'),
      'Protege a los permisos guardados antes del arreglo del backend.');
 
+  // ── Verificación después de guardar ──
+  // Es la defensa contra el modo de fallo que más daño ha hecho aquí: el
+  // servidor responde "ok", la pantalla dice "guardado" y el dato no queda.
+  // Pasó con las firmas, con las lecturas de gases y con los reenvíos.
+  ok('existe la verificación de lo guardado',
+     front.includes('function verificarGuardado_'),
+     'Sin ella, un guardado que no queda vuelve a pasar desapercibido.');
+
+  ok('la verificación compara las firmas, no solo que el permiso exista',
+     front.includes('firmasEjecutantes') && front.includes('firmasResponsables'),
+     'Las firmas son lo que se perdía en silencio; comparar solo el código no lo detectaría.');
+
+  ok('el borrador NO se borra si la verificación falla',
+     /if \(mostrarVerificacion_\(verif, 'apertura'\)\) \{[\s\S]{0,120}?DraftStore\.clear/.test(front),
+     'Si lo guardado no coincide, lo diligenciado tiene que seguir disponible.');
+
+  ok('sin señal no se da por fallido (evita falsas alarmas)',
+     front.includes("estado: 'sin-verificar'"),
+     'Una alarma que salta sin motivo deja de creerse, y entonces no sirve.');
+
+  ok('existe la auditoría de lo ya guardado',
+     core.includes('function auditarIntegridad'),
+     'Es la única forma de saber qué quedó incompleto antes de los arreglos.');
+
+  ok('la auditoría distingue "sin firma" de "firma perdida"',
+     core.includes('imagen perdida') || core.includes('firmasRotas') || core.includes('rotas'),
+     'No es lo mismo que alguien no firmara a que su firma se perdiera.');
+
+  ok('existe la vigilancia de tokens inválidos',
+     core.includes('function revisarIntentosSospechosos'));
+
+  ok('hay documento de traspaso',
+     existe('TRASPASO.md'),
+     'Hoy una sola persona entiende el sistema completo.');
+
+  ok('la lectura de gases también se verifica',
+     leer('permiso-espacios-confinados.html').includes('NO quedó guardada'),
+     'Fue justo el dato que se estuvo perdiendo.');
+
   ok('las búsquedas en las hojas son dirigidas, no recorridos completos',
      core.includes('createTextFinder'),
      'Sin esto, guardar se vuelve más lento a medida que crecen las hojas.');

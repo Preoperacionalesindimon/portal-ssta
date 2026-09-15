@@ -821,3 +821,243 @@ function recordatorioPermisosAbiertos() {
     MailApp.sendEmail(correo, 'Permisos de ' + PERMISO_NOMBRE + ' pendientes de cierre', cuerpo);
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   AUDITORÍA DE INTEGRIDAD DE LO YA GUARDADO
+   ------------------------------------------------------------------
+   POR QUÉ EXISTE
+
+   Este backend perdió datos EN SILENCIO más de una vez: firmas que
+   superaban el máximo de una celda de Google Sheets, y guardados que se
+   descartaban por confundirlos con un reintento. En los dos casos el
+   servidor respondía "ok" y el usuario veía "guardado".
+
+   Ya se corrigieron las causas y el portal ahora verifica cada guardado.
+   Pero los permisos escritos ANTES de esos arreglos siguen como quedaron,
+   y nadie sabe cuáles están incompletos.
+
+   Esto los revisa uno por uno y dice exactamente cuáles tienen problemas.
+   No modifica nada: solo lee, escribe un reporte en la hoja "Auditoria" y
+   manda un correo con el resumen.
+
+   CÓMO SE USA
+     Abrir el editor de Apps Script → elegir la función auditarIntegridad
+     en el desplegable → Ejecutar. Tarda según el tamaño de la hoja.
+   ══════════════════════════════════════════════════════════════════ */
+
+const AUDITORIA_SHEET_NAME = 'Auditoria';
+
+function getAuditoriaSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(AUDITORIA_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(AUDITORIA_SHEET_NAME);
+    sheet.appendRow(['revisadoEl', 'permitCode', 'status', 'abiertoEl', 'responsable',
+                     'ejecutantes', 'firmasEjecutantes', 'firmasResponsables',
+                     'firmasRotas', 'lecturasGases', 'problemas']);
+    sheet.setFrozenRows(1);
+    SpreadsheetApp.flush();
+  }
+  return sheet;
+}
+
+/** Recorre un objeto buscando campos de firma y clasifica cada uno:
+ *  presente (imagen real), rota (quedó la referencia pero la imagen no existe)
+ *  o vacía. Una firma ROTA es la huella exacta del fallo de las 50.000 celdas:
+ *  el permiso guardó la referencia y la imagen nunca llegó a escribirse. */
+function clasificarFirmas_(obj, mapaFirmas, acc) {
+  acc = acc || { presentes: 0, rotas: 0, vacias: 0 };
+  if (Array.isArray(obj)) {
+    obj.forEach(x => clasificarFirmas_(x, mapaFirmas, acc));
+    return acc;
+  }
+  if (obj && typeof obj === 'object') {
+    for (const k in obj) {
+      const v = obj[k];
+      if (k.toLowerCase().indexOf('sig') !== -1 && typeof v === 'string') {
+        if (v.indexOf('SIGREF:') === 0) {
+          const img = mapaFirmas[v.substring(7)];
+          if (img && String(img).length > 100) acc.presentes++;
+          else acc.rotas++;
+        } else if (v.indexOf('data:image') === 0) {
+          acc.presentes++;
+        } else if (!v) {
+          acc.vacias++;
+        }
+      } else {
+        clasificarFirmas_(v, mapaFirmas, acc);
+      }
+    }
+  }
+  return acc;
+}
+
+function auditarIntegridad() {
+  const sheet = getSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return 'No hay permisos registrados.';
+
+  const datos = sheet.getRange(2, 1, last - 1, 7).getValues();
+  const ahora = new Date();
+  const filasReporte = [];
+  const conProblemas = [];
+  let total = 0, sanos = 0;
+
+  datos.forEach(f => {
+    const code = f[0];
+    if (!code) return;
+    total++;
+    let d = {};
+    try { d = JSON.parse(f[2] || '{}'); } catch (e) { d = null; }
+
+    const problemas = [];
+    if (d === null) {
+      problemas.push('JSON ilegible');
+      filasReporte.push([ahora, code, f[1], f[4], f[5], '', '', '', '', '', problemas.join(' · ')]);
+      conProblemas.push({ code: code, status: f[1], fecha: f[4], problemas: problemas });
+      return;
+    }
+
+    const mapa = cargarFirmasPorCodigo_(code);
+
+    const ejec = Array.isArray(d.ejecutantes) ? d.ejecutantes : [];
+    const resp = Array.isArray(d.responsablesSigs) ? d.responsablesSigs : [];
+    const fEjec = clasificarFirmas_(ejec, mapa);
+    const fResp = clasificarFirmas_(resp, mapa);
+    const rotas = fEjec.rotas + fResp.rotas;
+    const lecturas = (d.gases && Array.isArray(d.gases.lecturas)) ? d.gases.lecturas.length : '';
+
+    // Un ejecutante con nombre pero sin firma es un permiso incompleto:
+    // la firma es lo que acredita que esa persona fue informada del riesgo.
+    const ejecConNombre = ejec.filter(e => e && String(e.nombre || '').trim()).length;
+
+    if (rotas > 0) problemas.push(rotas + ' firma(s) con la imagen perdida');
+    if (ejecConNombre > 0 && fEjec.presentes === 0) problemas.push('ningún ejecutante tiene firma');
+    else if (fEjec.presentes < ejecConNombre) problemas.push((ejecConNombre - fEjec.presentes) + ' ejecutante(s) sin firma');
+    if (resp.length > 0 && fResp.presentes === 0) problemas.push('ningún responsable tiene firma');
+    if (d.gases && lecturas === 0) problemas.push('espacio confinado sin ninguna lectura de gases');
+    if (f[1] === 'CERRADO' && !d.cierreFecha && !d.closeFields) {
+      // solo informativo: algunos formatos guardan el cierre con otras claves
+    }
+
+    filasReporte.push([ahora, code, f[1], f[4], f[5], ejecConNombre,
+                       fEjec.presentes, fResp.presentes, rotas, lecturas,
+                       problemas.length ? problemas.join(' · ') : 'OK']);
+    if (problemas.length) conProblemas.push({ code: code, status: f[1], fecha: f[4], problemas: problemas });
+    else sanos++;
+  });
+
+  if (filasReporte.length) {
+    const hoja = getAuditoriaSheet_();
+    hoja.getRange(hoja.getLastRow() + 1, 1, filasReporte.length, 11).setValues(filasReporte);
+  }
+
+  let cuerpo = 'AUDITORÍA DE INTEGRIDAD — ' + PERMISO_NOMBRE + ' (' + PERMISO_CODIGO + ')\n';
+  cuerpo += Utilities.formatDate(ahora, 'America/Bogota', 'dd/MM/yyyy HH:mm') + '\n';
+  cuerpo += '------------------------------------------------------------\n\n';
+  cuerpo += 'Permisos revisados : ' + total + '\n';
+  cuerpo += 'Sin problemas      : ' + sanos + '\n';
+  cuerpo += 'Con problemas      : ' + conProblemas.length + '\n\n';
+
+  if (conProblemas.length) {
+    cuerpo += 'DETALLE (del más reciente al más antiguo):\n\n';
+    conProblemas.slice().reverse().forEach(p => {
+      cuerpo += '  ' + p.code + '  [' + p.status + ']  ' + (p.fecha || '') + '\n';
+      p.problemas.forEach(x => { cuerpo += '      - ' + x + '\n'; });
+    });
+    cuerpo += '\nQué significa cada cosa:\n';
+    cuerpo += '  · "firma con la imagen perdida": el permiso guardó la referencia\n';
+    cuerpo += '    pero la imagen nunca se escribió. Es el rastro del fallo de las\n';
+    cuerpo += '    firmas que superaban el máximo de una celda. No se puede recuperar.\n';
+    cuerpo += '  · "sin firma": esa persona quedó registrada sin firmar.\n';
+    cuerpo += '  · "sin lectura de gases": el permiso se abrió sin registrar ninguna.\n\n';
+    cuerpo += 'Estos permisos están incompletos como documento. Los que sigan\n';
+    cuerpo += 'abiertos se pueden completar; los cerrados quedan como están y\n';
+    cuerpo += 'conviene saberlo antes de que los pida alguien.\n';
+  } else {
+    cuerpo += 'No se encontraron permisos incompletos.\n';
+  }
+  cuerpo += '\nEl detalle completo, permiso por permiso, quedó en la hoja "Auditoria".\n';
+
+  const correo = (typeof CORREOS_AUDITORIA !== 'undefined' && CORREOS_AUDITORIA)
+    ? CORREOS_AUDITORIA
+    : Session.getEffectiveUser().getEmail();
+  try {
+    MailApp.sendEmail(correo, 'Auditoría de permisos — ' + PERMISO_NOMBRE + ' — ' +
+                      conProblemas.length + ' con problemas de ' + total, cuerpo);
+  } catch (e) { /* si falla el correo, el reporte igual quedó en la hoja */ }
+
+  return total + ' permisos revisados · ' + conProblemas.length + ' con problemas. Ver hoja "Auditoria".';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VIGILANCIA DE INTENTOS SOSPECHOSOS
+   ------------------------------------------------------------------
+   El token viaja dentro de config.js, que es público: cualquiera que abra
+   el código del sitio lo ve. No se puede evitar con un sitio estático y
+   Apps Script — restringir el despliegue al dominio de Google rompería el
+   portal, porque las peticiones salen sin sesión iniciada.
+
+   Lo que sí se puede es NOTARLO. Un intento con token equivocado no es un
+   error de un trabajador: el portal siempre manda el token correcto. Es
+   alguien probando desde fuera.
+
+   Instalar una vez con instalarVigilancia_(). Revisa cada día y solo
+   escribe correo si hay algo — una alarma que suena sin motivo deja de
+   leerse.
+   ══════════════════════════════════════════════════════════════════ */
+
+function instalarVigilancia_() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'revisarIntentosSospechosos') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('revisarIntentosSospechosos').timeBased().everyDays(1).atHour(7).create();
+  return 'Vigilancia instalada: revisa cada día a las 7 a.m.';
+}
+
+function revisarIntentosSospechosos() {
+  const sheet = getEventosSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return 'Bitácora vacía.';
+
+  const desde = new Date(Date.now() - 24 * 3600 * 1000);
+  const datos = sheet.getRange(2, 1, last - 1, 6).getValues(); // A ts … F opId
+  const sospechosos = [];
+
+  datos.forEach(f => {
+    const ts = f[0] instanceof Date ? f[0] : new Date(f[0]);
+    if (isNaN(ts.getTime()) || ts < desde) return;
+    const resultado = String(f[3] || '');
+    const detalle = String(f[4] || '');
+    // Token inválido es la señal clara: el portal nunca manda uno malo.
+    if (resultado === 'RECHAZADO' && detalle.indexOf('Token') !== -1) {
+      sospechosos.push({ ts: ts, code: f[1], detalle: detalle });
+    }
+  });
+
+  if (!sospechosos.length) return 'Sin intentos sospechosos en las últimas 24 horas.';
+
+  let cuerpo = 'INTENTOS DE ACCESO CON TOKEN INVÁLIDO\n';
+  cuerpo += PERMISO_NOMBRE + ' (' + PERMISO_CODIGO + ')\n';
+  cuerpo += '------------------------------------------------------------\n\n';
+  cuerpo += 'Se registraron ' + sospechosos.length + ' intento(s) en las últimas 24 horas.\n\n';
+  sospechosos.slice(0, 40).forEach(s => {
+    cuerpo += '  ' + Utilities.formatDate(s.ts, 'America/Bogota', 'dd/MM/yyyy HH:mm') +
+              '  ' + (s.code || '(sin código)') + '  — ' + s.detalle + '\n';
+  });
+  cuerpo += '\nEl portal siempre envía el token correcto, así que esto NO lo causa\n';
+  cuerpo += 'un trabajador usando la aplicación: es alguien probando desde fuera.\n\n';
+  cuerpo += 'Qué hacer:\n';
+  cuerpo += '  · Si son pocos y aislados, puede ser un dispositivo con una versión\n';
+  cuerpo += '    vieja del portal en caché tras un cambio de token.\n';
+  cuerpo += '  · Si son muchos o insisten, conviene rotar el token siguiendo el\n';
+  cuerpo += '    procedimiento de tres fases del README.\n';
+  cuerpo += '\nNinguno de estos intentos modificó datos: quedaron rechazados y\n';
+  cuerpo += 'registrados en la hoja "Eventos".\n';
+
+  try {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
+      '⚠ ' + sospechosos.length + ' intento(s) con token inválido — ' + PERMISO_NOMBRE, cuerpo);
+  } catch (e) {}
+  return sospechosos.length + ' intento(s) sospechoso(s). Se envió aviso por correo.';
+}

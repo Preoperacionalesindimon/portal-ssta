@@ -7,6 +7,10 @@ o la tablet en planta. Funciona sin señal y sincroniza cuando vuelve la conexi�
 
 ---
 
+> **¿Te estás haciendo cargo de esto sin haberlo construido?** Lee primero
+> [TRASPASO.md](TRASPASO.md): explica cómo está armado, por qué, y dónde están
+> los peligros.
+
 ## Cómo está armado
 
 Son **dos mitades** que se despliegan por separado:
@@ -159,6 +163,34 @@ del `checkToken_`. Despliega de nuevo.
 
 *Cuándo rotar:* si alguien con acceso al código deja el equipo, si el token
 quedó expuesto, o por higiene cada 6-12 meses.
+
+### Auditar lo que ya está guardado
+
+Revisa permiso por permiso lo que YA está en las hojas y dice cuál quedó
+incompleto por los fallos que se corrigieron después. No modifica nada.
+
+En cada backend: editor de Apps Script → elegir `auditarIntegridad` en el
+desplegable → **Ejecutar**. Escribe el detalle en una pestaña `Auditoria` y
+manda el resumen por correo.
+
+Distingue dos cosas que parecen iguales y no lo son:
+
+- **"sin firma"** — esa persona nunca firmó.
+- **"firma con la imagen perdida"** — sí firmó, pero la imagen no llegó a
+  guardarse. Es el rastro del fallo de las 50.000 celdas. No se recupera.
+
+Conviene correrla una vez ahora, para saber el tamaño real del daño.
+
+### Vigilar intentos con token inválido
+
+El token está en `config.js`, que es público. **No se puede esconder** con un
+sitio estático: restringir el despliegue al dominio de Google rompería el
+portal, porque las peticiones salen sin sesión iniciada.
+
+Lo que sí se puede es notarlo. `instalarVigilancia_()` — ejecutar **una vez**
+en cada backend — revisa la bitácora cada día y avisa por correo si alguien
+intentó con un token equivocado. El portal siempre manda el correcto, así que
+esos intentos no los causa un trabajador usando la aplicación.
 
 ### Cuando las hojas crezcan
 

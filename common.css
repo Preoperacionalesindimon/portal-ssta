@@ -498,3 +498,13 @@ canvas.pad.locked{cursor:default;}
   background:var(--paper);
   color:var(--ink);
 }
+
+/* Banner de alerta cuando lo guardado NO coincide con lo enviado.
+   Tiene que verse distinto de "guardado ✓": es justo el caso en que el portal
+   venía diciendo que todo estaba bien mientras se perdían firmas y lecturas. */
+.status-banner.warn{
+  background:#fdecea !important;
+  border:2px solid var(--warn,#c0392b) !important;
+  color:#7a1f14 !important;
+}
+.status-banner.warn *{color:#7a1f14 !important;}

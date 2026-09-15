@@ -1362,6 +1362,22 @@ const PermisoCore = (function () {
       if (res.ok) {
         const nombres = todasLasFilas.filter((f) => f.nombre && f.nombre.trim()).length;
         statusEl.textContent = '✓ Guardado — ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        // Comprobar que el personal agregado realmente quedó: este camino
+        // escribe solo las filas nuevas, así que un fallo aquí es fácil de
+        // pasar por alto.
+        const verifAdd = await verificarGuardado_(addPeopleData.permitCode, {
+          permitCode: addPeopleData.permitCode,
+          status: addPeopleData.status,
+          ejecutantes: todasLasFilas,
+          responsablesSigs: addPeopleData.responsablesSigs
+        });
+        if (verifAdd.estado === 'difiere') {
+          statusEl.textContent = '⚠ El servidor confirmó pero al releer no coincide: ' + verifAdd.diferencias.join(' · ');
+          alert('⚠ ATENCIÓN: se guardó el personal pero al releer el permiso no coincide:\n\n  · ' +
+                verifAdd.diferencias.join('\n  · ') +
+                '\n\nNo cierres esta página. Vuelve a guardar y verifica en el permiso.');
+          return;
+        }
         $('backFromAddPeopleBtn').style.cssText = 'background:var(--ok,#1d7a4c);color:#fff;border-color:var(--ok,#1d7a4c);font-weight:700;';
         baseExecCount = todasLasFilas.length; // lo recién guardado ya no cuenta como "nuevo" si se sigue agregando más
         opIdAddWorkers = null; // esta operación ya se completó; la siguiente necesita su propia clave
@@ -1444,11 +1460,18 @@ const PermisoCore = (function () {
         }
         if (res.ok) {
           firstSaveDone = true;
-          lockOpenSections();
           $('statusBanner').className = 'status-banner open';
           $('statusBannerText').textContent = 'Permiso guardado en la hoja ✓ — comparte el código con quien hará el cierre';
           $('footerStatus').textContent = 'Código del permiso: ' + permitCode;
-          DraftStore.clear(draftKeyOpen());
+          // Releer del servidor y comparar ANTES de dar el permiso por bueno y
+          // de borrar el borrador: si algo no quedó, lo diligenciado no se pierde.
+          const verif = await verificarGuardado_(permitCode, data);
+          if (mostrarVerificacion_(verif, 'apertura')) {
+            lockOpenSections();
+            DraftStore.clear(draftKeyOpen());
+          } else {
+            btn.disabled = false; // se puede reintentar sin volver a llenar nada
+          }
         } else {
           btn.disabled = false;
           if (typeof Outbox !== 'undefined') {
@@ -1471,7 +1494,12 @@ const PermisoCore = (function () {
           $('statusBanner').className = 'status-banner closed';
           $('statusBannerText').textContent = 'Permiso cerrado y guardado en la hoja ✓';
           $('footerStatus').textContent = 'El registro quedó actualizado en Google Sheets.';
-          DraftStore.clear(draftKeyClose(permitCode));
+          const verif = await verificarGuardado_(permitCode, full);
+          if (mostrarVerificacion_(verif, 'cierre')) {
+            DraftStore.clear(draftKeyClose(permitCode));
+          } else {
+            btn.disabled = false;
+          }
         } else {
           btn.disabled = false;
           if (typeof Outbox !== 'undefined') {
@@ -1594,6 +1622,112 @@ const PermisoCore = (function () {
     });
   }
 
+  /* ================= VERIFICACIÓN DESPUÉS DE GUARDAR =================
+
+     Este portal ha perdido datos EN SILENCIO tres veces: las firmas que
+     superaban el máximo de una celda de Sheets, las lecturas de gases con ids
+     duplicados, y los reenvíos que el backend descartaba por confundirlos con
+     un reintento. En los tres casos el servidor respondía "ok", la pantalla
+     decía "guardado" y el dato no quedaba. Se descubrieron por casualidad,
+     semanas o días después.
+
+     La causa de fondo es siempre la misma: NADA comprobaba que lo guardado
+     quedara guardado. Eso es lo que hace esto: después de cada guardado exitoso
+     vuelve a leer el permiso del servidor y compara lo esencial con lo que se
+     envió. Si no coincide, avisa fuerte y NO borra el borrador.
+
+     No compara todo el contenido a propósito: el servidor añade campos propios
+     (_appliedOps, marcas de tiempo) y quita otros, así que una comparación
+     exacta daría falsas alarmas constantes y nadie volvería a creerle. Compara
+     lo que de verdad importa para un permiso: que exista, en qué estado quedó,
+     cuánta gente tiene y — sobre todo — cuántas firmas. */
+
+  function contarFirmas_(lista) {
+    if (!Array.isArray(lista)) return 0;
+    return lista.filter((x) => x && typeof x.sig === 'string' && x.sig.length > 100).length;
+  }
+
+  /** Reduce un permiso a las pocas cosas que deben coincidir sí o sí. */
+  function resumenVerificable_(data) {
+    if (!data) return null;
+    const r = {
+      code: data.permitCode || data.code || '',
+      status: data.status || '',
+      ejecutantes: Array.isArray(data.ejecutantes) ? data.ejecutantes.length : 0,
+      firmasEjecutantes: contarFirmas_(data.ejecutantes),
+      firmasResponsables: contarFirmas_(data.responsablesSigs)
+    };
+    // Cada tipo de permiso puede sumar lo suyo (ej. las lecturas de gases en
+    // espacios confinados, que fue justo uno de los datos que se perdía).
+    if (cfg.resumenVerificable) {
+      try { Object.assign(r, cfg.resumenVerificable(data) || {}); } catch (e) {}
+    }
+    return r;
+  }
+
+  const ETIQUETAS_VERIF = {
+    code: 'código del permiso',
+    status: 'estado',
+    ejecutantes: 'cantidad de ejecutantes',
+    firmasEjecutantes: 'firmas de ejecutantes',
+    firmasResponsables: 'firmas de responsables',
+    lecturas: 'lecturas de gases'
+  };
+
+  /**
+   * Relee el permiso del servidor y compara. Devuelve:
+   *   { estado:'ok' }                      todo coincide
+   *   { estado:'difiere', diferencias:[] } se guardó algo distinto
+   *   { estado:'sin-verificar', motivo }   no se pudo comprobar (sin señal…)
+   */
+  async function verificarGuardado_(code, enviado) {
+    const url = getWebAppUrl();
+    if (!url) return { estado: 'sin-verificar', motivo: 'sin backend configurado' };
+    try {
+      const res = await fetchWithRetry(url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const guardado = await res.json();
+      if (!guardado || guardado.ok === false) {
+        return { estado: 'difiere', diferencias: ['el permiso no aparece en el servidor'] };
+      }
+      const a = resumenVerificable_(enviado);
+      const b = resumenVerificable_(guardado);
+      const diferencias = [];
+      Object.keys(a).forEach((k) => {
+        if (a[k] !== b[k]) {
+          diferencias.push((ETIQUETAS_VERIF[k] || k) + ': se envió ' + a[k] + ' y quedó ' + b[k]);
+        }
+      });
+      return diferencias.length ? { estado: 'difiere', diferencias } : { estado: 'ok' };
+    } catch (e) {
+      return { estado: 'sin-verificar', motivo: 'no se pudo releer del servidor' };
+    }
+  }
+
+  /** Muestra el resultado y decide si se puede dar el guardado por bueno. */
+  function mostrarVerificacion_(verif, contexto) {
+    const st = $('footerStatus');
+    if (verif.estado === 'ok') {
+      if (st) st.textContent = (st.textContent || '') + ' · Verificado en el servidor ✓';
+      return true;
+    }
+    if (verif.estado === 'sin-verificar') {
+      if (st) st.textContent = (st.textContent || '') + ' · No se pudo verificar (' + verif.motivo + '). Revisa el permiso cuando tengas señal.';
+      return true; // el envío fue correcto; solo no se pudo confirmar
+    }
+    // Difiere: esto es grave y tiene que verse.
+    const detalle = verif.diferencias.join('\n  · ');
+    if (st) st.textContent = '⚠ Lo guardado NO coincide con lo enviado. NO cierres esta página.';
+    $('statusBanner').className = 'status-banner warn';
+    $('statusBannerText').textContent = '⚠ El guardado no quedó completo — revisa antes de continuar';
+    alert(
+      '⚠ ATENCIÓN: el servidor confirmó el guardado, pero al releer el permiso\n' +
+      'los datos NO coinciden con lo que se envió:\n\n  · ' + detalle + '\n\n' +
+      'Lo que diligenciaste sigue en esta página y el borrador NO se borró.\n' +
+      'Vuelve a guardar. Si se repite, avisa antes de dar el permiso por bueno.'
+    );
+    return false;
+  }
+
   // ================= PANEL DE DIAGNÓSTICO (solo con ?debug=1 en la URL) =================
   // No afecta el funcionamiento normal del portal — es un panel flotante, visible SOLO
   // si se pide explícitamente por la URL, para poder ver en pantalla (sin consola ni
@@ -1664,6 +1798,10 @@ const PermisoCore = (function () {
     // La lista de permisos abiertos también se reusa desde esas pantallas
     // propias, para no duplicar la consulta ni el formato de la lista.
     fetchOpenList,
-    renderOpenList
+    renderOpenList,
+    // Verificación de lo guardado: se expone para que las pantallas propias de
+    // un permiso (como la lectura de gases) puedan comprobar igual que el núcleo.
+    verificarGuardado: verificarGuardado_,
+    resumenVerificable: resumenVerificable_
   };
 })();

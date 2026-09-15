@@ -640,6 +640,14 @@ const cfg = {
   cualPermisoLabel: '¿Cuál permiso adicional? (sección 1)',
   dateRange: { desdeFecha:'desdeFecha', desdeHora:'desdeHora', hastaFecha:'hastaFecha', hastaHora:'hastaHora', sectionLabel:'sección 2' },
 
+  // Lo que el núcleo debe comprobar al releer el permiso del servidor. Las
+  // lecturas de gases van aquí porque fueron justo el dato que se estuvo
+  // perdiendo en silencio: el servidor decía "ok" y la lectura se descartaba.
+  resumenVerificable(data){
+    const g = data && data.gases;
+    return { lecturas: (g && Array.isArray(g.lecturas)) ? g.lecturas.length : 0 };
+  },
+
   extraOnInitRender(){
     initSel_herramientas();
     initSelCualPermiso();
@@ -726,6 +734,27 @@ document.getElementById('readingSaveBtn').addEventListener('click', async ()=>{
   const res = await PermisoCore.sendToSheet(quickReadingData);
   btn.disabled = false;
   if(res.ok){
+    // Releer del servidor y comprobar que la lectura realmente quedó. Este es
+    // exactamente el caso que estuvo fallando en silencio durante días: el
+    // servidor respondía ok y descartaba el guardado.
+    const esperadas = (quickReadingData.gases.lecturas || []).length;
+    let confirmadas = null;
+    try{
+      const rel = await PermisoCore.fetchFromSheet(quickReadingData.permitCode);
+      confirmadas = (rel && rel.gases && Array.isArray(rel.gases.lecturas)) ? rel.gases.lecturas.length : 0;
+    }catch(e){ /* sin señal: no se pudo comprobar */ }
+
+    if(confirmadas !== null && confirmadas !== esperadas){
+      statusEl.textContent = '⚠ El servidor confirmó pero la lectura NO quedó guardada.';
+      statusEl.style.color = '#c0392b';
+      alert('⚠ ATENCIÓN: el servidor respondió que guardó, pero al releer el permiso\n' +
+            'hay ' + confirmadas + ' lectura(s) y deberían ser ' + esperadas + '.\n\n' +
+            'NO cierres esta página: los valores siguen en pantalla.\n' +
+            'Vuelve a guardar. Si se repite, avisa antes de dar la lectura por registrada.');
+      return;
+    }
+    statusEl.style.color = '';
+
     // La lectura que estaba escrita ya quedó guardada: pasa a la bitácora y se
     // limpian los campos. Sin esto, al registrar la siguiente lectura los
     // valores viejos seguirían en pantalla y se guardarían otra vez.
