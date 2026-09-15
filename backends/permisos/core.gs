@@ -1080,3 +1080,65 @@ function revisarIntentosSospechosos() {
   console.log(m);
   return m;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   INVESTIGAR UN PERMISO — ¿en qué momento se perdieron las firmas?
+   ------------------------------------------------------------------
+   La hoja "Permisos" solo guarda el estado ACTUAL. La bitácora, en
+   cambio, guardó el contenido de CADA escritura. Así que si un permiso
+   hoy aparece sin firmas, aquí se puede ver si alguna vez las tuvo y en
+   qué operación desaparecieron.
+
+   Esto distingue dos cosas que se ven iguales en la auditoría pero son
+   muy distintas:
+     · nunca se firmó  → falla de uso o del formulario al abrir
+     · se firmó y el CIERRE lo borró → falla grave: una operación
+       posterior pisó datos buenos con vacíos
+
+   CÓMO SE USA
+     Cambiar el código en CODIGO_A_INVESTIGAR, elegir investigarPermiso
+     en el desplegable y Ejecutar. El resultado sale en el registro.
+   ══════════════════════════════════════════════════════════════════ */
+
+const CODIGO_A_INVESTIGAR = 'PTC-20260904-525281';   // ← cambiar por el que se quiera revisar
+
+function investigarPermiso() {
+  const code = CODIGO_A_INVESTIGAR;
+  const sheet = getEventosSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) { console.log('Bitácora vacía.'); return; }
+
+  const datos = sheet.getRange(2, 1, last - 1, 9).getValues();
+  const eventos = datos.filter(f => String(f[1]) === code);
+  if (!eventos.length) { console.log('No hay eventos para ' + code); return; }
+
+  console.log('HISTORIA DE ' + code + ' — ' + eventos.length + ' evento(s)');
+  console.log('='.repeat(64));
+
+  eventos.forEach(f => {
+    const ts = f[0] instanceof Date ? Utilities.formatDate(f[0], 'America/Bogota', 'dd/MM/yyyy HH:mm:ss') : String(f[0]);
+    const accion = f[2], resultado = f[3], detalle = f[4];
+    let resumen = '';
+    if (f[8]) {
+      let d = null;
+      try { d = JSON.parse(f[8]); } catch (e) {}
+      if (d) {
+        // Se cuentan las firmas TAL COMO quedaron en esa escritura concreta.
+        const cuenta = (lista) => {
+          if (!Array.isArray(lista)) return '0/0';
+          const con = lista.filter(x => x && typeof x.sig === 'string' && x.sig.length > 10).length;
+          return con + '/' + lista.length;
+        };
+        resumen = 'ejecutantes con firma: ' + cuenta(d.ejecutantes) +
+                  ' · responsables con firma: ' + cuenta(d.responsablesSigs);
+      }
+    }
+    console.log(ts + '  ' + accion + ' / ' + resultado);
+    if (detalle) console.log('      ' + detalle);
+    if (resumen) console.log('      ' + resumen);
+  });
+
+  console.log('='.repeat(64));
+  console.log('Cómo leerlo: si una operación muestra firmas y la SIGUIENTE muestra');
+  console.log('0, esa operación las borró. Si nunca aparecen, nunca se guardaron.');
+}
