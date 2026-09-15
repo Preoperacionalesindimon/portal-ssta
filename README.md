@@ -187,7 +187,7 @@ El token está en `config.js`, que es público. **No se puede esconder** con un
 sitio estático: restringir el despliegue al dominio de Google rompería el
 portal, porque las peticiones salen sin sesión iniciada.
 
-Lo que sí se puede es notarlo. `instalarVigilancia_()` — ejecutar **una vez**
+Lo que sí se puede es notarlo. `instalarVigilancia()` — ejecutar **una vez**
 en cada backend — revisa la bitácora cada día y avisa por correo si alguien
 intentó con un token equivocado. El portal siempre manda el correcto, así que
 esos intentos no los causa un trabajador usando la aplicación.

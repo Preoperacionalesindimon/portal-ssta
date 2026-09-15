@@ -1002,12 +1002,15 @@ function auditarIntegridad() {
    error de un trabajador: el portal siempre manda el token correcto. Es
    alguien probando desde fuera.
 
-   Instalar una vez con instalarVigilancia_(). Revisa cada día y solo
+   Instalar una vez con instalarVigilancia(). Revisa cada día y solo
    escribe correo si hay algo — una alarma que suena sin motivo deja de
    leerse.
    ══════════════════════════════════════════════════════════════════ */
 
-function instalarVigilancia_() {
+// OJO: sin guion bajo al final. En Apps Script, una función que termina en "_"
+// es privada y NO aparece en el desplegable del editor, así que no se podría
+// ejecutar a mano — que es justo para lo que sirve esta.
+function instalarVigilancia() {
   ScriptApp.getProjectTriggers().forEach(t => {
     if (t.getHandlerFunction() === 'revisarIntentosSospechosos') ScriptApp.deleteTrigger(t);
   });

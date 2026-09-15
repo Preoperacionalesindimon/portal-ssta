@@ -208,6 +208,15 @@ grupo('Permisos de trabajo', () => {
   ok('existe la vigilancia de tokens inválidos',
      core.includes('function revisarIntentosSospechosos'));
 
+  // En Apps Script una función que termina en "_" es privada y NO sale en el
+  // desplegable del editor: no se puede ejecutar a mano. Las que están hechas
+  // para ejecutarse así no pueden llevarlo.
+  ['auditarIntegridad', 'instalarVigilancia', 'revisarIntentosSospechosos', 'verificarIntegridad'].forEach(f => {
+    ok(`${f} se puede ejecutar desde el editor (sin guion bajo)`,
+       new RegExp('function ' + f + '\\s*\\(').test(core) && !core.includes('function ' + f + '_('),
+       'Con "_" al final, Apps Script la oculta del desplegable.');
+  });
+
   ok('hay documento de traspaso',
      existe('TRASPASO.md'),
      'Hoy una sola persona entiende el sistema completo.');

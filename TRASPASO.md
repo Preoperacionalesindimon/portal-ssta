@@ -171,7 +171,7 @@ errores, sin consola ni cable. Se hizo para diagnosticar una tablet en planta.
 | Cada cuánto | Qué |
 |---|---|
 | Una vez, y luego si hay dudas | `auditarIntegridad()` en cada backend: revisa lo ya guardado y dice qué quedó incompleto |
-| Una vez | `instalarVigilancia_()` y `instalarResumenDiario_()`: instalan los avisos automáticos |
+| Una vez | `instalarVigilancia()` y `instalarResumenDiario()`: instalan los avisos automáticos |
 | Cada 6-12 meses, o si alguien se va | Rotar el token (procedimiento en el README) |
 | Cuando guardar se sienta lento | Archivar permisos cerrados de más de un año |
 

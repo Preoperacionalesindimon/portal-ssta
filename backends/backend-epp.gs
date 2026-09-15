@@ -554,7 +554,7 @@ function doGet(e) {
 
    OPCIONAL — envío automático: si además se quiere que salga solo a una hora
    fija, en el editor de Apps Script seleccionar la función
-   instalarResumenDiario_ en el menú de arriba y darle a Ejecutar (una sola
+   instalarResumenDiario en el menú de arriba y darle a Ejecutar (una sola
    vez). Para desactivarlo, borrar el disparador desde el ícono del reloj
    (Activadores). El botón sigue funcionando con o sin esto.
    ================================================================== */
@@ -568,7 +568,10 @@ const CORREOS_RESUMEN_DIARIO = CORREOS_REPOSICION;
 
 /* Crea el disparador diario. Ejecutar UNA vez desde el editor. Si ya existía,
    lo borra primero para no terminar con dos resúmenes cada tarde. */
-function instalarResumenDiario_() {
+// OJO: sin guion bajo al final. En Apps Script, una función que termina en "_"
+// es privada y NO aparece en el desplegable del editor, así que no se podría
+// ejecutar a mano — que es justo para lo que sirve esta.
+function instalarResumenDiario() {
   ScriptApp.getProjectTriggers().forEach(t => {
     if (t.getHandlerFunction() === 'enviarResumenDiario') ScriptApp.deleteTrigger(t);
   });
