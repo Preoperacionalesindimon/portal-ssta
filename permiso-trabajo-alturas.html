@@ -622,8 +622,8 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
         <div class="field"><label>Herramienta eléctrica</label><div class="yn-opts" data-yn></div></div>
         <div class="field"><label>Herramienta hidráulica</label><div class="yn-opts" data-yn></div></div>
         <div class="field"><label>Herramienta neumática</label><div class="yn-opts" data-yn></div></div>
-        <div class="field"><label>Otro, ¿cuál?</label><input type="text"></div>
       </div>
+      <div class="field" style="margin-top:10px;"><label>Herramientas y/o equipos a utilizar</label><div id="herramientasSel"></div><input type="hidden" id="herramientas"></div>
 
       <div class="row" style="margin-top:6px;"><b style="font-size:12px;color:var(--navy-dark);">9.6 Riesgos locativos identificados y controlados</b></div>
       <div class="row">
@@ -705,6 +705,8 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
   <span class="status" id="footerStatus">—</span>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+    <button class="btn-secondary no-print" id="historyBtn" type="button">Ver historial</button>
+    <div class="historial-permiso" id="historialPermiso"></div>
     <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
     <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
   </div>
@@ -869,6 +871,7 @@ const cfg = {
   ],
 
   extraOnInitRender(){
+    initSel_herramientas();
     initSelCualPermiso();
     buildEpccTable();
     ['calc-at','calc-rc','calc-dcl','calc-da','calc-amt'].forEach(id=>{
@@ -889,6 +892,7 @@ const cfg = {
   onYNChange(){ updateSectionPills(); },
   extraCollectOpenData(){
     return {
+      herramientas: document.getElementById('herramientas').value,
       epcc: collectEpccAlt(),
       calcAt: document.getElementById('calc-at').value,
       calcRc: document.getElementById('calc-rc').value,
@@ -899,6 +903,11 @@ const cfg = {
     };
   },
   extraSetFieldValues(vals){
+    initSel_herramientas();
+    if (sel_herramientas) {
+      sel_herramientas.set(vals.herramientas || '');
+      document.getElementById('herramientas').value = sel_herramientas.get();
+    }
     initSelCualPermiso();
     if (selCualPermiso) {
       selCualPermiso.set(vals.cualPermiso || '');
@@ -939,6 +948,21 @@ function initSelCualPermiso(){
     opciones: ['Trabajo en caliente','Espacios confinados','Izaje de cargas','Trabajo eléctrico','Bloqueo y etiquetado (LOTO)'],
     placeholderLibre: 'Otro permiso (escribe aquí)…',
     onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
+
+/* ── Herramientas y/o equipos a utilizar: fichas + campo libre ──
+   Se conserva #herramientas oculto con el texto combinado, para que lo que ya está
+   guardado en la hoja se siga leyendo igual y el resto del código no cambie. */
+let sel_herramientas = null;
+function initSel_herramientas(){
+  const cont = document.getElementById('herramientasSel');
+  if(!cont || sel_herramientas) return;
+  const oculto = document.getElementById('herramientas');
+  sel_herramientas = SeleccionMultiple.crear(cont, {
+    opciones: ['Arnés', 'Eslinga con absorbedor', 'Línea de vida', 'Trípode', 'Andamio certificado', 'Escalera', 'Silla de suspensión', 'Descensor', 'Freno de soga', 'Herramienta manual', 'Taladro', 'Pulidora', 'Cuerda de izado', 'Balde/bolsa de herramienta'],
+    placeholderLibre: 'Otras herramientas o equipos…',
+    onChange: ()=>{ oculto.value = sel_herramientas.get(); }
   });
 }
 </script>

@@ -311,6 +311,67 @@ grupo('Token compartido', () => {
 /* ═══════════════════════════════════════════════════════════
    6. DESPLIEGUE — los errores que ya nos hicieron perder tiempo
    ═══════════════════════════════════════════════════════════ */
+grupo('Herramientas y equipos por permiso', () => {
+  // Los cinco permisos preguntan qué herramientas se van a usar, con fichas de
+  // lo habitual en ESE trabajo más un campo libre. El campo oculto guarda el
+  // texto combinado, así que lo ya registrado en la hoja se sigue leyendo.
+  const CAMPO = {
+    'permiso-trabajo-caliente.html': 'herramientas',
+    'permiso-trabajo-alturas.html': 'herramientas',
+    'permiso-trabajo-electrico.html': 'herramientas',
+    'permiso-espacios-confinados.html': 'herramientas',
+    'permiso-izajes-cargas.html': 'equiposReq'
+  };
+  Object.entries(CAMPO).forEach(([f, campo]) => {
+    const t = leer(f);
+    ok(`${f}: tiene el campo de herramientas/equipos`,
+       t.includes(`id="${campo}Sel"`) && t.includes(`id="${campo}"`));
+    ok(`  se inicializa y se restaura`,
+       t.includes(`initSel_${campo}();`) && t.includes(`sel_${campo}.set(vals.${campo}`));
+    ok(`  se GUARDA con el permiso`,
+       t.includes(`${campo}: document.getElementById('${campo}').value`),
+       'Sin esto el campo se llena pero no queda en la hoja.');
+    const m = new RegExp("opciones: \\[([^\\]]*)\\]").exec(t.slice(t.indexOf(`function initSel_${campo}`)));
+    const n = m ? (m[1].match(/'/g) || []).length / 2 : 0;
+    ok(`  ofrece opciones propias del permiso (${n})`, n >= 8,
+       'Una lista genérica no ahorra escribir: tiene que tener lo que de verdad se usa en ese trabajo.');
+  });
+});
+
+grupo('Historial y vencimiento', () => {
+  const core = leer('permiso-core.js');
+  const back = leer('backends/permisos/core.gs');
+  const dash = leer('dashboard.html');
+
+  // ── Historial (bitácora) desde el portal ──
+  ok('el permiso puede consultar su bitácora', core.includes('verHistorialDelPermiso'));
+  ok('el backend expone el historial', back.includes("action === 'history'"));
+  ok('el historial muestra también los intentos rechazados',
+     core.includes('hp-marca') && core.includes('ETIQUETA_ACCION'),
+     'Un intento rechazado de tocar un permiso cerrado es justo lo que hay que poder demostrar.');
+  ['permiso-trabajo-caliente.html','permiso-trabajo-alturas.html','permiso-espacios-confinados.html',
+   'permiso-izajes-cargas.html','permiso-trabajo-electrico.html'].forEach(f => {
+    ok(`${f} tiene el botón de historial`, leer(f).includes('id="historyBtn"'));
+  });
+
+  // ── Vencimiento real ──
+  ok('el backend guarda la vigencia en columnas propias',
+     back.includes("'hastaFecha', 'hastaHora'"),
+     'Leer el JSON de cada fila solo para saber cuándo vence sería caro.');
+  ok('el listado devuelve la vigencia', back.includes('hastaFecha: hastaFecha'));
+  ok('el dashboard calcula el vencimiento', dash.includes('estadoVigencia'));
+  ok('distingue vencido de por vencer',
+     dash.includes("'vencido'") && dash.includes("'porvencer'"));
+  ok('la fecha se arma en hora local, no UTC',
+     /new Date\(a, m-1, d,/.test(dash),
+     'Con UTC un permiso que vence a las 6pm aparecía venciendo a la 1pm.');
+  ok('ordena por urgencia real',
+     /va\.minutos - vb\.minutos/.test(dash));
+  ok('los permisos sin vigencia siguen funcionando como antes',
+     dash.includes('HORAS_ALERTA'),
+     'Los permisos viejos no declaran vigencia: no pueden quedar sin indicador.');
+});
+
 grupo('Código QR e impresión', () => {
   ok('existe el generador de QR propio', existe('qr.js'),
      'Un servicio de internet no cargaría en planta sin señal, que es justo donde se usa.');

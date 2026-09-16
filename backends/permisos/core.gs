@@ -77,7 +77,11 @@ function getSheet_() {
   let sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(['permitCode', 'status', 'dataJson', 'updatedAt', 'openedAt', 'responsable', 'sitio']);
+    // hastaFecha/hastaHora van en columnas propias, igual que responsable y
+    // sitio: el dashboard necesita saber cuándo vence cada permiso y leer el
+    // JSON de cada fila solo para eso sería caro.
+    sheet.appendRow(['permitCode', 'status', 'dataJson', 'updatedAt', 'openedAt',
+                     'responsable', 'sitio', 'hastaFecha', 'hastaHora']);
   }
   return sheet;
 }
@@ -467,7 +471,7 @@ function doPost(e) {
       guardarFirmas_(code, mapaFirmas);
       registrarEvento_(code, esCierre ? 'CERRAR' : 'ABRIR', 'APLICADO', 'Primer registro del permiso',
                        body.opId, body.responsable || '', body.sitio || '', json);
-      sheet.appendRow([code, body.status || 'ABIERTO', json, ahora, ahora, body.responsable || '', body.sitio || '']);
+      sheet.appendRow([code, body.status || 'ABIERTO', json, ahora, ahora, body.responsable || '', body.sitio || '', body.hastaFecha || '', body.hastaHora || '']);
       return jsonOut_({ ok: true, permitCode: code });
     }
 
@@ -542,7 +546,7 @@ function doPost(e) {
     sheet.getRange(rowIndex, 2, 1, 3).setValues([[body.status || 'ABIERTO', jsonFinal, ahora]]);
     // Columnas F/G (responsable, sitio) — solo lectura rápida para el dashboard;
     // se recalculan en cada guardado por si cambian con "Agregar personal" u otros ajustes.
-    sheet.getRange(rowIndex, 6, 1, 2).setValues([[body.responsable || '', body.sitio || '']]);
+    sheet.getRange(rowIndex, 6, 1, 4).setValues([[body.responsable || '', body.sitio || '', body.hastaFecha || '', body.hastaHora || '']]);
     return jsonOut_({ ok: true, permitCode: code });
   } finally {
     lock.releaseLock();
@@ -592,7 +596,7 @@ function doGet(e) {
     // cada uno de los 5 backends, cada 2 minutos.
     const n = last - 1;
     const colAB = sheet.getRange(2, 1, n, 2).getValues(); // permitCode, status
-    const colDG = sheet.getRange(2, 4, n, 4).getValues(); // updatedAt, openedAt, responsable, sitio
+    const colDG = sheet.getRange(2, 4, n, 6).getValues(); // updatedAt, openedAt, responsable, sitio, hastaFecha, hastaHora
     const rows = [];
     for (let i = 0; i < n; i++) {
       if (!colAB[i][0]) continue;
@@ -608,13 +612,26 @@ function doGet(e) {
           sitio = parsed.sitio || '';
         } catch (err) { /* fila sin JSON válido, se ignora */ }
       }
+      // La vigencia puede faltar en filas anteriores a estas columnas: se saca
+      // del JSON solo en ese caso y solo para permisos ABIERTOS, que son los
+      // únicos donde importa saber si ya venció.
+      let hastaFecha = colDG[i][4] || '', hastaHora = colDG[i][5] || '';
+      if (!hastaFecha && colAB[i][1] === 'ABIERTO') {
+        try {
+          const parsed = JSON.parse(sheet.getRange(i + 2, 3).getValue());
+          hastaFecha = parsed.hastaFecha || '';
+          hastaHora = parsed.hastaHora || '';
+        } catch (err) { /* fila sin JSON válido */ }
+      }
       rows.push({
         permitCode: colAB[i][0],
         status: colAB[i][1],
         updatedAt: colDG[i][0],
         openedAt: colDG[i][1] || colDG[i][0], // filas antiguas sin columna E: se usa updatedAt
         responsable: responsable,
-        sitio: sitio
+        sitio: sitio,
+        hastaFecha: hastaFecha,
+        hastaHora: hastaHora
       });
     }
     return jsonOut_({ ok: true, rows });

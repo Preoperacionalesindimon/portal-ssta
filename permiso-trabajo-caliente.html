@@ -219,6 +219,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
       <div class="section-title" id="titleSec1">1. Descripción específica del trabajo a realizar</div>
       <div class="section-body">
         <div class="field"><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
+        <div class="field" style="margin-top:12px;"><label>Herramientas y/o equipos a utilizar</label><div id="herramientasSel"></div><input type="hidden" id="herramientas"></div>
         <div style="margin-top:14px;">
           <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">¿Requiere un permiso adicional?</label>
           <div class="radio-row">
@@ -330,6 +331,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   <span class="status" id="footerStatus">—</span>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+    <button class="btn-secondary no-print" id="historyBtn" type="button">Ver historial</button>
+    <div class="historial-permiso" id="historialPermiso"></div>
     <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
     <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
   </div>
@@ -438,9 +441,15 @@ const cfg = {
   dateRange: { desdeFecha:'desdeFecha', desdeHora:'desdeHora', hastaFecha:'hastaFecha', hastaHora:'hastaHora', sectionLabel:'sección 2' },
 
   extraOnInitRender(){
+    initSel_herramientas();
     initSelCualPermiso();
   },
   extraSetFieldValues(vals){
+    initSel_herramientas();
+    if (sel_herramientas) {
+      sel_herramientas.set(vals.herramientas || '');
+      document.getElementById('herramientas').value = sel_herramientas.get();
+    }
     // Fichas de permisos adicionales (ver initSelCualPermiso más abajo)
     initSelCualPermiso();
     if (selCualPermiso) {
@@ -456,6 +465,7 @@ const cfg = {
   },
   extraCollectOpenData(){
     return {
+      herramientas: document.getElementById('herramientas').value,
       mantDia: document.getElementById('mantDia').value,
       mantMes: document.getElementById('mantMes').value,
       mantAnio: document.getElementById('mantAnio').value,
@@ -481,6 +491,21 @@ function initSelCualPermiso(){
     opciones: ['Trabajo en alturas', 'Espacios confinados', 'Izaje de cargas', 'Trabajo eléctrico', 'Bloqueo y etiquetado (LOTO)'],
     placeholderLibre: 'Otro permiso (escribe aquí)…',
     onChange: ()=>{ oculto.value = selCualPermiso.get(); }
+  });
+}
+
+/* ── Herramientas y/o equipos a utilizar: fichas + campo libre ──
+   Se conserva #herramientas oculto con el texto combinado, para que lo que ya está
+   guardado en la hoja se siga leyendo igual y el resto del código no cambie. */
+let sel_herramientas = null;
+function initSel_herramientas(){
+  const cont = document.getElementById('herramientasSel');
+  if(!cont || sel_herramientas) return;
+  const oculto = document.getElementById('herramientas');
+  sel_herramientas = SeleccionMultiple.crear(cont, {
+    opciones: ['Equipo de soldadura', 'Pulidora', 'Oxicorte', 'Plasma', 'Esmeril', 'Extintor', 'Biombo/cortina', 'Manta ignífuga', 'Extensión eléctrica', 'Andamio', 'Escalera', 'Llaves', 'Martillo', 'Flexómetro'],
+    placeholderLibre: 'Otras herramientas o equipos…',
+    onChange: ()=>{ oculto.value = sel_herramientas.get(); }
   });
 }
 </script>

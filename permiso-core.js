@@ -1391,6 +1391,20 @@ const PermisoCore = (function () {
       }
     });
 
+    const btnHist = $('historyBtn');
+    if (btnHist) btnHist.addEventListener('click', () => {
+      const cont = $('historialPermiso');
+      // Segundo toque: se cierra. Es un panel de consulta, no algo permanente.
+      if (cont && cont.classList.contains('show')) {
+        cont.classList.remove('show');
+        cont.innerHTML = '';
+        btnHist.textContent = 'Ver historial';
+        return;
+      }
+      btnHist.textContent = 'Ocultar historial';
+      verHistorialDelPermiso();
+    });
+
     $('listOpenBtn').addEventListener('click', async () => {
       const listEl = $('openList');
       listEl.innerHTML = 'Buscando…';
@@ -1622,6 +1636,65 @@ const PermisoCore = (function () {
         if (f.cargo && $(f.cargo)) $(f.cargo).value = p.cargo || '';
       });
     });
+  }
+
+  /* ================= HISTORIAL DEL PERMISO (BITÁCORA) =================
+     Cada backend registra en la hoja "Eventos" una fila por CADA intento de
+     escritura: aplicado, rechazado o duplicado. Es la mejor herramienta de
+     diagnóstico que tiene el portal — con ella se encontraron dos de los tres
+     fallos graves que ha tenido — pero para leerla había que entrar a la hoja
+     de cálculo.
+
+     Aquí se consulta desde el propio permiso. Sirve en una auditoría y cuando
+     alguien pregunta por qué un permiso quedó como quedó. */
+  const ETIQUETA_ACCION = {
+    ABRIR: 'Apertura del permiso',
+    ACTUALIZAR: 'Modificación',
+    CERRAR: 'Cierre del permiso',
+    ADD_WORKERS: 'Personal agregado',
+    MIGRACION: 'Migración de datos'
+  };
+
+  async function verHistorialDelPermiso() {
+    const cont = $('historialPermiso');
+    if (!cont || !permitCode) return;
+    cont.classList.add('show');
+    cont.innerHTML = '<div class="hp-titulo">Historial del permiso</div>' +
+                     '<div class="hp-cuerpo"><div class="hp-vacio">Consultando…</div></div>';
+    const url = getWebAppUrl();
+    if (!url) { cont.innerHTML = ''; cont.classList.remove('show'); return; }
+    try {
+      const res = await fetchWithRetry(url + '?action=history&code=' + encodeURIComponent(permitCode) +
+                                       '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const data = await res.json();
+      const eventos = (data.ok && Array.isArray(data.eventos)) ? data.eventos : [];
+      let cuerpo;
+      if (!eventos.length) {
+        // Los permisos anteriores a la bitácora no tienen eventos: conviene
+        // decirlo en vez de dejar un recuadro vacío que parezca un error.
+        cuerpo = '<div class="hp-vacio">No hay eventos registrados para este permiso. ' +
+                 'Puede ser anterior a que existiera la bitácora.</div>';
+      } else {
+        cuerpo = eventos.slice().reverse().map((ev) => {
+          const r = String(ev.resultado || '').toLowerCase();
+          const f = new Date(ev.ts);
+          const cuando = isNaN(f.getTime()) ? String(ev.ts || '')
+            : f.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+              ' · ' + f.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+          return '<div class="hp-evento">' +
+            '<span class="hp-marca ' + esc(r) + '">' + esc(ev.resultado || '—') + '</span>' +
+            '<span class="hp-txt"><b>' + esc(ETIQUETA_ACCION[ev.accion] || ev.accion || '—') + '</b>' +
+            (ev.detalle ? ' — ' + esc(ev.detalle) : '') +
+            '<span class="hp-cuando">' + esc(cuando) + '</span></span></div>';
+        }).join('');
+      }
+      cont.innerHTML = '<div class="hp-titulo">Historial del permiso · ' + esc(permitCode) + '</div>' +
+                       '<div class="hp-cuerpo">' + cuerpo + '</div>';
+    } catch (e) {
+      cont.innerHTML = '<div class="hp-titulo">Historial del permiso</div>' +
+        '<div class="hp-cuerpo"><div class="hp-vacio">No se pudo consultar. ' +
+        'El historial necesita señal.</div></div>';
+    }
   }
 
   /* ================= CÓDIGO QR DEL PERMISO =================

@@ -244,7 +244,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         </div>
         <div class="grid2" style="margin-top:6px;">
           <div class="field"><label>Responsable del trabajo</label><input type="text" id="responsable"></div>
-          <div class="field"><label>Herramientas y/o equipos a utilizar</label><input type="text" id="herramientas"></div>
+          <div class="field"><label>Herramientas y/o equipos a utilizar</label><div id="herramientasSel"></div><input type="hidden" id="herramientas"></div>
         </div>
       </div>
     </div>
@@ -379,6 +379,8 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   <span class="status" id="footerStatus">—</span>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn-secondary" id="printBtn" type="button">Imprimir / PDF</button>
+    <button class="btn-secondary no-print" id="historyBtn" type="button">Ver historial</button>
+    <div class="historial-permiso" id="historialPermiso"></div>
     <button class="btn-secondary" id="backToStartBtn" type="button">Volver al inicio</button>
     <button class="btn-main" id="mainActionBtn" type="button">Guardar y exportar apertura</button>
   </div>
@@ -484,6 +486,11 @@ const cfg = {
   execExtraField: { id:'execTarjeta', field:'tarjeta', placeholder:'N.° tarjeta profesional (opcional)' },
 
   extraSetFieldValues(vals){
+    initSel_herramientas();
+    if (sel_herramientas) {
+      sel_herramientas.set(vals.herramientas || '');
+      document.getElementById('herramientas').value = sel_herramientas.get();
+    }
     document.getElementById('herramientas').value = vals.herramientas || '';
     document.getElementById('docATS').checked = !!vals.docATS;
     document.getElementById('docCaliente').checked = !!vals.docCaliente;
@@ -494,6 +501,10 @@ const cfg = {
     document.querySelectorAll('#bajaTensionGrid input').forEach(i=>{ i.checked = baja.includes(i.value); });
     document.querySelectorAll('#mediaTensionGrid input').forEach(i=>{ i.checked = media.includes(i.value); });
   },
+  extraOnInitRender(){
+    initSel_herramientas();
+  },
+
   extraCollectOpenData(){
     return {
       herramientas: document.getElementById('herramientas').value,
@@ -509,6 +520,21 @@ const cfg = {
 };
 
 PermisoCore.init(cfg);
+
+/* ── Herramientas y/o equipos a utilizar: fichas + campo libre ──
+   Se conserva #herramientas oculto con el texto combinado, para que lo que ya está
+   guardado en la hoja se siga leyendo igual y el resto del código no cambie. */
+let sel_herramientas = null;
+function initSel_herramientas(){
+  const cont = document.getElementById('herramientasSel');
+  if(!cont || sel_herramientas) return;
+  const oculto = document.getElementById('herramientas');
+  sel_herramientas = SeleccionMultiple.crear(cont, {
+    opciones: ['Multímetro', 'Pinza amperimétrica', 'Detector de tensión', 'Puesta a tierra temporal', 'Candados de bloqueo (LOTO)', 'Tarjetas de bloqueo', 'Guantes dieléctricos', 'Pértiga aislada', 'Herramienta aislada', 'Extensión eléctrica', 'Megóhmetro', 'Escalera dieléctrica'],
+    placeholderLibre: 'Otras herramientas o equipos…',
+    onChange: ()=>{ oculto.value = sel_herramientas.get(); }
+  });
+}
 </script>
 </body>
 </html>

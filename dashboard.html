@@ -34,6 +34,11 @@
   .tiempo.ok{color:var(--ok,#1d7a4c);background:rgba(29,122,76,.1);}
   .tiempo.warn{color:var(--warn,#c0392b);background:rgba(192,57,43,.12);}
   .tiempo.closed{color:#5c6570;background:rgba(90,100,110,.1);}
+  /* Por vencer: ámbar, un aviso distinto del rojo de "ya venció". */
+  .tiempo.pronto{color:#8a6800;background:rgba(224,168,0,.18);}
+  .item.v-vencido{border-left-color:var(--warn,#c0392b);background:linear-gradient(90deg, rgba(192,57,43,.07), transparent 45%);}
+  .item.v-porvencer{border-left-color:#e0a800;background:linear-gradient(90deg, rgba(224,168,0,.09), transparent 45%);}
+  .item.v-vigente{border-left-color:var(--ok,#1d7a4c);}
   .meta{font-size:12px;color:var(--ink-soft,#666);margin-top:6px;}
   .chevron{font-size:var(--fs-menor,12.5px);color:var(--ink-muted,#5c6a76);margin-top:3px;}
   .empty{background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:14px;padding:2rem;text-align:center;color:var(--ink-soft,#888);font-size:13px;}
@@ -94,6 +99,35 @@ function iconoPara(nombre){
   if(nombre.includes('Eléctrico')) return '⚡';
   return '🧗';
 }
+/* ── Vencimiento real ──
+   El dashboard mostraba solo cuántas horas llevaba abierto un permiso, con un
+   umbral fijo de 8 horas igual para todos. Pero cada permiso declara su propia
+   vigencia ("hasta" fecha y hora) y ese dato ya estaba guardado sin usarse.
+   Para quien supervisa, "vence en 2h" dice mucho más que "lleva 6h abierto". */
+function fechaVencimiento(it){
+  if(!it.hastaFecha) return null;
+  // Se guarda como AAAA-MM-DD y HH:MM. Se arma en hora local, no en UTC: con
+  // UTC un permiso que vence a las 6pm aparecía venciendo a la 1pm.
+  const [a,m,d] = String(it.hastaFecha).split('-').map(Number);
+  if(!a || !m || !d) return null;
+  const [hh,mm] = String(it.hastaHora || '23:59').split(':').map(Number);
+  const f = new Date(a, m-1, d, isNaN(hh)?23:hh, isNaN(mm)?59:mm, 0, 0);
+  return isNaN(f.getTime()) ? null : f;
+}
+
+function estadoVigencia(it){
+  const vence = fechaVencimiento(it);
+  if(!vence) return null;                       // permiso sin vigencia declarada
+  const minutos = Math.round((vence.getTime() - Date.now()) / 60000);
+  const abs = Math.abs(minutos);
+  const texto = abs < 60
+    ? abs + ' min'
+    : (abs < 1440 ? (abs/60).toFixed(abs/60 < 10 ? 1 : 0) + ' h' : Math.round(abs/1440) + ' d');
+  if(minutos < 0)  return { nivel:'vencido',  texto:'VENCIDO hace ' + texto, minutos };
+  if(minutos <= 60) return { nivel:'porvencer', texto:'Vence en ' + texto, minutos };
+  return { nivel:'vigente', texto:'Vence en ' + texto, minutos };
+}
+
 function horasDesde(fechaStr){
   const t = new Date(fechaStr).getTime();
   if(isNaN(t)) return null;
@@ -144,6 +178,8 @@ async function cargar(){
           code: row.code || row.permitCode || '—',
           responsable: row.responsable || '',
           area: row.sitio || row.area || '',
+          hastaFecha: row.hastaFecha || '',
+          hastaHora: row.hastaHora || '',
           fechaApertura: row.openedAt || row.updatedAt || null,
           fechaCierre: row.status === 'CERRADO' ? (row.closedAt || row.updatedAt || null) : null
         };
@@ -152,7 +188,16 @@ async function cargar(){
       });
     }
   });
-  abiertos.sort((a,b)=>(horasDesde(a.fechaApertura)||0) < (horasDesde(b.fechaApertura)||0) ? 1 : -1);
+  // Orden por urgencia real: primero lo vencido, luego lo que está por vencer,
+  // y al final lo que tiene margen. Los que no declaran vigencia se ordenan
+  // como antes, por tiempo abierto.
+  abiertos.sort((a,b)=>{
+    const va = estadoVigencia(a), vb = estadoVigencia(b);
+    if(va && vb) return va.minutos - vb.minutos;      // menos minutos = más urgente
+    if(va) return -1;
+    if(vb) return 1;
+    return (horasDesde(b.fechaApertura)||0) - (horasDesde(a.fechaApertura)||0);
+  });
   cerrados.sort((a,b)=> new Date(b.fechaCierre||0) - new Date(a.fechaCierre||0));
 
   document.getElementById('countAbiertos').textContent = abiertos.length ? '('+abiertos.length+')' : '';
@@ -248,13 +293,20 @@ function render(){
   if(tabActual==='abiertos'){
     listEl.innerHTML = items.map(it=>{
       const h = horasDesde(it.fechaApertura);
-      const alerta = h!==null && h >= HORAS_ALERTA;
-      return `<a class="item ${alerta?'warn':''}" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
+      const v = estadoVigencia(it);
+      // Si el permiso declara vigencia, manda ella. Si no (permisos viejos), se
+      // sigue usando el umbral de horas abiertas como antes.
+      const alerta = v ? (v.nivel !== 'vigente') : (h!==null && h >= HORAS_ALERTA);
+      const clase = v ? ('v-' + v.nivel) : (alerta ? 'warn' : '');
+      const etiqueta = v
+        ? `<span class="tiempo ${v.nivel==='vencido'?'warn':(v.nivel==='porvencer'?'pronto':'ok')}">${esc(v.texto)}</span>`
+        : `<span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>`;
+      return `<a class="item ${clase}" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
         <div class="row1">
           <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
-          <span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>
+          ${etiqueta}
         </div>
-        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}</div>
+        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}${v ? ' · Abierto hace '+formatHoras(h) : ''}</div>
         <div class="chevron">Toca para abrir el permiso y cerrarlo →</div>
       </a>`;
     }).join('');

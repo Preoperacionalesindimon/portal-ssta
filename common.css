@@ -626,3 +626,42 @@ canvas.pad.locked{cursor:default;}
   .qr-permiso .qr-pie b{font-size:9.5px;}
   .qr-permiso .qr-pie span{display:none;}
 }
+
+/* ── Historial del permiso (bitácora) ──
+   La bitácora guarda cada intento de escritura, incluidos los rechazados. Era
+   información valiosa que solo se podía ver entrando a la hoja de cálculo;
+   ahora se consulta desde el propio permiso. */
+.historial-permiso{
+  display:none;
+  margin-top:12px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-md,10px);
+  background:var(--paper);
+  overflow:hidden;
+}
+.historial-permiso.show{display:block;}
+.historial-permiso .hp-titulo{
+  background:var(--ink);color:#fff;
+  padding:9px 14px;font-size:var(--fs-etiqueta,11px);
+  font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+}
+.historial-permiso .hp-cuerpo{padding:10px 14px;}
+.hp-evento{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:9px 0;border-bottom:1px solid var(--line-soft);
+}
+.hp-evento:last-child{border-bottom:none;}
+.hp-evento .hp-marca{
+  flex:0 0 auto;min-width:80px;
+  font-size:var(--fs-etiqueta,11px);font-weight:700;
+  text-transform:uppercase;letter-spacing:.03em;
+  padding:3px 8px;border-radius:20px;text-align:center;
+}
+.hp-marca.aplicado{background:rgba(29,122,76,.12);color:var(--ok,#1d7a4c);}
+.hp-marca.rechazado{background:rgba(192,57,43,.12);color:var(--warn,#c0392b);}
+.hp-marca.duplicado{background:rgba(138,151,163,.18);color:var(--ink-muted,#5c6a76);}
+.hp-evento .hp-txt{flex:1;min-width:0;font-size:var(--fs-menor,12.5px);line-height:1.5;}
+.hp-evento .hp-txt b{color:var(--ink);}
+.hp-evento .hp-cuando{display:block;color:var(--ink-muted,#5c6a76);font-size:var(--fs-etiqueta,11px);margin-top:2px;}
+.hp-vacio{font-size:var(--fs-menor,12.5px);color:var(--ink-muted,#5c6a76);padding:6px 0;}
+@media print{ .historial-permiso{display:none !important;} }
