@@ -44,26 +44,53 @@ const SHEET_NAME = 'Inspecciones';
 const FIRMAS_SHEET_NAME = 'Firmas';
 const EVENTOS_SHEET_NAME = 'Eventos';
 
-// Los 17 elementos del formato SSTA-F-006, en el mismo orden del papel.
-const ELEMENTOS_EPP = [
-  'CASCO CON BARBUQUEJO',
-  'SOPORTE BASCULANTE',
-  'VISOR',
-  'CARETA DE SOLDAR',
-  'GAFAS TRANSPARENTES',
-  'GAFAS OSCURAS',
-  'GAFAS DE SOBREPONER',
-  'PROTECTOR AUDITIVO',
-  'PROTECCIÓN RESPIRATORIA MEDIA CARA',
-  'FILTROS / CARTUCHO',
-  'PREFILTRO',
-  'PETO MANGAS / CHAQUETA SOLDADOR',
-  'GUANTES DE CAUCHO NITRILO',
-  'GUANTES DE VAQUETA',
-  'GUANTES DE PRECISIÓN',
-  'BOTAS DE SEGURIDAD',
-  'CARNÉT'
-];
+/* ── Los dos formatos que atiende este backend ──
+   SSTA-F-006 (EPP general) y SSTA-F-147 (dotación de brigadistas). Comparten
+   hoja, flujo y correos: solo cambian los elementos y, en brigadistas, que
+   además se cuenta cuántas unidades hay.
+
+   Un solo backend en vez de dos: en este portal la duplicación ya causó
+   fallos que se arreglaron en una copia y no en la otra.
+
+   `cantidad` es lo que DEBE haber. Un botiquín con 1 tapabocas de 3 está
+   incompleto aunque lo que haya esté en buen estado, así que también se pide. */
+const FORMATOS_EPP = {
+  epp: {
+    codigo: 'SSTA-F-006',
+    titulo: 'Inspección de EPP',
+    elementos: [
+      'CASCO CON BARBUQUEJO','SOPORTE BASCULANTE','VISOR','CARETA DE SOLDAR',
+      'GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER','PROTECTOR AUDITIVO',
+      'PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO',
+      'PETO MANGAS / CHAQUETA SOLDADOR','GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA',
+      'GUANTES DE PRECISIÓN','BOTAS DE SEGURIDAD','CARNÉT'
+    ].map(function(n){ return { nombre: n, cantidad: null }; })
+  },
+  brigadista: {
+    codigo: 'SSTA-F-147',
+    titulo: 'Inspección de EPP — Brigadistas',
+    elementos: [
+      { nombre:'CANGURO',             cantidad:1  },
+      { nombre:'TAPABOCAS',           cantidad:3  },
+      { nombre:'GUANTES QUIRÚRGICOS', cantidad:5  },
+      { nombre:'MÁSCARA RCP',         cantidad:1  },
+      { nombre:'SILBATO',             cantidad:1  },
+      { nombre:'CURITAS',             cantidad:10 },
+      { nombre:'GASAS',               cantidad:6  },
+      { nombre:'LINTERNA',            cantidad:1  },
+      { nombre:'ALCOHOL',             cantidad:1  }
+    ]
+  }
+};
+
+/** Devuelve el formato pedido. Las inspecciones guardadas antes de que
+ *  existiera el de brigadistas no tienen tipo: esas son del de EPP. */
+function formatoDe_(tipo) {
+  return FORMATOS_EPP[tipo] || FORMATOS_EPP.epp;
+}
+
+// Se mantiene por compatibilidad: varias partes del código ya la usaban.
+const ELEMENTOS_EPP = FORMATOS_EPP.epp.elementos.map(function(e){ return e.nombre; });
 
 function checkToken_(token) {
   return token === API_TOKEN;
@@ -296,7 +323,8 @@ function rehidratarFirmas_(obj, mapa) {
  */
 function enviarSolicitudReposicion_(datos, inspeccionId) {
   const malos = datos.malos || [];
-  if (!malos.length) return 'Sin elementos en MALO; no se envía correo.';
+  const faltantes = datos.faltantes || [];
+  if (!malos.length && !faltantes.length) return 'Sin elementos por reponer; no se envía correo.';
 
   const destinatarios = CORREOS_REPOSICION.filter(c => c && c.indexOf('@') !== -1);
   if (COPIAR_AL_INSPECTOR && datos.inspectorCorreo && datos.inspectorCorreo.indexOf('@') !== -1) {
@@ -307,11 +335,13 @@ function enviarSolicitudReposicion_(datos, inspeccionId) {
   }
 
   const fecha = datos.fechaInspeccion || Utilities.formatDate(new Date(), 'America/Bogota', 'dd/MM/yyyy');
-  const asunto = 'Solicitud de reposición de EPP — ' + (datos.nombre || 's/n');
+  const tituloFormato = (datos.formato && datos.formato.titulo) ? datos.formato.titulo : 'Inspección de EPP';
+  const codigoFormato = (datos.formato && datos.formato.codigo) ? datos.formato.codigo : 'SSTA-F-006';
+  const asunto = 'Solicitud de reposición — ' + tituloFormato + ' — ' + (datos.nombre || 's/n');
 
   let cuerpo = '';
-  cuerpo += 'SOLICITUD DE REPOSICIÓN DE ELEMENTOS DE PROTECCIÓN PERSONAL\n';
-  cuerpo += 'Formato SSTA-F-006 · Inspección de EPP\n';
+  cuerpo += 'SOLICITUD DE REPOSICIÓN DE ELEMENTOS\n';
+  cuerpo += 'Formato ' + codigoFormato + ' · ' + tituloFormato + '\n';
   cuerpo += '------------------------------------------------------------\n\n';
   cuerpo += 'Trabajador:  ' + (datos.nombre || '') + '\n';
   cuerpo += 'Cédula:      ' + (datos.cedula || '') + '\n';
@@ -319,8 +349,18 @@ function enviarSolicitudReposicion_(datos, inspeccionId) {
   cuerpo += 'Inspección:  ' + fecha + '\n';
   cuerpo += 'Inspector:   ' + (datos.inspector || '') + '\n';
   cuerpo += 'Registro:    ' + inspeccionId + '\n\n';
-  cuerpo += 'ELEMENTOS EN MAL ESTADO QUE REQUIEREN REPOSICIÓN (' + malos.length + '):\n\n';
-  malos.forEach((m, i) => { cuerpo += '  ' + (i + 1) + '. ' + m + '\n'; });
+  if (malos.length) {
+    cuerpo += 'EN MAL ESTADO — requieren reposición (' + malos.length + '):\n\n';
+    malos.forEach((m, i) => { cuerpo += '  ' + (i + 1) + '. ' + m + '\n'; });
+    cuerpo += '\n';
+  }
+  // Los incompletos van aparte: no están dañados, simplemente no alcanzan.
+  // Separarlos le dice a quien repone si debe cambiar o solo completar.
+  if (faltantes.length) {
+    cuerpo += 'INCOMPLETOS — falta cantidad (' + faltantes.length + '):\n\n';
+    faltantes.forEach((f, i) => { cuerpo += '  ' + (i + 1) + '. ' + f + '\n'; });
+    cuerpo += '\n';
+  }
 
   // Los elementos en REGULAR no se piden, pero se informan: sirven para
   // anticipar la próxima reposición sin que se conviertan en una urgencia.
@@ -346,7 +386,8 @@ function enviarSolicitudReposicion_(datos, inspeccionId) {
 
   try {
     MailApp.sendEmail(destinatarios.join(','), asunto, cuerpo);
-    return 'Correo enviado a: ' + destinatarios.join(', ') + ' (' + malos.length + ' elemento(s) en MALO)';
+    return 'Correo enviado a: ' + destinatarios.join(', ') +
+           ' (' + malos.length + ' en mal estado, ' + faltantes.length + ' incompleto(s))';
   } catch (e) {
     return 'ERROR al enviar el correo: ' + e.message;
   }
@@ -388,22 +429,39 @@ function doPost(e) {
     // Recalcular los MALOS/REGULARES en el servidor, no confiar en lo que
     // mande el cliente: el correo de reposición es el efecto real de este
     // formato, y debe corresponder exactamente a lo que quedó guardado.
+    const tipo = (body.tipo === 'brigadista') ? 'brigadista' : 'epp';
+    const formato = formatoDe_(tipo);
     const items = body.items || {};
-    const malos = [], regulares = [];
-    ELEMENTOS_EPP.forEach(el => {
+    const unidades = body.unidades || {};
+    const malos = [], regulares = [], faltantes = [];
+    formato.elementos.forEach(e => {
+      const el = e.nombre;
       if (items[el] === 'M') malos.push(el);
       else if (items[el] === 'R') regulares.push(el);
+      // Incompleto por cantidad: se pide igual aunque lo que haya esté bueno.
+      // Un campo sin diligenciar NO cuenta como faltante: significa "no lo
+      // conté", no "hay cero".
+      if (e.cantidad && items[el] !== 'N/A' && unidades[el] !== undefined && unidades[el] !== null) {
+        const hay = Number(unidades[el]);
+        if (!isNaN(hay) && hay < e.cantidad) {
+          faltantes.push(el + ' (hay ' + hay + ', deben ser ' + e.cantidad + ')');
+        }
+      }
     });
 
     const mapaFirmas = [];
     const limpio = extraerFirmas_({
+      tipo: tipo,
+      formato: formato.codigo,
       items: items,
+      unidades: unidades,
+      faltantes: faltantes,
       observaciones: body.observaciones || '',
       sigTrabajador: body.sigTrabajador || '',
       sigInspector: body.sigInspector || '',
       malos: malos,
       regulares: regulares,
-      formVersion: body.formVersion || 'SSTA-F-006-v6'
+      formVersion: body.formVersion || formato.codigo
     }, mapaFirmas);
 
     const sheet = getSheet_();
@@ -415,7 +473,7 @@ function doPost(e) {
       body.cargo || '',
       body.fechaInspeccion || Utilities.formatDate(ahora, 'America/Bogota', 'dd/MM/yyyy'),
       body.inspector || '',
-      malos.join(' | '),
+      malos.concat(faltantes).join(' | '),
       JSON.stringify(limpio),
       ahora
     ];
@@ -433,12 +491,16 @@ function doPost(e) {
     // El correo va DESPUÉS de guardar y registrar: si el envío falla, la
     // inspección ya está a salvo y el fallo queda anotado en la bitácora.
     const resultadoCorreo = enviarSolicitudReposicion_({
+      tipo: tipo, formato: formato,
+      faltantes: faltantes,
       nombre: body.nombre, cedula: body.cedula, cargo: body.cargo,
       inspector: body.inspector, inspectorCorreo: body.inspectorCorreo,
       fechaInspeccion: body.fechaInspeccion,
       observaciones: body.observaciones,
       malos: malos, regulares: regulares
     }, inspeccionId);
+    // Nota: 'faltantes' va aparte de 'malos' porque son cosas distintas — uno
+    // está dañado y el otro no alcanza — pero ambos se solicitan.
     registrarEvento_(inspeccionId, 'CORREO', malos.length ? 'APLICADO' : 'DUPLICADO',
                      resultadoCorreo, '', body.nombre || '', body.inspector || '', '');
 
@@ -499,16 +561,18 @@ function doGet(e) {
     const sheet = getSheet_();
     const rows = filasPorValor_(sheet, 2, e.parameter.cedula);
     const completo = e.parameter.full === '1';
+    const tipoPedido = e.parameter.tipo || '';
     const out = [];
     rows.forEach(r => {
       const f = sheet.getRange(r, 1, 1, 9).getValues()[0];
+      let datos = {};
+      try { datos = JSON.parse(f[7] || '{}'); } catch (err) { datos = {}; }
+      const tipoFila = datos.tipo || 'epp';
+      if (tipoPedido && tipoFila !== tipoPedido) return; // no mezclar formatos en la ficha
       const reg = { inspeccionId: f[0], cedula: f[1], nombre: f[2], cargo: f[3],
-                    fechaInspeccion: f[4], inspector: f[5], malos: f[6], updatedAt: f[8] };
-      if (completo) {
-        let datos = {};
-        try { datos = JSON.parse(f[7] || '{}'); } catch (err) { datos = {}; }
-        reg.datos = rehidratarFirmas_(datos, cargarFirmasPorId_(f[0]));
-      }
+                    fechaInspeccion: f[4], inspector: f[5], malos: f[6],
+                    tipo: tipoFila, updatedAt: f[8] };
+      if (completo) reg.datos = rehidratarFirmas_(datos, cargarFirmasPorId_(f[0]));
       out.push(reg);
     });
     out.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -522,13 +586,21 @@ function doGet(e) {
     const sheet = getSheet_();
     const last = sheet.getLastRow();
     const rows = [];
+    // Con &tipo= se devuelve solo ese formato. Las inspecciones guardadas antes
+    // de que existiera el de brigadistas no tienen tipo dentro del JSON: se
+    // cuentan como del formato de EPP, que es lo que eran.
+    const tipoPedido = e.parameter.tipo || '';
     if (last >= 2) {
-      const a = sheet.getRange(2, 1, last - 1, 7).getValues();
+      const a = sheet.getRange(2, 1, last - 1, 8).getValues(); // hasta H = dataJson
       const u = sheet.getRange(2, 9, last - 1, 1).getValues();
       for (let i = 0; i < a.length; i++) {
         if (!a[i][0]) continue;
+        let tipoFila = 'epp';
+        try { tipoFila = (JSON.parse(a[i][7] || '{}').tipo) || 'epp'; } catch (err) {}
+        if (tipoPedido && tipoFila !== tipoPedido) continue;
         rows.push({ inspeccionId: a[i][0], cedula: a[i][1], nombre: a[i][2], cargo: a[i][3],
-                    fechaInspeccion: a[i][4], inspector: a[i][5], malos: a[i][6], updatedAt: u[i][0] });
+                    fechaInspeccion: a[i][4], inspector: a[i][5], malos: a[i][6],
+                    tipo: tipoFila, updatedAt: u[i][0] });
       }
     }
     rows.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));

@@ -112,25 +112,53 @@ grupo('Firmas: no pueden perderse en silencio', () => {
 grupo('Inspección de EPP', () => {
   const back = leer('backends/backend-epp.gs');
   const front = leer('inspeccion-epp.html');
-  const lista = (txt, nombre) => {
-    const m = new RegExp('const ' + nombre + ' = \\[([\\s\\S]*?)\\];').exec(txt);
-    return m ? [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]) : null;
+  // La comparación de listas se hace más abajo, por formato: esta pantalla
+  // atiende dos (SSTA-F-006 y SSTA-F-147) y cada uno tiene la suya.
+
+  // La misma pantalla y el mismo backend atienden dos formatos (SSTA-F-006 y
+  // SSTA-F-147). Cada uno tiene su lista, y las dos mitades deben coincidir
+  // igual que la de EPP: si se separan, el correo pide cosas equivocadas.
+  const bloqueFormato = (txt, clave) => {
+    const m = new RegExp('\\n  ' + clave + ':\\s*\\{([\\s\\S]*?)\\n  \\}').exec(txt);
+    if (!m) return null;
+    const els = /elementos:\s*\[([\s\S]*?)\]/.exec(m[1]);
+    if (!els) return null;
+    let nombres = [...els[1].matchAll(/nombre:\s*'([^']+)'/g)].map(x => x[1]);
+    if (!nombres.length) nombres = [...els[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
+    const cantidades = [...els[1].matchAll(/cantidad:\s*(\d+|null)/g)].map(x => x[1]);
+    return { nombres, cantidades };
   };
-  const b = lista(back, 'ELEMENTOS_EPP'), f = lista(front, 'ELEMENTOS');
-  ok('el backend define los 17 elementos del formato SSTA-F-006', b && b.length === 17,
-     b ? `tiene ${b.length}` : 'no se encontró la lista');
-  ok('el navegador define los mismos 17', f && f.length === 17,
-     f ? `tiene ${f.length}` : 'no se encontró la lista');
-  ok('las dos listas coinciden EXACTAMENTE (mismo texto y orden)',
-     b && f && JSON.stringify(b) === JSON.stringify(f),
-     'Si se desincronizan, el correo pediría elementos distintos a los marcados.');
+  ['epp', 'brigadista'].forEach(tipo => {
+    const bb = bloqueFormato(back, tipo), ff = bloqueFormato(front, tipo);
+    ok(`el formato "${tipo}" está definido en las dos mitades`, !!bb && !!ff);
+    if (bb && ff) {
+      ok(`  "${tipo}": los elementos coinciden entre navegador y servidor`,
+         JSON.stringify(bb.nombres) === JSON.stringify(ff.nombres),
+         'Desincronizados, se marcaría una cosa y se pediría otra.');
+      ok(`  "${tipo}": las cantidades esperadas coinciden`,
+         JSON.stringify(bb.cantidades) === JSON.stringify(ff.cantidades),
+         'La cantidad decide si un kit está incompleto: tiene que ser la misma en los dos lados.');
+    }
+  });
+
+  ok('el formato de brigadistas pide por cantidad además de por estado',
+     back.includes('faltantes') && front.includes('faltantesPorCantidad'),
+     'Un botiquín con 1 tapabocas de 3 está incompleto aunque lo que haya esté bueno.');
+
+  ok('un campo de unidades vacío no cuenta como faltante',
+     front.includes("el.value === ''") && back.includes("!== undefined"),
+     'Vacío significa "no lo conté", no "hay cero".');
 
   ok('el servidor recalcula los MALO en vez de confiar en el navegador',
-     /ELEMENTOS_EPP\.forEach\([\s\S]{0,200}?=== 'M'/.test(back),
+     /formato\.elementos\.forEach\([\s\S]{0,260}?=== 'M'/.test(back),
      'El correo es el efecto real del formato: debe salir de lo que quedó guardado.');
 
-  ok('sin elementos en MALO no se envía correo',
-     back.includes("if (!malos.length) return 'Sin elementos en MALO"));
+  ok('el servidor también recalcula los incompletos por cantidad',
+     /faltantes\.push/.test(back),
+     'Un kit incompleto se repone aunque lo que haya esté en buen estado.');
+
+  ok('sin nada por reponer no se envía correo',
+     back.includes("Sin elementos por reponer"));
 
   ok('un fallo de correo no tumba el guardado',
      /try \{[\s\S]{0,300}?MailApp\.sendEmail[\s\S]{0,200}?catch/.test(back),

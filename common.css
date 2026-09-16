@@ -508,3 +508,16 @@ canvas.pad.locked{cursor:default;}
   color:#7a1f14 !important;
 }
 .status-banner.warn *{color:#7a1f14 !important;}
+
+/* Columna de unidades del formato de brigadistas (SSTA-F-147). El de EPP no
+   la tiene: ahí solo importa el estado, no cuántos hay. */
+.epp-item .epp-unidades{
+  width:64px;flex:0 0 auto;text-align:center;
+  border:1.5px solid var(--line);border-radius:var(--radius-sm,7px);
+  padding:9px 6px;font-size:var(--fs-campo,16px);font-family:inherit;
+  min-height:var(--touch,44px);background:var(--paper);color:var(--ink);
+}
+.epp-item .epp-esperado{
+  display:block;font-size:var(--fs-etiqueta,11px);color:var(--ink-muted,#5c6a76);
+  font-weight:400;margin-top:2px;
+}

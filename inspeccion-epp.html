@@ -240,7 +240,7 @@
 <body>
 
 <div class="hdr">
-  <h1>🦺 Inspección de EPP<span class="cod">SSTA-F-006 · versión 6</span></h1>
+  <h1 id="tituloFormato">🦺 Inspección de EPP<span class="cod">SSTA-F-006 · versión 6</span></h1>
   <a href="index.html">← Volver al portal</a>
 </div>
 
@@ -285,7 +285,7 @@
 
   <!-- ── Persona que se está revisando ── -->
   <div class="section">
-    <div class="section-title">Trabajador inspeccionado</div>
+    <div class="section-title" id="etiquetaTrabajador">Trabajador inspeccionado</div>
     <div class="section-body">
       <div class="field">
         <label for="trabNombre">Nombre completo</label>
@@ -314,7 +314,7 @@
     <div class="section-body">
       <p class="leyenda">
         <b>B</b> Bueno · <b>R</b> Regular · <b>M</b> Malo · <b>N/A</b> No aplica.<br>
-        Lo que marques como <b>M</b> se solicita automáticamente por correo al guardar.
+        Lo que marques como <b>M</b> —y lo que esté incompleto— se solicita automáticamente por correo al guardar.
       </p>
       <div id="listaEpp"></div>
       <div class="aviso-malos" id="avisoMalos"></div>
@@ -421,7 +421,7 @@ const CORREO_APROBACION = 'analista.ssta@indimon.com.co';
 /** Arma el enlace de WhatsApp con el mensaje ya escrito, para que el inspector
  *  solo tenga que adjuntar las fotos y darle enviar. */
 function enlaceWhatsApp(nombre, cedula, fecha, malos, registro, observaciones){
-  let msg = 'Solicitud de reposición de EPP (SSTA-F-006)\n\n';
+  let msg = 'Solicitud de reposición — ' + FORMATO.titulo + ' (' + FORMATO.codigo + ')\n\n';
   msg += 'Trabajador: ' + (nombre || '') + '\n';
   if(cedula) msg += 'Cédula: ' + cedula + '\n';
   if(fecha)  msg += 'Inspección: ' + fecha + '\n';
@@ -435,18 +435,66 @@ function enlaceWhatsApp(nombre, cedula, fecha, malos, registro, observaciones){
   return 'https://wa.me/' + WA_NUMERO + '?text=' + encodeURIComponent(msg);
 }
 
-/* Los 17 elementos del formato SSTA-F-006, en el orden del papel.
-   El backend tiene esta misma lista y es quien MANDA: al guardar, recalcula
-   allá cuáles quedaron en M para armar el correo, en vez de confiar en lo que
-   mande el navegador — el correo de reposición es el efecto real de este
-   formato y debe corresponder exactamente a lo que quedó guardado. */
-const ELEMENTOS = [
-  'CASCO CON BARBUQUEJO','SOPORTE BASCULANTE','VISOR','CARETA DE SOLDAR',
-  'GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER','PROTECTOR AUDITIVO',
-  'PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO',
-  'PETO MANGAS / CHAQUETA SOLDADOR','GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA',
-  'GUANTES DE PRECISIÓN','BOTAS DE SEGURIDAD','CARNÉT'
-];
+/* ── Los dos formatos que maneja esta pantalla ──
+   La misma página sirve para la inspección de EPP (SSTA-F-006) y para la de
+   dotación de brigadistas (SSTA-F-147). Se elige con ?tipo=brigadista en la
+   dirección; sin parámetro, es la de EPP.
+
+   Se hizo así en vez de duplicar la página y el backend: son el mismo flujo
+   (buscar a la persona, calificar elementos, firmar, pedir reposición) y en
+   este portal la duplicación ya nos costó tres fallos que solo se arreglaron
+   en una copia y no en la otra.
+
+   El backend tiene estas mismas listas y es quien MANDA: al guardar recalcula
+   allá qué quedó en MALO y qué falta, en vez de confiar en lo que mande el
+   navegador — el correo de reposición es el efecto real de estos formatos y
+   debe corresponder exactamente a lo que quedó guardado.
+
+   `cantidad` solo la usa el formato de brigadistas: ahí el papel tiene una
+   columna UNIDADES porque un botiquín con 1 tapabocas de 3 está incompleto
+   aunque lo que haya esté en buen estado. */
+const FORMATOS = {
+  epp: {
+    codigo: 'SSTA-F-006',
+    version: '6',
+    titulo: 'Inspección de EPP',
+    icono: '🦺',
+    sujeto: 'trabajador',
+    unidades: false,
+    elementos: [
+      'CASCO CON BARBUQUEJO','SOPORTE BASCULANTE','VISOR','CARETA DE SOLDAR',
+      'GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER','PROTECTOR AUDITIVO',
+      'PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO',
+      'PETO MANGAS / CHAQUETA SOLDADOR','GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA',
+      'GUANTES DE PRECISIÓN','BOTAS DE SEGURIDAD','CARNÉT'
+    ].map(n => ({ nombre: n, cantidad: null }))
+  },
+  brigadista: {
+    codigo: 'SSTA-F-147',
+    version: '1',
+    titulo: 'Inspección de EPP — Brigadistas',
+    icono: '🧰',
+    sujeto: 'brigadista',
+    unidades: true,
+    elementos: [
+      { nombre:'CANGURO',              cantidad:1  },
+      { nombre:'TAPABOCAS',            cantidad:3  },
+      { nombre:'GUANTES QUIRÚRGICOS',  cantidad:5, unidadTexto:'pares' },
+      { nombre:'MÁSCARA RCP',          cantidad:1  },
+      { nombre:'SILBATO',              cantidad:1  },
+      { nombre:'CURITAS',              cantidad:10 },
+      { nombre:'GASAS',                cantidad:6  },
+      { nombre:'LINTERNA',             cantidad:1  },
+      { nombre:'ALCOHOL',              cantidad:1  }
+    ]
+  }
+};
+
+const TIPO = (new URLSearchParams(location.search).get('tipo') === 'brigadista') ? 'brigadista' : 'epp';
+const FORMATO = FORMATOS[TIPO];
+const ELEMENTOS = FORMATO.elementos.map(e => e.nombre);
+const CANTIDAD_ESPERADA = {};
+FORMATO.elementos.forEach(e => { if (e.cantidad) CANTIDAD_ESPERADA[e.nombre] = e.cantidad; });
 const OPCIONES = [
   { v:'B',   label:'B',   cls:'on-b'  },
   { v:'R',   label:'R',   cls:'on-r'  },
@@ -492,6 +540,30 @@ function renderLista(){
     row.dataset.el = el;
     const p = document.createElement('p');
     p.textContent = el;
+    const esperada = CANTIDAD_ESPERADA[el];
+    if (esperada) {
+      // Se muestra cuánto DEBE haber: es el criterio para saber si el botiquín
+      // está completo, y quien inspecciona no tiene por qué saberlo de memoria.
+      const meta = FORMATO.elementos.find(x => x.nombre === el);
+      const sp = document.createElement('span');
+      sp.className = 'epp-esperado';
+      sp.textContent = 'deben ser ' + esperada + ' ' + (meta && meta.unidadTexto ? meta.unidadTexto : (esperada === 1 ? 'unidad' : 'unidades'));
+      p.appendChild(document.createElement('br'));
+      p.appendChild(sp);
+    }
+    if (FORMATO.unidades) {
+      const cant = document.createElement('input');
+      cant.type = 'number'; cant.min = '0'; cant.inputMode = 'numeric';
+      cant.className = 'epp-unidades';
+      cant.dataset.unidades = el;
+      cant.placeholder = '0';
+      cant.setAttribute('aria-label', 'Unidades encontradas de ' + el);
+      cant.addEventListener('input', actualizarResumen);
+      row.appendChild(p);
+      row.appendChild(cant);
+    } else {
+      row.appendChild(p);
+    }
     const opts = document.createElement('div');
     opts.className = 'epp-opts';
     OPCIONES.forEach(o=>{
@@ -504,7 +576,7 @@ function renderLista(){
       b.setAttribute('aria-label', o.label + ' — ' + el);
       opts.appendChild(b);
     });
-    row.appendChild(p); row.appendChild(opts);
+    row.appendChild(opts);
     cont.appendChild(row);
   });
 }
@@ -554,13 +626,41 @@ function actualizarBannerPendientes(){
   }
 }
 
+/* Elementos donde la cantidad encontrada no llega a la esperada. Solo aplica
+   al formato que tiene columna de unidades. Un campo vacío NO cuenta como
+   faltante: significa "todavía no lo he contado", no "hay cero". */
+function faltantesPorCantidad(){
+  if(!FORMATO.unidades) return [];
+  const out = [];
+  FORMATO.elementos.forEach(e=>{
+    if(!e.cantidad) return;
+    if(estado[e.nombre] === 'N/A') return;      // no aplica: no se pide
+    const el = document.querySelector('[data-unidades="'+CSS.escape(e.nombre)+'"]');
+    if(!el || el.value === '') return;
+    const hay = parseInt(el.value, 10);
+    if(!isNaN(hay) && hay < e.cantidad) out.push({ nombre:e.nombre, hay:hay, debe:e.cantidad });
+  });
+  return out;
+}
+
+/* Lo contado, para enviarlo al servidor. Solo se manda lo que de verdad se
+   diligenció: un campo vacío no es un cero. */
+function unidadesRegistradas(){
+  const o = {};
+  document.querySelectorAll('[data-unidades]').forEach(el=>{
+    if(el.value !== '') o[el.dataset.unidades] = parseInt(el.value,10);
+  });
+  return o;
+}
+
 function actualizarResumen(){
   const respondidos = ELEMENTOS.filter(e=>estado[e]).length;
   document.getElementById('progresoEpp').textContent = respondidos + '/' + ELEMENTOS.length;
   const malos = ELEMENTOS.filter(e=>estado[e]==='M');
   const box = document.getElementById('avisoMalos');
   const boxAprob = document.getElementById('avisoAprobacion');
-  if(!malos.length){
+  const faltantes = faltantesPorCantidad();
+  if(!malos.length && !faltantes.length){
     box.classList.remove('show'); box.innerHTML='';
     boxAprob.classList.remove('show'); boxAprob.innerHTML='';
     return;
@@ -569,11 +669,14 @@ function actualizarResumen(){
   // Arriba, junto a los elementos: qué se va a pedir. Se muestra ANTES de
   // guardar para que no haya sorpresas con un correo que sale sin que el
   // inspector lo tuviera claro.
-  box.innerHTML = '<strong>Se solicitará la reposición de ' + malos.length +
-    (malos.length===1?' elemento:':' elementos:') + '</strong><ul>' +
-    malos.map(m=>'<li>'+esc(m)+'</li>').join('') + '</ul>' +
+  const totalPedidos = malos.length + faltantes.length;
+  box.innerHTML = '<strong>Se solicitará la reposición de ' + totalPedidos +
+    (totalPedidos===1?' elemento:':' elementos:') + '</strong><ul>' +
+    malos.map(m=>'<li>'+esc(m)+' — en mal estado</li>').join('') +
+    faltantes.map(f=>'<li>'+esc(f.nombre)+' — hay '+f.hay+' y deben ser '+f.debe+'</li>').join('') +
+    '</ul>' +
     '<span class="wa-nota">📷 Toma las fotos ahora, mientras tienes ' +
-    (malos.length===1?'el elemento':'los elementos') + ' a la mano. ' +
+    (totalPedidos===1?'el elemento':'los elementos') + ' a la mano. ' +
     'El paso para enviarlas está más abajo, después de las observaciones.</span>';
   box.classList.add('show');
 
@@ -737,7 +840,9 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
     inspector: document.getElementById('inspNombre').value.trim(),
     inspectorCorreo: document.getElementById('inspCorreo').value.trim(),
     fechaInspeccion: formatFechaCorta(document.getElementById('inspFecha').value),
+    tipo: TIPO,
     items: estado,
+    unidades: unidadesRegistradas(),
     observaciones: document.getElementById('observaciones').value.trim(),
     sigTrabajador: pads['padTrabajador'].getDataUrl(),
     sigInspector: pads['padInspector'].getDataUrl()
@@ -863,7 +968,7 @@ async function cargarHistorial(){
   }
   nota.textContent = 'Cargando…';
   try{
-    const res = await fetchWithRetry(EPP_URL + '?list=1&token=' + encodeURIComponent(TOKEN));
+    const res = await fetchWithRetry(EPP_URL + '?list=1&tipo=' + TIPO + '&token=' + encodeURIComponent(TOKEN));
     const data = await res.json();
     histCache = (data.ok && data.rows) ? data.rows : [];
     nota.textContent = histCache.length
@@ -1063,7 +1168,7 @@ async function abrirFicha(cedula, origen){
   box.innerHTML = '<div class="vacio">Armando la ficha…</div>';
   showScreen('screenFicha');
   try{
-    const res = await fetchWithRetry(EPP_URL + '?cedula=' + encodeURIComponent(cedula) + '&full=1&token=' + encodeURIComponent(TOKEN));
+    const res = await fetchWithRetry(EPP_URL + '?cedula=' + encodeURIComponent(cedula) + '&full=1&tipo=' + TIPO + '&token=' + encodeURIComponent(TOKEN));
     const d = await res.json();
     const rows = (d.ok && d.rows) ? d.rows : [];
     if(!rows.length){ box.innerHTML = '<div class="vacio">Esta persona todavía no tiene inspecciones registradas.</div>'; return; }
@@ -1108,7 +1213,7 @@ async function abrirFicha(cedula, origen){
 
     box.innerHTML = `
       <div class="ficha-head">
-        <div class="codigo">SSTA-F-006 · Ficha de inspección de EPP</div>
+        <div class="codigo">${esc(FORMATO.codigo)} · Ficha de ${esc(FORMATO.titulo.toLowerCase())}</div>
         <h2>${esc(p.nombre||'—')}</h2>
         <div class="sub">CC ${esc(p.cedula||'—')}${p.cargo?' · '+esc(p.cargo):''}</div>
         <div class="sub" style="margin-top:4px;">${rows.length} inspección(es) registrada(s) · documento generado el ${formatFechaHora(new Date())}</div>
@@ -1129,6 +1234,18 @@ document.getElementById('btnVolverDeFicha').addEventListener('click', ()=> showS
 
 /* ================= ARRANQUE ================= */
 (async function init(){
+  // Los textos que dependen del formato se ajustan al arrancar, para que la
+  // misma página sirva a los dos sin tener dos archivos casi iguales.
+  document.title = FORMATO.titulo + ' · Portal SSTA';
+  document.getElementById('tituloFormato').innerHTML =
+    FORMATO.icono + ' ' + esc(FORMATO.titulo) +
+    '<span class="cod">' + esc(FORMATO.codigo) + ' · versión ' + esc(FORMATO.version) + '</span>';
+  const etTrab = document.getElementById('etiquetaTrabajador');
+  if (etTrab) etTrab.textContent = FORMATO.sujeto === 'brigadista' ? 'Brigadista inspeccionado' : 'Trabajador inspeccionado';
+  const etProg = document.getElementById('progresoEpp');
+  if (etProg) etProg.textContent = '0/' + ELEMENTOS.length;
+  if (FORMATO.unidades) document.getElementById('listaEpp').classList.add('con-unidades');
+
   renderLista();
   actualizarResumen();
   // Fecha de hoy por defecto (en hora local, no UTC: si no, después de las 7 pm
