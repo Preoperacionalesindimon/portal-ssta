@@ -521,3 +521,108 @@ canvas.pad.locked{cursor:default;}
   display:block;font-size:var(--fs-etiqueta,11px);color:var(--ink-muted,#5c6a76);
   font-weight:400;margin-top:2px;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   IMPRESIÓN COMPACTA DE LOS PERMISOS
+   --------------------------------------------------------------------
+   Un permiso salía en demasiadas hojas por tres motivos:
+
+   1. Cada lienzo de firma mide 220px en pantalla y hay hasta diez por
+      permiso. En papel una firma se lee perfectamente en un tercio de
+      eso.
+   2. `break-inside:avoid` sobre secciones enteras: una sección larga que
+      no cabe en lo que queda de hoja se empuja COMPLETA a la siguiente,
+      dejando media hoja en blanco. Ahora solo se protegen los bloques
+      pequeños (una tarjeta de ejecutante, un bloque de firma), que es
+      donde partir de verdad estorba.
+   3. Espaciados y tipografía pensados para tocar con el dedo, no para
+      leer en papel.
+
+   Va en common.css para que los cinco permisos impriman igual.
+   ════════════════════════════════════════════════════════════════════ */
+@media print{
+  /* Nada de la interfaz: solo el documento. */
+  #pendingNav, #scrollProgress, #offlineBanner, #updateBanner,
+  .autocomplete-box, .sig-actions, .add-row-btn, .footer-actions,
+  .validation-banner, .draft-banner, .tabs, .searchbar,
+  .remove-worker, .remove-x, .copy-code-btn{ display:none !important; }
+
+  /* La sugerencia de girar el celular para firmar no tiene sentido en papel. */
+  .sig-pad-wrap label::after, .sig-block h5::after{ content:none !important; }
+
+  /* Firmas: legibles, pero sin ocupar un tercio de hoja cada una. */
+  canvas.pad, canvas.sigpad, canvas.mini-pad{
+    height:72px !important;
+    border:1px solid #999 !important;
+    background:#fff !important;
+    page-break-inside:avoid;
+  }
+
+  /* Solo se protegen bloques pequeños de partirse. Las secciones SÍ pueden
+     partir: forzarlas enteras era lo que dejaba hojas a medias. */
+  .section{ break-inside:auto !important; page-break-inside:auto !important;
+            margin-top:8px !important; box-shadow:none !important; }
+  .exec-card, .sig-block, .sig-pad-wrap, .close-q, .check-item{
+    break-inside:avoid; page-break-inside:avoid;
+  }
+
+  /* Espaciado de papel, no de dedo. */
+  .section-body{ padding:8px 10px !important; }
+  .section-title{ padding:5px 10px !important; font-size:10.5px !important; }
+  .check-item{ padding:3px 2px !important; gap:8px !important; }
+  .chk, .check-item p{ font-size:10.5px !important; line-height:1.3 !important; }
+  .field{ margin-bottom:6px !important; }
+  .field label{ font-size:9px !important; margin-bottom:2px !important; }
+  .field input, .field textarea, .field select{
+    font-size:10.5px !important; padding:4px 6px !important; min-height:0 !important;
+  }
+  .exec-card{ padding:8px !important; margin-bottom:8px !important; }
+
+  /* Los ejecutantes en dos columnas: es lo que más hojas ahorra en permisos
+     con cuadrillas grandes. */
+  .exec-cards{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px !important;
+  }
+
+  /* Las listas de verificación también. */
+  .check-cat, .checklist{ break-inside:auto; }
+
+  @page{ margin:10mm 8mm; }
+  body{ font-size:10.5px; }
+}
+
+/* ── Código QR del permiso ──
+   Se muestra al guardar y va en la impresión, para pegar la hoja en el sitio
+   de trabajo: quien vaya a cerrar el permiso lo escanea en vez de teclear
+   "PTC-20260914-259129" sin equivocarse. */
+.qr-permiso{
+  display:none;
+  margin-top:14px;
+  padding:14px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-md,10px);
+  text-align:center;
+}
+.qr-permiso.show{display:block;}
+.qr-permiso img{width:180px;height:180px;image-rendering:pixelated;}
+.qr-permiso .qr-pie{margin-top:6px;line-height:1.4;}
+.qr-permiso .qr-pie b{
+  display:block;font-family:var(--font-display);font-size:var(--fs-titulo,15px);
+  letter-spacing:.02em;color:var(--ink);
+}
+.qr-permiso .qr-pie span{font-size:var(--fs-menor,12.5px);color:var(--ink-muted,#5c6a76);}
+
+@media print{
+  /* En papel va arriba a la derecha y más pequeño: es para escanear, no para mirar. */
+  .qr-permiso{
+    display:block !important;
+    border:1px solid #999;padding:6px;margin:0 0 8px auto;
+    width:132px;page-break-inside:avoid;
+  }
+  .qr-permiso img{width:108px;height:108px;}
+  .qr-permiso .qr-pie b{font-size:9.5px;}
+  .qr-permiso .qr-pie span{display:none;}
+}

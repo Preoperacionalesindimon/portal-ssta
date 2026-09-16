@@ -1116,6 +1116,7 @@ const PermisoCore = (function () {
     goToApp();
     initRender();
     loadOpenDataIntoForm(data);
+    mostrarQrDelPermiso();
     lockOpenSections();
     $('statusBanner').className = data.status === 'CERRADO' ? 'status-banner closed' : 'status-banner open';
     $('statusBannerText').textContent = data.status === 'CERRADO' ? 'Permiso ya cerrado (modo consulta)' : 'Permiso abierto — completa el cierre';
@@ -1468,6 +1469,7 @@ const PermisoCore = (function () {
           const verif = await verificarGuardado_(permitCode, data);
           if (mostrarVerificacion_(verif, 'apertura')) {
             lockOpenSections();
+            mostrarQrDelPermiso();
             DraftStore.clear(draftKeyOpen());
           } else {
             btn.disabled = false; // se puede reintentar sin volver a llenar nada
@@ -1620,6 +1622,31 @@ const PermisoCore = (function () {
         if (f.cargo && $(f.cargo)) $(f.cargo).value = p.cargo || '';
       });
     });
+  }
+
+  /* ================= CÓDIGO QR DEL PERMISO =================
+     Quien abre el permiso tiene que pasarle el código a quien lo cierra, y
+     dictar "PTC-20260914-259129" por radio o por teléfono es una fuente segura
+     de errores. El QR lleva la dirección que abre ESE permiso: se escanea y
+     entra directo, sin escribir nada.
+
+     Aparece al guardar y sale en la impresión, para pegar la hoja en el sitio
+     de trabajo. Se genera aquí mismo (qr.js) y no con un servicio de internet,
+     porque en planta muchas veces no hay señal y una imagen pedida a otro sitio
+     no cargaría justo cuando se necesita. */
+  function mostrarQrDelPermiso() {
+    if (typeof QR === 'undefined' || !permitCode) return;
+    const cont = $('qrPermiso');
+    if (!cont) return;
+    const url = location.origin + location.pathname + '?code=' + encodeURIComponent(permitCode);
+    try {
+      cont.innerHTML =
+        '<img src="' + QR.comoImagen(url, { px: 220 }) + '" alt="Código QR del permiso ' + esc(permitCode) + '">' +
+        '<div class="qr-pie"><b>' + esc(permitCode) + '</b><span>Escanea para abrir y cerrar este permiso</span></div>';
+      cont.classList.add('show');
+    } catch (e) {
+      cont.classList.remove('show');   // si algo falla, el permiso sigue igual
+    }
   }
 
   /* ================= VERIFICACIÓN DESPUÉS DE GUARDAR =================

@@ -203,6 +203,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
       <span>Código: <code id="permitCodeDisplay">—</code></span>
     </div>
 
+    <!-- QR del permiso: se llena al guardar y sale en la impresión. -->
+    <div class="qr-permiso" id="qrPermiso"></div>
+
     <div class="draft-banner" id="draftBanner">
       <span id="draftBannerText"></span>
       <span style="display:flex;gap:8px;">
@@ -344,6 +347,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="qr.js"></script>
 <script src="permiso-core.js"></script>
 <script>
 /* ================= DATA DEFINITIONS ================= */

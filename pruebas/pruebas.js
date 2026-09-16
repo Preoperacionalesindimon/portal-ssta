@@ -311,6 +311,45 @@ grupo('Token compartido', () => {
 /* ═══════════════════════════════════════════════════════════
    6. DESPLIEGUE — los errores que ya nos hicieron perder tiempo
    ═══════════════════════════════════════════════════════════ */
+grupo('Código QR e impresión', () => {
+  ok('existe el generador de QR propio', existe('qr.js'),
+     'Un servicio de internet no cargaría en planta sin señal, que es justo donde se usa.');
+  if (existe('qr.js')) {
+    const qr = leer('qr.js');
+    ok('no depende de ningún servicio externo',
+       !/https?:\/\//.test(qr.replace(/\/\*[\s\S]*?\*\//g, '')),
+       'Debe funcionar sin conexión.');
+    ok('usa corrección de errores (se lee aunque se ensucie)',
+       qr.includes('TABLA_M') && qr.includes('corregir'));
+  }
+  ok('qr.js está en la caché del Service Worker', leer('sw.js').includes("'./qr.js'"));
+
+  const core = leer('permiso-core.js');
+  ok('el permiso genera su QR', core.includes('mostrarQrDelPermiso'));
+  ok('el QR lleva la dirección que abre ESE permiso',
+     /\?code=' \+ encodeURIComponent\(permitCode\)/.test(core),
+     'Si solo llevara el código, escanearlo no abriría nada.');
+
+  ['permiso-trabajo-caliente.html','permiso-trabajo-alturas.html','permiso-espacios-confinados.html',
+   'permiso-izajes-cargas.html','permiso-trabajo-electrico.html'].forEach(f => {
+    const t = leer(f);
+    ok(`${f} carga qr.js y tiene dónde mostrarlo`,
+       t.includes('src="qr.js"') && t.includes('id="qrPermiso"'));
+  });
+
+  // Impresión compacta: un permiso llegaba a salir en 7 hojas.
+  const css = leer('common.css');
+  ok('las firmas se achican al imprimir',
+     /canvas\.pad[\s\S]{0,120}?height:72px/.test(css),
+     'Cada firma ocupaba 220px y hay hasta diez por permiso.');
+  ok('las secciones pueden partirse entre hojas',
+     /\.section\{ break-inside:auto/.test(css),
+     'Forzarlas enteras dejaba media hoja en blanco y sumaba páginas.');
+  ok('los ejecutantes se imprimen en dos columnas',
+     /\.exec-cards\{[\s\S]{0,160}?grid-template-columns:1fr 1fr/.test(css));
+  ok('el QR sale en la impresión', /@media print\{[\s\S]*?\.qr-permiso\{[\s\S]{0,120}?display:block/.test(css));
+});
+
 grupo('Caché y despliegue', () => {
   const sw = leer('sw.js');
   const v = /const CACHE_NAME = '([^']+)'/.exec(sw);
