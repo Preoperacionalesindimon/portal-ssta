@@ -256,7 +256,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         <div class="field" style="margin-top:6px;"><label>Actividad a realizar</label><textarea id="descripcion" placeholder="Describa el trabajo a realizar..."></textarea></div>
         <div class="grid2" style="margin-top:6px;">
           <div class="field"><label>Herramientas y/o equipos a utilizar</label><div id="herramientasSel"></div><input type="hidden" id="herramientas"></div>
-          <div class="field"><label>¿Qué gases detecta el equipo de medición?</label><input type="text" id="gasesDetecta" placeholder="Oxígeno, LEL, H2S, CO, Metano, Cloro…"></div>
+          <div class="field"><label>¿Qué gases detecta el equipo de medición?</label><div id="gasesDetectaSel"></div><input type="hidden" id="gasesDetecta"></div>
         </div>
         <div class="grid3" style="margin-top:6px;">
           <div class="field"><label>¿Cuenta con planeación de la tarea?</label>
@@ -661,6 +661,7 @@ const cfg = {
 
   extraOnInitRender(){
     initSel_herramientas();
+    initSelGasesDetecta();
     initSelCualPermiso();
     renderGasTable(document.getElementById('gasTableContainer'));
     renderEpp(document.getElementById('eppContainer'));
@@ -678,7 +679,12 @@ const cfg = {
       document.getElementById('cualPermiso').value = selCualPermiso.get();
     }
     document.getElementById('herramientas').value = vals.herramientas || '';
-    document.getElementById('gasesDetecta').value = vals.gasesDetecta || '';
+    // Gases que detecta el equipo: fichas + campo libre (ver initSelGasesDetecta)
+    initSelGasesDetecta();
+    if (selGasesDetecta) {
+      selGasesDetecta.set(vals.gasesDetecta || '');
+      document.getElementById('gasesDetecta').value = selGasesDetecta.get();
+    }
     document.querySelectorAll('input[name=cuentaPlaneacion]').forEach(r=>{ r.checked = (r.value===vals.cuentaPlaneacion); });
     restoreGasState(vals.gases);
     restoreEppState(vals.epp);
@@ -811,6 +817,24 @@ function initSel_herramientas(){
     opciones: ['Llaves', 'Destornilladores', 'Alicates', 'Bisturí', 'Taladro', 'Pulidora', 'Martillo', 'Flexómetro', 'Nivel', 'Extensión eléctrica', 'Andamio', 'Escalera'],
     placeholderLibre: 'Otras herramientas o equipos…',
     onChange: ()=>{ oculto.value = sel_herramientas.get(); }
+  });
+}
+
+/* ── ¿Qué gases detecta el equipo de medición?: fichas + campo libre ──
+   Los cinco primeros son los canales del MSA ALTAIR 5X que se usa hoy; los
+   demás quedan por si en el futuro se usa otro detector. El campo libre del
+   final sigue permitiendo escribir cualquier gas que no esté en la lista.
+   Igual que en herramientas, se conserva #gasesDetecta oculto con el texto
+   combinado para que lo ya guardado en la hoja se lea sin migrar nada. */
+let selGasesDetecta = null;
+function initSelGasesDetecta(){
+  const cont = document.getElementById('gasesDetectaSel');
+  if(!cont || selGasesDetecta) return;
+  const oculto = document.getElementById('gasesDetecta');
+  selGasesDetecta = SeleccionMultiple.crear(cont, {
+    opciones: ['COMB (inflamables)', 'O₂ (oxígeno)', 'CO (monóxido)', 'H₂S (ác. sulfhídrico)', 'NH₃ (amoníaco)', 'Metano (CH₄)', 'Cloro (Cl₂)', 'SO₂ (dióxido de azufre)', 'CO₂ (dióxido de carbono)', 'COV (compuestos orgánicos volátiles)'],
+    placeholderLibre: 'Otro gas que detecte el equipo…',
+    onChange: ()=>{ oculto.value = selGasesDetecta.get(); }
   });
 }
 </script>
