@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v57';
+const CACHE_NAME = 'ssta-portal-v58';
 
 const PAGES = [
   './',

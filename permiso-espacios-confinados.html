@@ -425,11 +425,16 @@ const eppData = [
   "Camilla y botiquín de primeros auxilios"
 ];
 const gasPhases = ['Lectura preingreso','Lectura durante el trabajo'];
+// Canales en el mismo orden en que los muestra el detector MSA ALTAIR 5X
+// que usa INDIMON: COMB · O2 · CO · H2S · NH3. Así el brigadista lee la
+// pantalla de arriba a abajo y llena los campos en ese mismo orden, sin
+// tener que ir saltando entre casillas.
 const gasTypes = [
-  {key:'oxigeno', label:'Oxígeno', unidad:'%', min:19.5, max:23.5},
-  {key:'lel', label:'Inflamabilidad LEL', unidad:'%', min:0, max:9.99},
-  {key:'h2s', label:'H2S', unidad:'ppm', min:0, max:9.99},
-  {key:'co', label:'CO', unidad:'ppm', min:0, max:24.99}
+  {key:'lel',     label:'COMB (inflamables)', unidad:'% LEL', min:0,    max:9.99},
+  {key:'oxigeno', label:'O₂ (oxígeno)',       unidad:'%',     min:19.5, max:23.5},
+  {key:'co',      label:'CO (monóxido)',      unidad:'ppm',   min:0,    max:24.99},
+  {key:'h2s',     label:'H₂S (ác. sulfhídrico)', unidad:'ppm', min:0,   max:9.99},
+  {key:'nh3',     label:'NH₃ (amoníaco)',     unidad:'ppm',   min:0,    max:24.99}
 ];
 let gasState = { lecturas: [] };
 let eppState = {};
