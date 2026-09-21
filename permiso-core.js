@@ -33,6 +33,7 @@ const PermisoCore = (function () {
   let execCounter = 0;
   let execBody = null;
   let personalCache = [];
+  let personalMotivo = '';
   let closedPermitsCache = [];
   let addPeopleData = null;
   let baseExecCount = 0; // cuántos ejecutantes ya existían ANTES de esta sesión de "agregar personal"
@@ -684,16 +685,71 @@ const PermisoCore = (function () {
   }
 
   /* ================= PERSONAL COMPARTIDO (autocompletar) ================= */
+  /**
+   * Antes, cualquier fallo aquí se tragaba en silencio: el autocompletar
+   * simplemente dejaba de sugerir y nadie sabía por qué (¿sin señal?, ¿token
+   * cambiado?, ¿hoja vacía?). Ahora se guarda el motivo y, si falla, aparece
+   * un aviso tocable para reintentar y ver el detalle — mismo criterio que con
+   * las firmas: si un dato no llegó, el formulario lo dice, no lo esconde.
+   */
   async function cargarPersonalCompartido() {
+    personalMotivo = '';
     try {
       const res = await fetchWithRetry(
         PORTAL_CONFIG.BACKENDS.personal.url + '?action=listPersonal&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN)
       );
-      const data = await res.json();
-      personalCache = data.ok && data.personal ? data.personal : [];
+      const texto = await res.text();
+      let data;
+      try {
+        data = JSON.parse(texto);
+      } catch (e) {
+        // Apps Script devuelve HTML (pantalla de login o de error) cuando el
+        // despliegue no es público o la URL ya no existe.
+        personalMotivo = 'El anexo de personal respondió con una página web en vez de datos (HTTP ' + res.status + '). Suele pasar cuando el despliegue de Apps Script quedó como privado o la URL cambió.';
+        personalCache = [];
+        avisarPersonal();
+        return;
+      }
+      if (!data.ok) {
+        personalMotivo = 'El anexo de personal respondió: ' + (data.error || 'error sin detalle') + '. Si dice token, hay que igualar API_TOKEN en config.js y en personal.gs.';
+        personalCache = [];
+      } else if (!data.personal || !data.personal.length) {
+        personalMotivo = 'El anexo de personal respondió correctamente, pero no trae ningún registro. Revisa que la hoja de Personal Autorizado tenga filas.';
+        personalCache = [];
+      } else {
+        personalCache = data.personal;
+      }
     } catch (err) {
-      /* si no hay señal o no está configurado el anexo, el autocompletar simplemente no ofrece sugerencias */
+      personalMotivo = 'No se pudo contactar el anexo de personal (' + (err && err.message ? err.message : 'sin conexión') + ').';
+      personalCache = [];
     }
+    avisarPersonal();
+  }
+
+  /** Muestra (o quita) el aviso de que el autocompletar de personal no está disponible. */
+  function avisarPersonal() {
+    let chip = document.getElementById('avisoPersonal');
+    if (personalCache.length) {
+      if (chip) chip.remove();
+      return;
+    }
+    if (!chip) {
+      chip = document.createElement('button');
+      chip.id = 'avisoPersonal';
+      chip.type = 'button';
+      chip.className = 'aviso-personal';
+      chip.addEventListener('click', () => {
+        alert(
+          'Autocompletar de personal no disponible\n\n' +
+            personalMotivo +
+            '\n\nPuedes seguir llenando el permiso escribiendo los nombres y cédulas a mano; no se pierde nada.\n\nSe va a reintentar ahora.'
+        );
+        chip.textContent = '⏳ Reintentando…';
+        cargarPersonalCompartido();
+      });
+      document.body.appendChild(chip);
+    }
+    chip.textContent = '⚠️ Sin base de personal — toca para ver por qué';
   }
   function attachPersonalAutocomplete(inputEl, onSelect) {
     if (inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
