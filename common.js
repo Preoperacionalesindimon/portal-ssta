@@ -696,10 +696,49 @@ const SignaturePad = {
      *  no recalcular a medio giro). Llamar una sola vez por manager. */
     function bindOrientationChange() {
       let timer = null;
+      // Al girar, el alto de la página cambia por completo y el navegador
+      // pierde la posición: la pantalla "se dispara" y toca volver a buscar
+      // dónde iba la firma. Justo el momento en que giras el celular es
+      // porque vas a firmar, así que se recuerda a qué lienzo se estaba
+      // apuntando y, después de recalcular tamaños, se vuelve ahí solo.
+      let ancla = null;
+      document.addEventListener(
+        'pointerdown',
+        (e) => {
+          const c = e.target && e.target.closest ? e.target.closest('canvas.pad, canvas.mini-pad') : null;
+          if (c) ancla = c;
+        },
+        true
+      );
+
+      /** Si no se ha tocado ningún lienzo, se ancla al que se esté viendo
+       *  (o, en su defecto, al bloque que esté en el centro de la pantalla). */
+      function anclaVisible() {
+        const centro = window.innerHeight / 2;
+        const candidatos = document.querySelectorAll('canvas.pad, canvas.mini-pad, .section-body, .epp-item');
+        let mejor = null;
+        let mejorDist = Infinity;
+        candidatos.forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.bottom < 0 || r.top > window.innerHeight) return; // fuera de pantalla
+          const dist = Math.abs(r.top + r.height / 2 - centro);
+          if (dist < mejorDist) { mejorDist = dist; mejor = el; }
+        });
+        return mejor;
+      }
+
       window.addEventListener('orientationchange', () => {
+        const objetivo = (ancla && document.body.contains(ancla)) ? ancla : anclaVisible();
         clearTimeout(timer);
         timer = setTimeout(() => {
           Object.keys(pads).forEach((id) => pads[id].refreshSize());
+          if (!objetivo || !document.body.contains(objetivo)) return;
+          // Dos intentos: el primero apenas termina el giro y el segundo un
+          // poco después, porque en Safari de iPhone la barra de direcciones
+          // se recoge/despliega y mueve la página otra vez.
+          const volver = () => objetivo.scrollIntoView({ block: 'center', behavior: 'auto' });
+          volver();
+          setTimeout(volver, 250);
         }, 120);
       });
     }

@@ -49,13 +49,35 @@
      cuatro botones repartidos en partes iguales: nada se corta y todos los
      botones quedan del mismo ancho. */
   @media (max-width:620px){
-    .epp-item{align-items:stretch;gap:8px;padding:12px 0;}
-    .epp-item p{flex:1 0 100%;}
-    .epp-item .epp-esperado{display:inline;margin-left:6px;}
-    .epp-item .epp-unidades{flex:0 0 68px;width:68px;}
-    .epp-opts{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-    .epp-opts button{min-width:0;width:100%;padding:0 2px;}
+    /* Nombre a la izquierda y los cuatro botones a la derecha, EN LA MISMA
+       línea: antes el nombre se llevaba un renglón entero y los botones otro,
+       así que cada elemento medía ~95px y los 17 sumaban un scroll larguísimo.
+       El nombre puede partirse en dos o tres líneas sin problema, porque la
+       fila la sigue mandando la altura de los botones (44px). */
+    .epp-item{align-items:center;gap:8px;padding:7px 0;flex-wrap:nowrap;}
+    .epp-item p{flex:1 1 auto;min-width:0;font-size:var(--fs-menor);line-height:1.3;}
+    .epp-item .epp-esperado{display:block;}
+    .epp-opts{flex:0 0 auto;display:flex;gap:4px;}
+    .epp-opts button{min-width:38px;width:38px;padding:0;font-size:11.5px;}
+    /* El formato de brigadistas sí lleva campo de unidades: ahí no cabe todo
+       en una línea, así que ese conserva el reparto en dos renglones. */
+    .epp-item.con-unidades{flex-wrap:wrap;align-items:stretch;padding:12px 0;}
+    .epp-item.con-unidades p{flex:1 0 100%;}
+    .epp-item.con-unidades .epp-unidades{flex:0 0 68px;width:68px;}
+    .epp-item.con-unidades .epp-opts{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+    .epp-item.con-unidades .epp-opts button{min-width:0;width:100%;padding:0 2px;}
   }
+
+  /* ── Separadores por parte del cuerpo ──
+     17 elementos seguidos, todos con la misma pinta, se revisan en piloto
+     automático y es fácil saltarse uno. Agrupados por dónde se usa, la lista
+     se recorre igual que se viste uno: de la cabeza a los pies. */
+  .epp-grupo{
+    font-size:var(--fs-etiqueta);font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-muted);background:var(--bg);
+    margin:14px -14px 4px;padding:6px 14px;border-radius:var(--radius-sm);
+  }
+  .epp-grupo:first-child{margin-top:0;}
   .epp-opts{display:flex;gap:5px;flex:0 0 auto;}
   .epp-opts button{
     /* 44px: son 17 filas x 4 botones y se tocan con guantes de vaqueta.
@@ -578,10 +600,38 @@ document.addEventListener('click', e=>{
 });
 
 /* ================= LISTA DE ELEMENTOS ================= */
+/* Grupos por parte del cuerpo, en el orden en que uno se equipa: de la cabeza
+   a los pies. Es solo orden de PANTALLA — lo guardado sigue yendo por nombre
+   de elemento, así que las inspecciones viejas se leen igual y el correo de
+   reposición no cambia. Un elemento que no esté aquí (o el formato de
+   brigadistas, que es otra cosa) simplemente sale sin encabezado. */
+const GRUPOS_EPP = [
+  ['Cabeza',            ['CASCO CON BARBUQUEJO','SOPORTE BASCULANTE']],
+  ['Cara y ojos',       ['VISOR','CARETA DE SOLDAR','GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER']],
+  ['Oídos',             ['PROTECTOR AUDITIVO']],
+  ['Vías respiratorias',['PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO']],
+  ['Cuerpo',            ['PETO MANGAS / CHAQUETA SOLDADOR']],
+  ['Manos',             ['GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA','GUANTES DE PRECISIÓN']],
+  ['Pies',              ['BOTAS DE SEGURIDAD']],
+  ['Documentación',     ['CARNÉT']]
+];
+/** Devuelve el título del grupo si este elemento lo encabeza; si no, ''. */
+function encabezadoDe_(el){
+  const g = GRUPOS_EPP.find(g => g[1][0] === el);
+  return g ? g[0] : '';
+}
+
 function renderLista(){
   const cont = document.getElementById('listaEpp');
   cont.innerHTML = '';
   ELEMENTOS.forEach((el, i)=>{
+    const titulo = encabezadoDe_(el);
+    if (titulo) {
+      const h = document.createElement('div');
+      h.className = 'epp-grupo';
+      h.textContent = titulo;
+      cont.appendChild(h);
+    }
     estado[el] = estado[el] || null;
     const row = document.createElement('div');
     row.className = 'epp-item';
@@ -607,6 +657,7 @@ function renderLista(){
       cant.placeholder = '0';
       cant.setAttribute('aria-label', 'Unidades encontradas de ' + el);
       cant.addEventListener('input', actualizarResumen);
+      row.classList.add('con-unidades');
       row.appendChild(p);
       row.appendChild(cant);
     } else {
