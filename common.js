@@ -548,6 +548,10 @@ const SignaturePad = {
           ctx.stroke();
         });
       }
+      // Tamaño en pantalla (px CSS) para el que está armada la imagen interna.
+      // Si el recuadro cambia de tamaño y la imagen interna no, el navegador la
+      // estira para llenarlo y la raya ya no sale debajo del dedo.
+      let tamCss = { w: 0, h: 0 };
       function resize() {
         const rect = canvas.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return; // aún oculto, se reintentará al mostrarse
@@ -559,8 +563,42 @@ const SignaturePad = {
         ctx.lineWidth = 2.2;
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#1f2a33';
+        tamCss = { w: rect.width, h: rect.height };
       }
       resize();
+
+      /**
+       * Deja la imagen interna del tamaño exacto del recuadro, conservando lo
+       * ya firmado. SÍNCRONO a propósito: se llama al tocar el lienzo, y si
+       * restaurara la firma en diferido (como antes, con una imagen que carga
+       * después) podía borrar el trazo que se acababa de empezar.
+       * Los trazos están guardados como coordenadas, así que se reescalan a la
+       * nueva medida sin perder calidad ni el historial de "deshacer".
+       */
+      function ajustarTamano(forzar) {
+        const r = canvas.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const igual = Math.abs(r.width - tamCss.w) < 0.5 && Math.abs(r.height - tamCss.h) < 0.5;
+        if (igual && !forzar) return;
+        if (tamCss.w && tamCss.h && !igual) {
+          const sx = r.width / tamCss.w;
+          const sy = r.height / tamCss.h;
+          strokes = strokes.map((s) => s.map(([x, y]) => [x * sx, y * sy]));
+        }
+        resize();
+        redibujar();
+      }
+
+      // Vigila el tamaño REAL del recuadro, no el evento de girar: cubre el
+      // giro (que en muchos Android termina después de que el evento avisa),
+      // una sección que se despliega, la barra de desplazamiento que aparece…
+      if (typeof ResizeObserver !== 'undefined') {
+        let espera = null;
+        new ResizeObserver(() => {
+          clearTimeout(espera);
+          espera = setTimeout(() => { if (!drawing) ajustarTamano(false); }, 60);
+        }).observe(canvas);
+      }
       let drawing = false, hasInk = false, lastX = 0, lastY = 0;
       function pos(e) {
         const r = canvas.getBoundingClientRect();
@@ -571,6 +609,10 @@ const SignaturePad = {
       function start(e) {
         if (canvas.dataset.locked === '1') return;
         e.preventDefault();
+        // Antes de poner el primer punto se confirma que la imagen interna
+        // coincide con el recuadro. Es la garantía final: pase lo que pase con
+        // los giros, el trazo sale donde está el dedo.
+        ajustarTamano(false);
         const [x, y] = pos(e);
         strokes.push([[x, y]]); // arranca un trazo nuevo
         drawing = true;
@@ -599,6 +641,10 @@ const SignaturePad = {
       canvas.addEventListener('touchstart', start, { passive: false });
       canvas.addEventListener('touchmove', move, { passive: false });
       canvas.addEventListener('touchend', end);
+      // Si el sistema interrumpe el toque (una llamada, un gesto del borde),
+      // antes el lienzo se quedaba "dibujando" y el siguiente toque unía los
+      // dos trazos con una raya recta.
+      canvas.addEventListener('touchcancel', end);
 
       /* Exporta la firma a una resolución acotada.
          POR QUÉ: el lienzo en pantalla se crea a (ancho CSS × devicePixelRatio).
@@ -677,11 +723,7 @@ const SignaturePad = {
         // seguro llamarlo en cualquier momento, sin importar el orden.
         // Usa la copia a resolución completa (no la recortada de getDataUrl),
         // para que girar la pantalla varias veces no degrade la firma.
-        refreshSize: () => {
-          const saved = hasInk ? canvas.toDataURL('image/png') : null;
-          resize();
-          if (saved) pads[canvas.id].setDataUrl(saved);
-        }
+        refreshSize: () => ajustarTamano(true)
       };
     }
 
@@ -695,50 +737,14 @@ const SignaturePad = {
     /** Registra el reintento de tamaño al girar el celular (con espera para
      *  no recalcular a medio giro). Llamar una sola vez por manager. */
     function bindOrientationChange() {
+      // Solo reajusta el tamaño de los lienzos al girar. Volver al recuadro
+      // que se estaba firmando lo hace AnclaGiro (más abajo), que funciona
+      // en todas las páginas aunque no tengan lienzos.
       let timer = null;
-      // Al girar, el alto de la página cambia por completo y el navegador
-      // pierde la posición: la pantalla "se dispara" y toca volver a buscar
-      // dónde iba la firma. Justo el momento en que giras el celular es
-      // porque vas a firmar, así que se recuerda a qué lienzo se estaba
-      // apuntando y, después de recalcular tamaños, se vuelve ahí solo.
-      let ancla = null;
-      document.addEventListener(
-        'pointerdown',
-        (e) => {
-          const c = e.target && e.target.closest ? e.target.closest('canvas.pad, canvas.mini-pad') : null;
-          if (c) ancla = c;
-        },
-        true
-      );
-
-      /** Si no se ha tocado ningún lienzo, se ancla al que se esté viendo
-       *  (o, en su defecto, al bloque que esté en el centro de la pantalla). */
-      function anclaVisible() {
-        const centro = window.innerHeight / 2;
-        const candidatos = document.querySelectorAll('canvas.pad, canvas.mini-pad, .section-body, .epp-item');
-        let mejor = null;
-        let mejorDist = Infinity;
-        candidatos.forEach((el) => {
-          const r = el.getBoundingClientRect();
-          if (r.bottom < 0 || r.top > window.innerHeight) return; // fuera de pantalla
-          const dist = Math.abs(r.top + r.height / 2 - centro);
-          if (dist < mejorDist) { mejorDist = dist; mejor = el; }
-        });
-        return mejor;
-      }
-
       window.addEventListener('orientationchange', () => {
-        const objetivo = (ancla && document.body.contains(ancla)) ? ancla : anclaVisible();
         clearTimeout(timer);
         timer = setTimeout(() => {
           Object.keys(pads).forEach((id) => pads[id].refreshSize());
-          if (!objetivo || !document.body.contains(objetivo)) return;
-          // Dos intentos: el primero apenas termina el giro y el segundo un
-          // poco después, porque en Safari de iPhone la barra de direcciones
-          // se recoge/despliega y mueve la página otra vez.
-          const volver = () => objetivo.scrollIntoView({ block: 'center', behavior: 'auto' });
-          volver();
-          setTimeout(volver, 250);
         }, 120);
       });
     }
@@ -878,3 +884,124 @@ const SeleccionMultiple = {
     };
   }
 };
+
+/* ============================================================
+ * AnclaGiro: al girar el celular, la pantalla vuelve sola a donde estaba.
+ * ------------------------------------------------------------
+ * Al pasar de vertical a horizontal (o al revés) el alto de toda la página
+ * cambia y el navegador pierde la posición: quedas en otra parte del permiso
+ * y toca buscar otra vez el recuadro de la firma.
+ *
+ * La versión anterior (v62) fallaba por tres motivos, y los tres se
+ * reprodujeron en pruebas antes de corregir:
+ *  1. Recordaba el último lienzo TOCADO: si alguien ya había firmado el
+ *     recuadro de otro ejecutante, al girar mandaba a ese, lejos del actual.
+ *  2. Si no se había tocado ninguno, se anclaba a una sección entera, y
+ *     "centrar" una sección de 3 pantallas de alto deja cualquier cosa a la vista.
+ *  3. Corregía a los 120 y 370 ms; en Android el giro puede terminar después
+ *     y el navegador deshacía la corrección.
+ *
+ * Ahora:
+ *  - Se recuerda lo que SE ESTÁ VIENDO, actualizado cada vez que la pantalla
+ *    queda quieta: primero un recuadro de firma visible; si no hay, el campo
+ *    más cercano al centro (nunca un bloque más alto que media pantalla).
+ *  - El giro se detecta por la orientación real del aparato, no por el alto
+ *    de la ventana: abrir el teclado encoge la ventana y no debe contar.
+ *  - Se vuelve al punto varias veces durante 1,5 s mientras el giro termina
+ *    de acomodarse, y se deja de insistir en cuanto la persona toca la pantalla.
+ * ============================================================ */
+const AnclaGiro = (() => {
+  const SEL_FIRMA = 'canvas.pad, canvas.sigpad, canvas.mini-pad';
+  const SEL_CAMPO = SEL_FIRMA + ', .field, .epp-item, .close-q, .check-item, .exec-card, h2, h3, .section-title';
+  const REINTENTOS_MS = [0, 120, 300, 550, 900, 1500];
+  let ancla = null;
+  let ultimoTocado = null;
+  let restaurando = false;
+  let timers = [];
+  let orientacion = null;
+  let esperaScroll = null;
+
+  function orientacionActual() {
+    if (screen.orientation && screen.orientation.type) return screen.orientation.type.indexOf('portrait') === 0 ? 'v' : 'h';
+    if (typeof window.orientation === 'number') return Math.abs(window.orientation) === 90 ? 'h' : 'v';
+    return window.innerWidth > window.innerHeight ? 'h' : 'v';
+  }
+  function enPantalla(el) {
+    if (!el || !document.body.contains(el)) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;
+  }
+  function masCercanoAlCentro(selector, altoMax) {
+    const centro = window.innerHeight / 2;
+    let mejor = null, mejorDist = Infinity;
+    document.querySelectorAll(selector).forEach((el) => {
+      if (!enPantalla(el)) return;
+      const r = el.getBoundingClientRect();
+      if (altoMax && r.height > altoMax) return;
+      const d = Math.abs(r.top + r.height / 2 - centro);
+      if (d < mejorDist) { mejorDist = d; mejor = el; }
+    });
+    return mejor;
+  }
+  function elegir() {
+    // El recuadro que se acaba de tocar manda, pero SOLO si sigue a la vista:
+    // si la persona bajó a otro ejecutante, ese ya no cuenta.
+    if (enPantalla(ultimoTocado)) return ultimoTocado;
+    return masCercanoAlCentro(SEL_FIRMA) || masCercanoAlCentro(SEL_CAMPO, window.innerHeight * 0.5);
+  }
+  function registrar() {
+    if (restaurando) return;
+    const el = elegir();
+    if (el) ancla = el;
+  }
+  function detener() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    restaurando = false;
+  }
+  function alGirar() {
+    const nueva = orientacionActual();
+    if (nueva === orientacion && restaurando) return; // ya se está corrigiendo este giro
+    orientacion = nueva;
+    const objetivo = ancla;
+    detener();
+    if (!objetivo || !document.body.contains(objetivo)) return;
+    restaurando = true;
+    REINTENTOS_MS.forEach((ms, i) => {
+      timers.push(setTimeout(() => {
+        if (document.body.contains(objetivo)) objetivo.scrollIntoView({ block: 'center', behavior: 'auto' });
+        if (i === REINTENTOS_MS.length - 1) {
+          restaurando = false;
+          registrar();
+        }
+      }, ms));
+    });
+  }
+
+  function init() {
+    orientacion = orientacionActual();
+    registrar();
+    // La posición se anota cuando la pantalla queda quieta. La espera también
+    // protege contra el propio giro: el navegador mueve la página al empezar
+    // a girar, y para cuando esta anotación se ejecutaría, ya se sabe que es
+    // un giro y se ignora.
+    window.addEventListener('scroll', () => {
+      clearTimeout(esperaScroll);
+      esperaScroll = setTimeout(registrar, 200);
+    }, { passive: true });
+    document.addEventListener('touchstart', (e) => {
+      // Si la persona toca la pantalla mientras se corrige, manda ella.
+      if (restaurando) detener();
+      const c = e.target && e.target.closest ? e.target.closest(SEL_FIRMA) : null;
+      if (c) { ultimoTocado = c; ancla = c; }
+    }, { passive: true, capture: true });
+    const revisar = () => { if (orientacionActual() !== orientacion) alGirar(); };
+    window.addEventListener('orientationchange', alGirar);
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', revisar);
+    window.addEventListener('resize', revisar);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  return { _estado: () => ({ ancla, restaurando, orientacion }) };
+})();

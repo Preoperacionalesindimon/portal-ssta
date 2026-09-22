@@ -58,9 +58,37 @@ grupo('Firmas: no pueden perderse en silencio', () => {
      /getDataUrl:\s*\(\)\s*=>\s*\(hasInk \? exportarFirmaAcotada\(\)/.test(common),
      'Si vuelve a usar canvas.toDataURL() directo, regresa el bug.');
 
+  // Fijar canvas.width/height limpia el lienzo: después de resize() hay que
+  // volver a pintar lo firmado. Desde la v64 se hace de forma síncrona con los
+  // trazos guardados (redibujar), en vez de copiar una imagen y restaurarla en
+  // diferido — la restauración en diferido podía borrar un trazo recién empezado.
   ok('refreshSize() preserva la firma al redimensionar',
-     /refreshSize:[\s\S]{0,200}?canvas\.toDataURL[\s\S]{0,120}?resize\(\)/.test(common),
+     /refreshSize:\s*\(\)\s*=>\s*ajustarTamano\(true\)/.test(common) &&
+     /function ajustarTamano[\s\S]{0,900}?resize\(\);\s*redibujar\(\);/.test(common),
      'Sin esto, refrescar el lienzo borra la firma dejando el estado en "Firmado ✓".');
+
+  ok('al redimensionar, los trazos se reescalan a la nueva medida',
+     /function ajustarTamano[\s\S]{0,700}?strokes\s*=\s*strokes\.map/.test(common),
+     'Sin esto, la firma queda corrida o recortada después de girar el celular.');
+
+  // Al girar el celular, la pantalla debe volver al recuadro que se estaba
+  // viendo. Estas tres condiciones son las que fallaban en la v62/v64.
+  ok('al girar, vuelve a lo que se está VIENDO, no al último lienzo tocado',
+     /const AnclaGiro/.test(common) && /if \(enPantalla\(ultimoTocado\)\) return ultimoTocado;/.test(common),
+     'Sin esto, si ya se firmó el recuadro de otro ejecutante, al girar manda a ese.');
+  ok('al girar, nunca se ancla a un bloque más alto que media pantalla',
+     /masCercanoAlCentro\(SEL_CAMPO, window\.innerHeight \* 0\.5\)/.test(common),
+     'Centrar una sección entera deja cualquier parte del permiso a la vista.');
+  ok('el giro se detecta por la orientación del aparato (el teclado no cuenta)',
+     /screen\.orientation\.type/.test(common),
+     'Si se usa el alto de la ventana, abrir el teclado en una tablet dispara el salto.');
+  ok('se insiste en volver durante más de un segundo mientras termina el giro',
+     (() => { const m = common.match(/REINTENTOS_MS = \[([^\]]+)\]/); return m && Math.max(...m[1].split(',').map(Number)) >= 1000; })(),
+     'En Android el giro puede terminar tarde y el navegador deshace una corrección temprana.');
+
+  ok('el lienzo verifica su tamaño real al empezar a firmar',
+     /function start\(e\)[\s\S]{0,500}?ajustarTamano\(false\);[\s\S]{0,80}?pos\(e\)/.test(common),
+     'Sin esto, si la imagen interna quedó con la medida de horizontal, en vertical la raya sale corrida del dedo.');
 
   ok('el historial de deshacer NO guarda mapas de bits completos',
      !common.includes('history.push(ctx.getImageData'),
