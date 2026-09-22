@@ -90,6 +90,22 @@ grupo('Firmas: no pueden perderse en silencio', () => {
      /function start\(e\)[\s\S]{0,500}?ajustarTamano\(false\);[\s\S]{0,80}?pos\(e\)/.test(common),
      'Sin esto, si la imagen interna quedó con la medida de horizontal, en vertical la raya sale corrida del dedo.');
 
+  // Firma a pantalla completa en celulares (v66)
+  const iFc = common.indexOf('FirmaCompleta.abrir(canvas');
+  const iStart = common.indexOf("canvas.addEventListener('touchstart', start");
+  ok('en celular, el toque abre la pantalla completa ANTES de dibujar en el recuadro',
+     iFc > 0 && iStart > 0 && iFc < iStart && /e\.stopImmediatePropagation\(\);\s*FirmaCompleta\.abrir/.test(common),
+     'Si el interceptor queda después, el primer toque deja una raya en el recuadro pequeño.');
+  ok('"Listo" sin dibujar NO borra una firma que ya venía guardada',
+     /else if \(!teniaBase\) destinoPad\.setStrokes\(\[\]\)/.test(common),
+     'Sin esto, abrir la firma de un permiso restaurado y tocar Listo la borra.');
+  ok('la firma pasa como trazos escalados sin deformar (misma escala en ancho y alto)',
+     /const k = Math\.min\(\(tamCss\.w - 2 \* margen\) \/ bw, \(tamCss\.h - 2 \* margen\) \/ bh, 1\)/.test(common),
+     'Una firma hecha en horizontal quedaría aplastada en el recuadro vertical.');
+  ok('al confirmar, se avisa al formulario para que guarde el borrador',
+     /destino\.dispatchEvent\(new Event\('input', \{ bubbles: true \}\)\)/.test(common),
+     'El lienzo grande está fuera del formulario: sin este aviso, la firma no entra al borrador.');
+
   ok('el historial de deshacer NO guarda mapas de bits completos',
      !common.includes('history.push(ctx.getImageData'),
      'Guardar una foto por trazo consumía cientos de MB y el navegador mataba la pestaña.');
@@ -137,6 +153,25 @@ grupo('Firmas: no pueden perderse en silencio', () => {
 /* ═══════════════════════════════════════════════════════════
    2. EPP — el correo de reposición debe coincidir con lo marcado
    ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   Tablero: nunca decir "todo cerrado" con datos incompletos (v66)
+   ═══════════════════════════════════════════════════════════ */
+grupo('Tablero y contador de permisos abiertos', () => {
+  const dash = leer('dashboard.html');
+  const idx = leer('index.html');
+  ok('el tablero registra los tipos de permiso que no respondieron',
+     /nFallidos\.push/.test(dash) && !/status !== 'fulfilled'\) return; \/\/ backend no disponible; se omite/.test(dash),
+     'Antes se omitían en silencio: con un backend caído el tablero podía decir "No hay permisos abiertos ✓".');
+  ok('el chulo de "No hay permisos abiertos" solo sale si respondieron todos',
+     /else if\(fallidos\.length\) msg = '⚠️ No se puede confirmar/.test(dash),
+     'Una lista incompleta que parece completa es una falsa tranquilidad.');
+  ok('un backend que responde con error (token, login de Google) también cuenta como caído',
+     /if\(!data \|\| !data\.ok \|\| !Array\.isArray\(data\.rows\)\)/.test(dash));
+  ok('el contador de la portada avisa cuando le faltan datos',
+     /sinDatos\.push/.test(idx) && /al menos /.test(idx),
+     'Sin esto, el contador sale por debajo de lo real sin decirlo.');
+});
+
 grupo('Inspección de EPP', () => {
   const back = leer('backends/backend-epp.gs');
   const front = leer('inspeccion-epp.html');

@@ -21,6 +21,17 @@
   .searchbar input{width:100%;box-sizing:border-box;border:1.5px solid var(--line,#d9d9d9);border-radius:10px;padding:12px 14px;font-size:15px;background:var(--paper,#fff);}
 
   .refresh-note{font-size:11.5px;color:var(--ink-soft,#888);margin:0 0 1rem;}
+
+  /* Aviso de backends que no respondieron. Rojo y arriba de la lista a
+     propósito: significa que la lista está INCOMPLETA, y en un tablero de
+     permisos una lista incompleta que parece completa es una falsa tranquilidad. */
+  .aviso-incompleto{display:none;background:#fdecea;border:1.5px solid #c0392b;color:#7a1f14;
+    border-radius:12px;padding:12px 14px;margin:0 0 12px;font-size:13px;line-height:1.5;}
+  .aviso-incompleto b{display:block;font-size:14px;margin-bottom:2px;}
+  .aviso-incompleto ul{margin:6px 0 8px;padding-left:18px;}
+  .aviso-incompleto button{min-height:var(--touch,44px);padding:0 16px;border:none;border-radius:8px;
+    background:#c0392b;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+  .empty.incompleto{border:1.5px solid #c0392b;color:#7a1f14;background:#fdecea;}
   .list{display:flex;flex-direction:column;gap:10px;}
   .item{display:block;background:var(--paper,#fff);border:1px solid var(--line,#d9d9d9);border-radius:12px;padding:.9rem 1.1rem;border-left:5px solid #F2C200;transition:.15s;text-decoration:none;color:inherit;}
   .item:active{transform:scale(.99);}
@@ -73,6 +84,7 @@
   </div>
 
   <p class="refresh-note" id="refreshNote">Cargando…</p>
+  <div class="aviso-incompleto" id="avisoIncompleto" role="alert"></div>
   <div class="list" id="list"></div>
 </div>
 <script src="config.js"></script>
@@ -146,6 +158,11 @@ function formatFecha(fechaStr){
 
 let abiertos = [];
 let cerrados = [];
+// Tipos de permiso cuyo backend NO respondió en la última consulta:
+// [{nombre, motivo}]. Mientras haya alguno, la lista está incompleta.
+let fallidos = [];
+// null = todavía no se ha consultado nada (no se puede afirmar nada).
+let ultimaConsulta = null;
 let tabActual = 'abiertos';
 let eppPendientes = [];   // [{nombre, cedula, cargo, fecha, inspector, elementos[]}]
 let eppCargado = false;
@@ -157,7 +174,7 @@ async function cargar(){
   // Script sin ninguna necesidad real.
   if (document.hidden || !navigator.onLine) return;
   const noteEl = document.getElementById('refreshNote');
-  abiertos = []; cerrados = [];
+  const nAbiertos = [], nCerrados = [], nFallidos = [];
   // Se consultan los 5 backends EN PARALELO (no uno detrás de otro): si alguno
   // está caído o lento, ya no retrasa a los demás — antes, con un backend caído,
   // la carga completa del dashboard podía tardar 10-15 segundos.
@@ -166,11 +183,24 @@ async function cargar(){
       .then(res => res.json())
       .then(data => ({ backend, data }))
   ));
-  resultados.forEach(r=>{
-    if(r.status !== 'fulfilled') return; // backend no disponible; se omite
+  // ANTES un backend caído se omitía en silencio: si justo ese tenía el único
+  // permiso abierto, el tablero mostraba "No hay permisos abiertos ✓".
+  // Ahora cada tipo que no respondió queda registrado con su motivo.
+  resultados.forEach((r, i)=>{
+    if(r.status !== 'fulfilled'){
+      const err = r.reason;
+      const motivo = (err && err.name === 'SyntaxError')
+        ? 'respondió con una página en vez de datos (¿despliegue privado o URL cambiada?)'
+        : 'no respondió (sin señal o servidor caído)';
+      nFallidos.push({ nombre: PERMIT_BACKENDS[i].nombre, motivo });
+      return;
+    }
     const { backend, data } = r.value;
-    if(data.ok && Array.isArray(data.rows)){
-      data.rows.forEach(row=>{
+    if(!data || !data.ok || !Array.isArray(data.rows)){
+      nFallidos.push({ nombre: backend.nombre, motivo: 'respondió con error: ' + ((data && data.error) || 'sin detalle') });
+      return;
+    }
+    data.rows.forEach(row=>{
         const item = {
           tipo: backend.nombre,
           archivo: backend.archivo,
@@ -183,11 +213,12 @@ async function cargar(){
           fechaApertura: row.openedAt || row.updatedAt || null,
           fechaCierre: row.status === 'CERRADO' ? (row.closedAt || row.updatedAt || null) : null
         };
-        if(row.status === 'ABIERTO') abiertos.push(item);
-        else if(row.status === 'CERRADO') cerrados.push(item);
+        if(row.status === 'ABIERTO') nAbiertos.push(item);
+        else if(row.status === 'CERRADO') nCerrados.push(item);
       });
-    }
   });
+  abiertos = nAbiertos; cerrados = nCerrados; fallidos = nFallidos;
+  ultimaConsulta = new Date();
   // Orden por urgencia real: primero lo vencido, luego lo que está por vencer,
   // y al final lo que tiene margen. Los que no declaran vigencia se ordenan
   // como antes, por tiempo abierto.
@@ -203,6 +234,7 @@ async function cargar(){
   document.getElementById('countAbiertos').textContent = abiertos.length ? '('+abiertos.length+')' : '';
   document.getElementById('countCerrados').textContent = cerrados.length ? '('+cerrados.length+')' : '';
   noteEl.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'}) + ' — se refresca solo cada 2 minutos.';
+  mostrarAvisoIncompleto();
   render();
 }
 
@@ -271,6 +303,21 @@ function renderEpp(listEl, q){
   }).join('');
 }
 
+/** Aviso arriba de la lista con los tipos de permiso que no respondieron. */
+function mostrarAvisoIncompleto(){
+  const el = document.getElementById('avisoIncompleto');
+  if(!fallidos.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = '<b>⚠️ Lista incompleta</b>' +
+    'No se pudieron consultar estos permisos, así que los suyos <u>no aparecen</u> abajo:' +
+    '<ul>' + fallidos.map(f => '<li><b style="display:inline">' + esc(f.nombre) + '</b>: ' + esc(f.motivo) + '</li>').join('') + '</ul>' +
+    '<button type="button" id="btnReintentarTablero">Reintentar ahora</button>';
+  el.style.display = 'block';
+  document.getElementById('btnReintentarTablero').addEventListener('click', (e)=>{
+    e.target.textContent = 'Consultando…'; e.target.disabled = true;
+    cargar();
+  });
+}
+
 function render(){
   const listEl = document.getElementById('list');
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -286,7 +333,17 @@ function render(){
   }
 
   if(items.length===0){
-    listEl.innerHTML = `<div class="empty">${tabActual==='abiertos' ? 'No hay permisos abiertos en este momento ✓' : 'No hay permisos cerrados que coincidan con la búsqueda.'}</div>`;
+    let msg;
+    if(tabActual==='abiertos'){
+      if(q) msg = 'Ningún permiso abierto coincide con la búsqueda.';
+      // El chulo verde SOLO cuando los 5 tipos respondieron. Con uno caído no
+      // se puede afirmar que no haya permisos abiertos: se dice lo que se sabe.
+      else if(fallidos.length) msg = '⚠️ No se puede confirmar que no haya permisos abiertos: faltan datos de ' + fallidos.map(f=>esc(f.nombre)).join(', ') + '.';
+      else msg = 'No hay permisos abiertos en este momento ✓';
+    } else {
+      msg = fallidos.length ? '⚠️ Faltan datos de ' + fallidos.map(f=>esc(f.nombre)).join(', ') + '. La lista puede estar incompleta.' : 'No hay permisos cerrados que coincidan con la búsqueda.';
+    }
+    listEl.innerHTML = `<div class="empty${fallidos.length && !q ? ' incompleto' : ''}">${msg}</div>`;
     return;
   }
 

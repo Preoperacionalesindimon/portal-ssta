@@ -1235,20 +1235,29 @@
         .then(res => res.json())
         .then(data => ({ backend, data }))
     ));
-    resultados.forEach(r => {
-      if (r.status !== 'fulfilled') return; // backend no disponible, se omite silenciosamente
+    // Antes un backend caído se omitía en silencio y el contador salía por
+    // debajo de lo real sin decirlo. Ahora se cuentan los que no respondieron.
+    const conDatos = PERMIT_BACKENDS.filter(b => b.url);
+    const sinDatos = [];
+    resultados.forEach((r, i) => {
+      if (r.status !== 'fulfilled') { sinDatos.push(conDatos[i].nombre); return; }
       const { backend, data } = r.value;
-      if (data.ok && Array.isArray(data.rows)) {
+      if (data && data.ok && Array.isArray(data.rows)) {
         const abiertos = data.rows.filter(row => row.status === 'ABIERTO').length;
         if (abiertos > 0) { total += abiertos; detalle.push(abiertos + ' ' + backend.nombre); }
+      } else {
+        sinDatos.push(backend.nombre);
       }
     });
     const badge = document.getElementById('openPermitsBadge');
-    if (total > 0) {
+    const faltan = sinDatos.length ? ' · ⚠️ sin datos de ' + sinDatos.join(', ') : '';
+    if (total > 0 || sinDatos.length) {
       const resumen = detalle.length ? ' (' + detalle.join(', ') + ')' : '';
-      badge.textContent = total + (total === 1 ? ' abierto' : ' abiertos') + resumen;
-      badge.title = detalle.join(' · ');
-      badge.setAttribute('aria-label', total + ' permisos abiertos: ' + detalle.join(', '));
+      // "al menos": con tipos sin responder, el total real puede ser mayor.
+      const cifra = total > 0 ? (sinDatos.length ? 'al menos ' : '') + total + (total === 1 ? ' abierto' : ' abiertos') + resumen : 'Abiertos: ?';
+      badge.textContent = cifra + faltan;
+      badge.title = detalle.join(' · ') + faltan;
+      badge.setAttribute('aria-label', badge.textContent);
       badge.style.display = 'inline-block';
     }
   }

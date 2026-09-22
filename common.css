@@ -136,10 +136,12 @@ h1, .section-title, .gate-top h1, .header h1, .helper-title,
   #scrollProgress{height:2px;}
 }
 
-/* En vertical, sugiere girar el celular antes de firmar — desaparece solo al girar. */
-@media (orientation: portrait) and (max-width: 600px){
+/* En celular, avisa que el recuadro abre la firma a pantalla completa.
+   (Antes decía "gira el celular": girar reacomodaba toda la página y había que
+   volver a buscar el recuadro. Ver FirmaCompleta en common.js.) */
+@media (pointer: coarse) and (max-width: 599px){
   .sig-pad-wrap label::after, .sig-block h5::after{
-    content:"💡 gira el celular para firmar con más espacio";
+    content:"💡 toca el recuadro para firmar en pantalla completa";
     display:block;
     font-weight:400;
     text-transform:none;
@@ -689,4 +691,54 @@ canvas.pad.locked{cursor:default;}
   text-align:left;
   padding:10px 14px;
   cursor:pointer;
+}
+
+
+/* ── Firma a pantalla completa (celulares) — ver FirmaCompleta en common.js ── */
+/* Pista dentro del recuadro vacío: en celular, tocarlo abre la firma grande. */
+@media (pointer: coarse) and (max-width: 599px), (pointer: coarse) and (max-height: 599px){
+  canvas.pad:not(.con-firma):not(.locked), canvas.mini-pad:not(.con-firma):not(.locked){
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='28'%3E%3Ctext x='120' y='19' font-family='sans-serif' font-size='14' font-weight='600' fill='%238a97a3' text-anchor='middle'%3ETOCA AQU%C3%8D PARA FIRMAR%3C/text%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:center;
+  }
+}
+html.fc-abierta, html.fc-abierta body{overflow:hidden;}
+.firma-completa{
+  display:none;position:fixed;inset:0;z-index:10050;background:var(--paper,#fff);
+  flex-direction:column;font-family:var(--font-family,inherit);
+}
+.firma-completa.abierta{display:flex;}
+.fc-cab{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line,#dde3e8);
+}
+.fc-etq{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted,#5c6a76);}
+.fc-quien b{display:block;font-size:16px;color:var(--ink,#151b24);min-height:1.2em;}
+.fc-giro{font-size:12px;color:var(--ink-muted,#5c6a76);}
+.fc-aviso{display:none;margin:8px 16px 0;padding:8px 12px;border-radius:8px;background:#fff4d6;color:#6b4a00;font-size:12.5px;line-height:1.4;}
+.fc-area{flex:1;min-height:0;position:relative;padding:10px 16px;}
+canvas.pad-completa{
+  display:block;width:100%;height:100%;border:1.5px dashed #b8c2cc;border-radius:12px;
+  background:#fcfcfd;touch-action:none;overscroll-behavior:contain;
+}
+/* Línea guía de firma, como en el papel */
+.fc-linea{position:absolute;left:44px;right:44px;bottom:32%;border-bottom:1.5px solid #cfd6dc;pointer-events:none;}
+.fc-pie{
+  display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line,#dde3e8);
+}
+.fc-pie button{
+  flex:1;min-height:var(--touch,44px);border:1.5px solid var(--line,#dde3e8);background:#fff;
+  border-radius:10px;font-weight:700;font-size:14px;font-family:inherit;color:var(--ink,#151b24);cursor:pointer;
+}
+.fc-pie .fc-listo{flex:1.5;background:var(--ok,#1d7a4c);border-color:var(--ok,#1d7a4c);color:#fff;}
+/* Horizontal: todo más compacto para dejarle el alto al lienzo */
+@media (orientation: landscape) and (max-height: 500px){
+  .fc-cab{padding:6px 16px;}
+  .fc-giro{display:none;}
+  .fc-quien b{font-size:14px;}
+  .fc-area{padding:6px 16px;}
+  .fc-pie{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+  .fc-pie button{min-height:40px;}
 }

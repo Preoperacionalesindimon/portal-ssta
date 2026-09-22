@@ -501,15 +501,30 @@ const SignaturePad = {
     function markSigned(id) {
       const el = document.getElementById(statusIdFor(id));
       if (el) { el.textContent = signedLabel; el.classList.add('done', 'signed'); }
+      const c = document.getElementById(id);
+      if (c) c.classList.add('con-firma'); // quita la pista "Toca aquí para firmar"
     }
     function markUnsigned(id) {
       const el = document.getElementById(statusIdFor(id));
       if (el) { el.textContent = unsignedLabel; el.classList.remove('done', 'signed'); }
+      const c = document.getElementById(id);
+      if (c) c.classList.remove('con-firma');
     }
 
     function setup(canvas) {
       if (canvas.dataset.sigInit) return; // este MISMO elemento ya tiene sus listeners
       canvas.dataset.sigInit = '1';
+      // En celular, tocar el recuadro abre la firma a pantalla completa (ver
+      // FirmaCompleta). Se registra ANTES que los de dibujo para poder frenar
+      // el trazo en el recuadro pequeño. En tablet o computador no hace nada.
+      if (!canvas.dataset.completa) {
+        canvas.addEventListener('touchstart', (e) => {
+          if (canvas.dataset.locked === '1' || !FirmaCompleta.usar()) return;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          FirmaCompleta.abrir(canvas, pads[canvas.id]);
+        }, { passive: false });
+      }
       // willReadFrequently: true — le dice al navegador desde el inicio que este
       // lienzo se va a LEER seguido (getImageData para el historial de "deshacer",
       // toDataURL al guardar), no solo dibujar. Sin esto, el navegador por defecto
@@ -713,6 +728,43 @@ const SignaturePad = {
           img.src = url;
         },
         hasInk: () => hasInk,
+        /** Trazos de esta sesión, en px CSS, con la medida del lienzo donde se hicieron. */
+        getStrokes: () => ({
+          strokes: strokes.map((t) => t.map((pt) => [pt[0], pt[1]])),
+          w: tamCss.w,
+          h: tamCss.h,
+          base: !!baseImage
+        }),
+        /**
+         * Reemplaza lo firmado por estos trazos, ajustados a ESTE lienzo sin
+         * deformarlos: se escala igual a lo ancho y a lo alto (una firma hecha
+         * en pantalla completa horizontal no queda aplastada en un recuadro
+         * vertical) y se centra. Nunca se agranda más allá del trazo original.
+         */
+        setStrokes: (lista) => {
+          ajustarTamano(false);
+          const pts = [];
+          (lista || []).forEach((t) => t.forEach((pt) => pts.push(pt)));
+          baseImage = null;
+          if (!pts.length) {
+            strokes = [];
+            hasInk = false;
+            redibujar();
+            markUnsigned(canvas.id);
+            return;
+          }
+          const xs = pts.map((pt) => pt[0]), ys = pts.map((pt) => pt[1]);
+          const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+          const bw = Math.max(maxX - minX, 1), bh = Math.max(maxY - minY, 1);
+          const margen = 10;
+          const k = Math.min((tamCss.w - 2 * margen) / bw, (tamCss.h - 2 * margen) / bh, 1);
+          const dx = (tamCss.w - bw * k) / 2 - minX * k;
+          const dy = (tamCss.h - bh * k) / 2 - minY * k;
+          strokes = lista.map((t) => t.map((pt) => [pt[0] * k + dx, pt[1] * k + dy]));
+          hasInk = true;
+          redibujar();
+          markSigned(canvas.id);
+        },
         // ⚠️ A diferencia de la versión anterior (donde solo el manejador de
         // rotación de pantalla preservaba la firma), refreshSize() SIEMPRE
         // guarda la firma actual antes de redimensionar y la vuelve a
@@ -1004,4 +1056,148 @@ const AnclaGiro = (() => {
   else init();
 
   return { _estado: () => ({ ancla, restaurando, orientacion }) };
+})();
+
+/* ============================================================
+ * FirmaCompleta: en celular, la firma se hace a pantalla completa.
+ * ------------------------------------------------------------
+ * En un celular el recuadro de firma es angosto, y la solución de siempre
+ * era girar el teléfono… con lo que la página entera se reacomodaba y había
+ * que volver a buscar el recuadro. Llevamos varias versiones corrigiendo los
+ * efectos del giro; esto ataca la causa: al tocar el recuadro se abre un
+ * lienzo que ocupa toda la pantalla, sin nada detrás que se mueva. Se firma,
+ * se toca "Listo", la firma pasa al recuadro y la pantalla queda ahí mismo.
+ *
+ * - Solo en celulares (pantalla táctil con el lado corto menor a 600 px). En
+ *   tablet y computador el recuadro normal ya es cómodo y no cambia nada.
+ * - La firma pasa como trazos, no como imagen: no pierde calidad ni se
+ *   deforma, aunque se haya hecho en horizontal y el recuadro sea vertical.
+ * - Si el recuadro ya traía una firma guardada, "Listo" sin dibujar la deja
+ *   como estaba: no se puede borrar una firma sin querer.
+ * - El botón "atrás" de Android cierra la firma en vez de salir del permiso.
+ * ============================================================ */
+const FirmaCompleta = (() => {
+  const MQ = '(pointer: coarse) and (max-width: 599px), (pointer: coarse) and (max-height: 599px)';
+  let el = null, pad = null, destino = null, destinoPad = null;
+  let abierta = false, empujado = false, ignorarPop = false, teniaBase = false;
+
+  function usar() {
+    return !!(window.matchMedia && window.matchMedia(MQ).matches);
+  }
+
+  /** Nombre de quien firma, tomado del mismo bloque del recuadro. */
+  function nombreFirmante(canvas) {
+    const bloque = canvas.closest('.exec-card, tr, .sig-block, .sig-pad-wrap, .field, section') || canvas.parentElement;
+    let b = bloque;
+    // Sube hasta 3 niveles buscando un campo de nombre con algo escrito.
+    for (let i = 0; i < 3 && b; i++, b = b.parentElement) {
+      const inp = Array.from(b.querySelectorAll('input')).find((x) => /nombre/i.test(x.id + ' ' + x.name + ' ' + x.placeholder) && x.value.trim());
+      if (inp) return inp.value.trim();
+    }
+    const t = bloque && bloque.querySelector('h5, h4, label, .exec-num');
+    return t ? t.textContent.trim() : '';
+  }
+  function tituloBloque(canvas) {
+    const bloque = canvas.closest('.exec-card, .sig-block, .sig-pad-wrap, .field') || canvas.parentElement;
+    const card = canvas.closest('.exec-card');
+    const t = (card && card.querySelector('.exec-num')) || (bloque && bloque.querySelector('h5, h4, label'));
+    return t ? t.textContent.trim() : 'Firma';
+  }
+
+  function construir() {
+    el = document.createElement('div');
+    el.id = 'firmaCompleta';
+    el.className = 'firma-completa';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', 'Firmar a pantalla completa');
+    el.innerHTML =
+      '<div class="fc-cab">' +
+        '<div class="fc-quien"><span class="fc-etq" id="fcTitulo">Firma</span><b id="fcNombre"></b></div>' +
+        '<span class="fc-giro">💡 Gira el celular si quieres más espacio</span>' +
+      '</div>' +
+      '<div class="fc-aviso" id="fcAviso">Ya hay una firma guardada. Si firmas aquí, la reemplaza; si tocas Listo sin firmar, queda la que estaba.</div>' +
+      '<div class="fc-area"><canvas id="fcPad" class="pad-completa" data-completa="1"></canvas><div class="fc-linea" aria-hidden="true"></div></div>' +
+      '<div class="fc-pie">' +
+        '<button type="button" data-fc="cancelar">Cancelar</button>' +
+        '<button type="button" data-fc="deshacer">Deshacer</button>' +
+        '<button type="button" data-fc="borrar">Borrar</button>' +
+        '<button type="button" data-fc="listo" class="fc-listo">Listo ✓</button>' +
+      '</div>';
+    document.body.appendChild(el);
+    const mgr = SignaturePad.createManager({ statusIdFor: () => '__fc_sin_estado' });
+    const c = document.getElementById('fcPad');
+    mgr.setup(c);
+    pad = mgr.pads[c.id];
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-fc]');
+      if (!b) return;
+      const acc = b.dataset.fc;
+      if (acc === 'borrar') pad.clear();
+      else if (acc === 'deshacer') pad.undo();
+      else if (acc === 'cancelar') cerrar(false);
+      else if (acc === 'listo') cerrar(true);
+    });
+    window.addEventListener('popstate', () => {
+      if (ignorarPop) { ignorarPop = false; return; }
+      if (abierta) { empujado = false; cerrarInterno(false); }
+    });
+  }
+
+  function abrir(canvas, padDestino) {
+    if (!padDestino) return;
+    if (!el) construir();
+    destino = canvas;
+    destinoPad = padDestino;
+    const previo = padDestino.getStrokes ? padDestino.getStrokes() : { strokes: [], base: false };
+    teniaBase = !!previo.base;
+    document.getElementById('fcTitulo').textContent = tituloBloque(canvas);
+    document.getElementById('fcNombre').textContent = nombreFirmante(canvas);
+    document.getElementById('fcAviso').style.display = teniaBase ? 'block' : 'none';
+    document.documentElement.classList.add('fc-abierta');
+    el.classList.add('abierta');
+    abierta = true;
+    try { history.pushState({ firmaCompleta: true }, ''); empujado = true; } catch (e) { empujado = false; }
+    // El lienzo mide 0×0 mientras está oculto: se ajusta ya visible.
+    requestAnimationFrame(() => {
+      pad.refreshSize();
+      pad.clear();
+      // Si en esta sesión ya se había firmado, se trae para poder corregirla.
+      if (!teniaBase && previo.strokes && previo.strokes.length) pad.setStrokes(previo.strokes);
+    });
+  }
+
+  function cerrarInterno(aceptar) {
+    if (!abierta) return;
+    if (aceptar) {
+      const actual = pad.getStrokes();
+      if (actual.strokes.length) destinoPad.setStrokes(actual.strokes);
+      else if (!teniaBase) destinoPad.setStrokes([]); // borró todo y confirmó
+      // El formulario guarda el borrador al detectar cambios dentro de él; el
+      // lienzo grande está fuera, así que se avisa desde el recuadro original.
+      destino.dispatchEvent(new Event('input', { bubbles: true }));
+      destino.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    el.classList.remove('abierta');
+    document.documentElement.classList.remove('fc-abierta');
+    abierta = false;
+    const volverA = destino;
+    // Dos veces: si se giró el celular mientras se firmaba, la página detrás
+    // cambió de medida y termina de acomodarse un momento después.
+    requestAnimationFrame(() => {
+      if (volverA && document.body.contains(volverA)) volverA.scrollIntoView({ block: 'center', behavior: 'auto' });
+      setTimeout(() => { if (volverA && document.body.contains(volverA)) volverA.scrollIntoView({ block: 'center', behavior: 'auto' }); }, 300);
+    });
+  }
+
+  function cerrar(aceptar) {
+    cerrarInterno(aceptar);
+    if (empujado) {
+      empujado = false;
+      ignorarPop = true;
+      history.back();
+    }
+  }
+
+  return { usar, abrir, cerrar, estaAbierta: () => abierta };
 })();
