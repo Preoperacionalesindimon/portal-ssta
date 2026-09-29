@@ -328,6 +328,7 @@ const Outbox = {
       // Si el pendiente era un CIERRE, solo cuenta como guardado si allá ya
       // figura cerrado; si no, el cierre todavía tiene que salir.
       if (item.body.status === 'CERRADO') return json.status === 'CERRADO';
+      if (item.body.action === 'cerrarAts') return json.estado === 'CERRADO';
       return true;
     } catch (e) { return false; }
   },

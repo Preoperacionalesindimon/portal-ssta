@@ -13,6 +13,10 @@
   .hdr{background:var(--ink);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
   .hdr h1{font-family:var(--font-display);font-size:16px;margin:0;font-weight:700;}
   .hdr .cod{font-size:11px;opacity:.7;display:block;font-weight:400;margin-top:2px;}
+  /* El círculo decorativo del encabezado (common.css) quedaba encima del
+     botón de la esquina y se comía el toque. */
+  .hdr::before{pointer-events:none;}
+  .hdr > *{position:relative;z-index:1;}
   .hdr a{color:#ffd84d;font-size:12.5px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;min-height:var(--touch);padding:0 4px;}
 
   .banner{display:none;margin-top:14px;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
@@ -144,6 +148,56 @@
   .qr-ats{text-align:center;} .qr-ats img{width:220px;height:220px;image-rendering:pixelated;}
   @media(min-width:760px){ .firmas-fin{grid-template-columns:1fr 1fr 1fr;} }
 
+  /* ── Menú inicial (como el de los permisos) ── */
+  #menuAts{display:none;}
+  body.en-menu #menuAts{display:block;}
+  body.en-menu #atsApp, body.en-menu .footer-actions{display:none !important;}
+  body.en-menu{padding-bottom:30px;}
+  .menu-in{max-width:860px;margin:0 auto;padding:22px 14px 0;}
+  .menu-in h2{font-family:var(--font-display);font-size:19px;margin:0 0 6px;}
+  .menu-in > p{font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;line-height:1.5;}
+  .opciones{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:760px){ .opciones{grid-template-columns:1fr 1fr 1fr;} }
+  .opcion{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:8px;}
+  .opcion .ico{font-size:28px;line-height:1;}
+  .opcion h3{margin:0;font-size:15px;font-family:var(--font-display);color:var(--brand-ats);}
+  .opcion > p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+  .opcion .btn{width:100%;}
+  .opcion .inp{margin:0;}
+  .opcion .en-curso{font-size:12px;background:var(--brand-ats-soft);border-radius:8px;padding:8px 10px;line-height:1.4;}
+  .lista-menu{font-size:12.5px;}
+  .lista-menu .pl-item:last-child{border-bottom:none;}
+  .sin-srv{font-size:12px;color:#7a5600;background:#fff4d6;border-radius:8px;padding:8px 10px;line-height:1.4;}
+  .etiqueta-estado{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:1px 8px;border-radius:10px;margin-left:4px;vertical-align:middle;}
+  .etiqueta-estado.abierto{background:#e3f4ea;color:#1d6b43;}
+  .etiqueta-estado.cerrado{background:#e8eaed;color:#4a5560;}
+  .hdr button.menu{background:none;border:none;color:#ffd84d;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;min-height:var(--touch);padding:0 4px;}
+
+  /* ── Modo "Cerrar ATS" ── */
+  #secCerrar{display:none;}
+  body.modo-cerrar #secCerrar{display:block;}
+  body.modo-cerrar #atsApp .wrap > .section:not(#secCerrar), body.modo-cerrar #bannerBorrador, body.modo-cerrar #bannerCerrado{display:none !important;}
+  body.modo-cerrar #btnPlantillas, body.modo-cerrar #btnGuardarServidor, body.modo-cerrar #btnVistaPrevia{display:none;}
+  #btnConfirmarCierre, #btnSalirCerrar{display:none;}
+  /* El estado de la barra es del ATS en curso del celular, no del que se está cerrando o completando. */
+  body.modo-cerrar #estadoGuardado, body.modo-agregar #estadoGuardado{display:none;}
+  body.modo-cerrar #btnSalirCerrar{display:inline-block;}
+  body.modo-cerrar:not(.ref-cerrado) #btnConfirmarCierre{display:inline-block;}
+  body.ref-cerrado #formCierre{display:none;}
+  .pend-cierre{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#fff4d6;border:1px solid #e8c56a;color:#6b4a00;font-size:12.5px;line-height:1.45;}
+  .pend-cierre ul{margin:6px 0 0;padding-left:18px;}
+  .pend-cierre.ok{background:#e3f4ea;border-color:#9fd1b3;color:#1d5e3a;}
+  .field select{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:var(--fs-campo);font-family:inherit;background:#fff;color:var(--ink);min-height:var(--touch);}
+  .cerrado-info{background:#e8eaed;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:12px;color:#26313b;}
+  /* ATS cerrado abierto en el editor: solo consulta e impresión. */
+  #bannerCerrado{display:none;margin-top:14px;}
+  body.ats-cerrado #bannerCerrado{display:block;}
+  body.ats-cerrado #btnGuardarServidor, body.ats-cerrado #btnModoAgregar, body.ats-cerrado #btnCerrarEste{display:none !important;}
+  body.modo-agregar #bannerCerrado{display:none !important;}
+  body.modo-agregar.ref-cerrado #listaNuevos, body.modo-agregar.ref-cerrado #btnOtroNuevo,
+  body.modo-agregar.ref-cerrado #btnGuardarPersonal, body.modo-agregar.ref-cerrado #btnCompartirAgregar,
+  body.modo-agregar.ref-cerrado #secAgregar .ayuda{display:none !important;}
+
   /* ── Barra inferior ── */
   .footer-actions{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:var(--shadow-float);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:60;}
   .footer-actions .in{max-width:860px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
@@ -160,6 +214,7 @@
   .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:70;max-width:90vw;box-shadow:var(--shadow-lift);opacity:0;transition:opacity .2s;pointer-events:none;}
   .toast.show{opacity:1;}
 
+  #avisoPersonal{bottom:calc(84px + env(safe-area-inset-bottom));}
   .panel{position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:80;display:none;align-items:flex-end;justify-content:center;}
   .panel.show{display:flex;}
   .panel .caja{background:#fff;border-radius:16px 16px 0 0;max-width:620px;width:100%;max-height:85vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));}
@@ -196,7 +251,7 @@
   @media print{
     @page{size:letter landscape;margin:8mm;}
     body{padding:0;background:#fff;}
-    #atsApp,.footer-actions,.previa-barra,#offlineBanner,#updateBanner,#scrollProgress,.toast,.panel,#avisoPersonal{display:none !important;}
+    #atsApp,#menuAts,.footer-actions,.previa-barra,#offlineBanner,#updateBanner,#scrollProgress,.toast,.panel,#avisoPersonal{display:none !important;}
     #vistaPrevia{display:block !important;padding:0 !important;}
     .hoja-scroll{border:none;padding:0;overflow:visible;}
     .hoja{min-width:0;font-size:8.5px;}
@@ -204,13 +259,81 @@
   }
 </style>
 </head>
-<body>
+<body class="en-menu">
+<!-- MENÚ INICIAL: como en los permisos — abrir, cerrar o agregar personal. -->
+<div id="menuAts">
+  <div class="hdr">
+    <div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormatoMenu"></span></div>
+    <a href="index.html">← Volver al portal</a>
+  </div>
+  <div class="menu-in">
+    <h2>¿Qué deseas hacer?</h2>
+    <p>El ATS se guarda en una hoja de cálculo compartida: se abre desde un dispositivo, se le agrega personal desde otro y se cierra al terminar el trabajo, buscándolo por su código.</p>
+    <div class="opciones">
+      <div class="opcion" id="opAbrir">
+        <div class="ico">🧭</div>
+        <h3>Abrir nuevo ATS</h3>
+        <p>Diligenciar datos del trabajo, tareas con sus peligros y controles, EPP, participantes y firmas.</p>
+        <div class="en-curso" id="menuEnCurso" hidden></div>
+        <button type="button" class="btn" id="menuContinuar" hidden>Continuar el ATS en curso</button>
+        <button type="button" class="btn" id="menuNuevo">Empezar ATS nuevo</button>
+        <button type="button" class="btn sec" id="menuAbrirGuardado">📁 Abrir uno guardado o una plantilla</button>
+      </div>
+      <div class="opcion" id="opCerrar">
+        <div class="ico">✅</div>
+        <h3>Cerrar un ATS</h3>
+        <p>Cuando el trabajo termina o se suspende: registra fecha, hora, motivo y firma. Después ya no se puede modificar.</p>
+        <input type="text" class="inp" id="menuCodCerrar" placeholder="Ej. ATS-20260928-482173" autocomplete="off" autocapitalize="characters">
+        <button type="button" class="btn" id="menuBuscarCerrar">Buscar ATS</button>
+        <button type="button" class="btn sec" id="menuAbiertosCerrar">Ver ATS abiertos</button>
+        <button type="button" class="btn sec" id="menuHistorial">Ver historial (cerrados)</button>
+        <div id="menuListaCerrar" class="lista-menu"></div>
+      </div>
+      <div class="opcion" id="opAgregar">
+        <div class="ico">👥</div>
+        <h3>Agregar personal</h3>
+        <p>Para un ATS abierto: suma a la gente que va llegando a la obra, con su firma y la constancia de que se le socializó.</p>
+        <input type="text" class="inp" id="menuCodAgregar" placeholder="Ej. ATS-20260928-482173" autocomplete="off" autocapitalize="characters">
+        <button type="button" class="btn" id="menuBuscarAgregar">Cargar ATS y agregar personal</button>
+        <button type="button" class="btn sec" id="menuAbiertosAgregar">Ver ATS abiertos</button>
+        <div id="menuListaAgregar" class="lista-menu"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="atsApp">
   <div class="hdr">
     <div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormato"></span></div>
-    <a href="index.html">← Volver al portal</a>
+    <button type="button" class="menu" id="btnIrMenu">☰ Menú</button>
   </div>
   <div class="wrap">
+    <div class="cerrado-info" id="bannerCerrado"></div>
+    <div class="section" id="secCerrar">
+      <div class="section-title">Cerrar ATS</div>
+      <div class="section-body">
+        <div class="ref-ats" id="refCerrar"></div>
+        <div class="acciones-tareas" style="margin:0 0 12px;">
+          <button type="button" class="btn sec" id="btnVerAtsCerrar">📄 Ver el ATS completo</button>
+        </div>
+        <div id="infoCerrado"></div>
+        <div id="formCierre">
+          <div id="pendCierre"></div>
+          <div class="grid2">
+            <div class="field"><label>Fecha de cierre</label><input type="date" id="cFecha"></div>
+            <div class="field"><label>Hora de cierre</label><input type="time" id="cHora"></div>
+          </div>
+          <div class="field"><label>Motivo del cierre</label>
+            <select id="cMotivo"><option value="">Seleccione…</option><option>Actividad finalizada</option><option>Actividad cancelada</option><option>Evento no deseado</option><option>Lluvia / tormenta</option><option>Condiciones y/o actos inseguros</option></select></div>
+          <div class="field"><label>Observaciones</label><textarea id="cObs" placeholder="Ej: Trabajo terminado, área entregada limpia y en orden."></textarea></div>
+          <div class="field"><label>Quién cierra</label>
+            <input type="text" class="inp" id="cNombre" placeholder="Nombre (escribe para buscar)" autocomplete="off" style="margin-bottom:8px;">
+            <div class="grid2"><input type="text" class="inp" id="cCedula" placeholder="Cédula" inputmode="numeric"><input type="text" class="inp" id="cCargo" placeholder="Cargo"></div>
+            <div id="cFirmaWrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="section" id="secAgregar">
       <div class="section-title">Agregar personal al ATS</div>
       <div class="section-body">
@@ -316,7 +439,8 @@
     <!-- 8. Firmas -->
     <div class="section">
       <div class="section-title">Firmas</div>
-      <div class="section-body"><div class="firmas-fin" id="firmasFin"></div></div>
+      <div class="section-body"><div class="firmas-fin" id="firmasFin"></div>
+        <div class="acciones-tareas"><button type="button" class="btn sec" id="btnCerrarEste" hidden>✅ Terminó el trabajo: cerrar este ATS</button></div></div>
     </div>
   </div>
 </div>
@@ -337,6 +461,8 @@
     <button type="button" class="btn" id="btnVistaPrevia">Ver formato e imprimir</button>
     <button type="button" class="btn sec" id="btnSalirAgregar">Salir</button>
     <button type="button" class="btn" id="btnGuardarPersonal">☁️ Guardar personal</button>
+    <button type="button" class="btn sec" id="btnSalirCerrar">Salir</button>
+    <button type="button" class="btn" id="btnConfirmarCierre">✅ Cerrar ATS</button>
   </div>
 </div>
 
@@ -376,7 +502,7 @@ let uidSeq = Date.now();
 const uid = () => 'u' + (uidSeq++).toString(36);
 const hoyISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 
-$('codFormato').textContent = ATS_FORMATO.codigo + ' · Versión ' + ATS_FORMATO.version;
+$('codFormato').textContent = $('codFormatoMenu').textContent = ATS_FORMATO.codigo + ' · Versión ' + ATS_FORMATO.version;
 
 /* ================= ESTADO ================= */
 function nuevoAts() {
@@ -478,11 +604,17 @@ function actualizarEstado() {
   // El botón para agregar gente que llega después depende de que el ATS ya
   // esté en el servidor: se actualiza aquí, que es lo que corre al guardar.
   $('btnModoAgregar').hidden = !(ats.code && urlAts());
+  $('btnCerrarEste').hidden = !(ats.code && urlAts());
+  // Un ATS cerrado se puede consultar e imprimir, pero ya no se sube.
+  const cerrado = ats.estado === 'CERRADO';
+  document.body.classList.toggle('ats-cerrado', cerrado);
+  $('bannerCerrado').innerHTML = cerrado ? textoCierre(ats) + '<br>Queda solo para consulta e impresión: los cambios que hagas aquí no se suben.' : '';
   const el = $('estadoGuardado');
   el.classList.remove('sucio', 'subido');
   const hora = (d) => new Date(d).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
   if (!urlAts()) { el.textContent = 'Borrador guardado en este dispositivo.'; return; }
   if (!ats.code) { el.textContent = 'Guardado solo en este dispositivo: todavía no se ha subido.'; return; }
+  if (cerrado) { el.textContent = '🔒 ' + ats.code + ' cerrado · solo consulta e impresión'; return; }
   if (ats.sucio) { el.textContent = ats.code + ' · hay cambios sin subir al servidor'; el.classList.add('sucio'); return; }
   el.textContent = '✓ ' + ats.code + ' guardado en el servidor (versión ' + ats.version + (ats.subidoEn ? ', ' + hora(ats.subidoEn) : '') + ')';
   el.classList.add('subido');
@@ -1057,14 +1189,49 @@ function renderEditor() {
 
 /* ================= PERSONAL (autocompletar) ================= */
 let personal = [];
-(async function cargarPersonal() {
+let personalMotivo = '';
+/* Si la base no carga, se dice por qué (igual que en los permisos): antes
+   cualquier falla se tragaba en silencio y el buscador simplemente no
+   sugería nada, sin forma de saber si era la señal, el token o config.js. */
+async function cargarPersonal() {
+  personalMotivo = '';
   try {
-    const cfg = PORTAL_CONFIG.BACKENDS.personal;
-    const r = await fetchWithRetry(cfg.url + '?action=listPersonal&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
-    const d = JSON.parse(await r.text());
-    if (d.ok && d.personal) personal = d.personal;
-  } catch (e) { /* sin señal: se escribe a mano; no bloquea el ATS */ }
-})();
+    if (typeof PORTAL_CONFIG === 'undefined' || !PORTAL_CONFIG.BACKENDS || !PORTAL_CONFIG.BACKENDS.personal) {
+      personalMotivo = 'config.js no se pudo leer (probablemente quedó con un error al editarlo). Hay que volver a subir un config.js correcto.';
+    } else {
+      const r = await fetchWithRetry(PORTAL_CONFIG.BACKENDS.personal.url + '?action=listPersonal&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const t = await r.text();
+      let d = null;
+      try { d = JSON.parse(t); } catch (e) {
+        personalMotivo = 'La base de personal respondió con una página web en vez de datos (HTTP ' + r.status + '). Suele pasar cuando el despliegue de Apps Script quedó privado o la URL cambió.';
+      }
+      if (d && !d.ok) personalMotivo = 'La base de personal respondió: ' + String(d.error || 'error sin detalle').replace(/\.$/, '') + '.';
+      else if (d && (!d.personal || !d.personal.length)) personalMotivo = 'La base de personal respondió bien, pero no trae ningún registro.';
+      else if (d) personal = d.personal;
+    }
+  } catch (e) {
+    personalMotivo = 'No se pudo contactar la base de personal (' + (e && e.message ? e.message : 'sin conexión') + ').';
+  }
+  avisarPersonal();
+}
+function avisarPersonal() {
+  let chip = document.getElementById('avisoPersonal');
+  if (personal.length) { if (chip) chip.remove(); return; }
+  if (!chip) {
+    chip = document.createElement('button');
+    chip.id = 'avisoPersonal'; chip.type = 'button'; chip.className = 'aviso-personal';
+    chip.addEventListener('click', () => {
+      alert('Búsqueda de personal no disponible\n\n' + personalMotivo + '\n\nPuedes seguir escribiendo nombres y cédulas a mano; no se pierde nada.\n\nSe va a reintentar ahora.');
+      chip.textContent = '⏳ Reintentando…';
+      cargarPersonal();
+    });
+    document.body.appendChild(chip);
+  }
+  chip.textContent = '⚠️ Sin base de personal — toca para ver por qué';
+}
+cargarPersonal();
+// Si abrió sin señal, se reintenta sola al volver la conexión.
+window.addEventListener('online', () => { if (!personal.length) cargarPersonal(); });
 /* En la base el nombre viene completo; el formato pide nombres y apellidos
    aparte. En Colombia casi siempre son los dos últimos. */
 function partirNombre(n) {
@@ -1288,8 +1455,8 @@ function armarHoja() {
   $('hoja').innerHTML =
     '<table class="cod"><colgroup><col style="width:18%"><col style="width:' + (qr ? 45 : 57) + '%"><col style="width:25%">' + (qr ? '<col style="width:12%">' : '') + '</colgroup>' +
     '<tr><td rowspan="4" class="logo c"><img src="logo-indimon.png" alt="INDIMON"></td><td rowspan="4" class="titulo">' + esc(ATS_FORMATO.titulo) +
-    (ats.code ? '<div style="font-size:9px;font-weight:400;margin-top:4px;">Registro ' + esc(ats.code) + ' · versión ' + (ats.version || 1) + (ats.sucio ? ' (con cambios sin subir)' : '') + '</div>' : '') + '</td><td>' + esc(ATS_FORMATO.pagina) + '</td>' +
-    (qr ? '<td rowspan="4" class="qr-hoja c"><img src="' + qr + '" alt="QR del ATS"><div>Escanea para ver este ATS o agregar personal</div></td>' : '') + '</tr>' +
+    (ats.code ? '<div style="font-size:9px;font-weight:400;margin-top:4px;">Registro ' + esc(ats.code) + ' · versión ' + (ats.version || 1) + (ats.estado === 'CERRADO' ? ' · CERRADO' : '') + (ats.sucio && ats.estado !== 'CERRADO' ? ' (con cambios sin subir)' : '') + '</div>' : '') + '</td><td>' + esc(ATS_FORMATO.pagina) + '</td>' +
+    (qr ? '<td rowspan="4" class="qr-hoja c"><img src="' + qr + '" alt="QR del ATS"><div>' + (ats.estado === 'CERRADO' ? 'Escanea para ver este ATS' : 'Escanea para ver este ATS o agregar personal') + '</div></td>' : '') + '</tr>' +
     '<tr><td>Versión: ' + esc(ATS_FORMATO.version) + '</td></tr><tr><td>Código: ' + esc(ATS_FORMATO.codigo) + '</td></tr><tr><td>Fecha: ' + esc(ATS_FORMATO.fecha) + '</td></tr></table>' +
     '<table><colgroup><col style="width:18%"><col style="width:40%"><col style="width:17%"><col style="width:25%"></colgroup>' +
     '<tr><td class="r">Centro de costos</td><td>' + esc(centro) + '</td><td class="r">Fecha</td><td>' + esc(fecha) + '</td></tr>' +
@@ -1310,7 +1477,20 @@ function armarHoja() {
     '<table><colgroup><col style="width:34%"><col style="width:33%"><col style="width:33%"></colgroup>' +
     '<tr><td class="firma firma-fin" style="height:60px;">' + img(F.lider.firma) + '</td><td class="firma firma-fin">' + img(F.jefe.firma) + '</td><td class="firma firma-fin">' + img(F.sst.firma) + '</td></tr>' +
     '<tr><td class="c">' + esc(F.lider.nombre) + '</td><td class="c">' + esc(F.jefe.nombre) + '</td><td class="c">' + esc(F.sst.nombre) + '</td></tr>' +
-    '<tr><td class="r c">Responsable / líder ejecutante de la tarea</td><td class="r c">Jefe de área</td><td class="r c">Seguridad industrial SSTA</td></tr></table>';
+    '<tr><td class="r c">Responsable / líder ejecutante de la tarea</td><td class="r c">Jefe de área</td><td class="r c">Seguridad industrial SSTA</td></tr></table>' +
+    hojaCierre();
+}
+/* Cierre del ATS en la hoja impresa (solo si ya se cerró). */
+function hojaCierre() {
+  const k = ats.cierre;
+  if (ats.estado !== 'CERRADO' || !k) return '';
+  const img = (src) => (src ? '<img src="' + src + '" alt="firma">' : '');
+  return '<table><colgroup><col style="width:18%"><col style="width:22%"><col style="width:18%"><col style="width:42%"></colgroup>' +
+    '<tr><td colspan="4" class="sub">Cierre del ATS</td></tr>' +
+    '<tr><td class="r">Fecha y hora de cierre</td><td>' + esc(fechaCO(k.fecha) + ' ' + (k.hora || '')) + '</td><td class="r">Motivo</td><td>' + esc(k.motivo) + '</td></tr>' +
+    '<tr><td class="r">Observaciones</td><td colspan="3">' + esc(k.observaciones || '—') + '</td></tr>' +
+    ((k.pendientes || []).length ? '<tr><td class="r">Pendientes al cerrar</td><td colspan="3">' + esc(k.pendientes.join('\n')) + '</td></tr>' : '') +
+    '<tr><td class="r">Cierra</td><td>' + esc(k.nombre) + (k.cedula ? '\nCC ' + esc(k.cedula) : '') + (k.cargo ? '\n' + esc(k.cargo) : '') + '</td><td class="r">Firma</td><td class="firma firma-fin" style="height:50px;">' + img(k.firma) + '</td></tr></table>';
 }
 /* Lo que falta, para avisar antes de imprimir (no bloquea: a veces se
    imprime para firmar en papel). */
@@ -1419,6 +1599,11 @@ async function guardarEnServidor(force) {
       });
       return;
     }
+    if (!r.ok && r.cerrado) {
+      panel('<div class="verif mal"><b>🔒 ' + esc(r.error || 'Este ATS ya está cerrado.') + '</b></div><p class="ayuda">Los cambios de este dispositivo ya no se pueden subir: se trae la versión cerrada del servidor.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+      cargarDesdeServidor(ats.code, true);
+      return;
+    }
     if (!r.ok) { panel('<div class="verif mal"><b>No se pudo guardar.</b><br>' + esc(r.error || 'Error sin detalle') + '</div><p class="ayuda">El ATS sigue guardado en este dispositivo.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Cerrar</button></div>'); return; }
     ats.code = r.code; ats.version = r.version; ats.subidoEn = new Date().toISOString(); ats.sucio = false;
     DraftStore.save(CLAVE_BORRADOR, ats);
@@ -1467,13 +1652,14 @@ async function cargarDesdeServidor(code, sinPreguntar) {
     ats = Object.assign(base, r.ats);
     ats.cab = Object.assign(base.cab, r.ats.cab);
     ats.code = r.code; ats.version = Number(r.version) || 1; ats.subidoEn = r.updatedAt || null; ats.sucio = false;
+    ats.estado = r.estado || 'ABIERTO';
     ats.tareas.forEach((t) => { if (!t.uid) t.uid = uid(); });
     ats.participantes.forEach((p) => { if (!p.uid) p.uid = uid(); });
     editando = null; ultimaGuardada = null;
     DraftStore.save(CLAVE_BORRADOR, ats);
     $('bannerBorrador').classList.remove('show');
-    cargarTodo(); actualizarEstado();
-    toast(code + ' abierto (versión ' + ats.version + ').');
+    irAlEditor();
+    toast(code + ' abierto (versión ' + ats.version + ')' + (ats.estado === 'CERRADO' ? ' · cerrado' : '') + '.');
   } catch (e) {
     alert('Sin señal: no se pudo abrir ' + code + '. Inténtalo de nuevo cuando haya conexión.');
   }
@@ -1482,6 +1668,13 @@ $('btnGuardarServidor').addEventListener('click', () => guardarEnServidor(false)
 window.addEventListener('outbox-enviado', (e) => {
   const b = e.detail && e.detail.body;
   if (b && b.action === 'agregarParticipantes') { toast('Se agregaron ' + (b.participantes || []).length + ' persona(s) a ' + b.code + '.'); return; }
+  if (b && b.action === 'cerrarAts') {
+    try { localStorage.removeItem(claveCierre(b.code)); } catch (err) {}
+    cacheLista = null;
+    if (ats.code === b.code) { ats.estado = 'CERRADO'; DraftStore.save(CLAVE_BORRADOR, ats); actualizarEstado(); }
+    toast(b.code + ' quedó cerrado en el servidor.');
+    return;
+  }
   if (!(b && b.code && b.code === ats.code)) return;
   // Si se aplicó, el servidor quedó en la versión siguiente a la que se usó
   // de base. Hay que anotarla: si no, el próximo guardado desde este celular
@@ -1496,6 +1689,11 @@ window.addEventListener('outbox-enviado', (e) => {
 // otro dispositivo guardó una versión más nueva mientras este no tenía señal).
 window.addEventListener('outbox-fallido', (e) => {
   const b = e.detail && e.detail.item && e.detail.item.body;
+  if (b && b.action === 'cerrarAts') {
+    panel('<div class="verif mal"><b>El cierre pendiente de ' + esc(b.code) + ' no se pudo enviar.</b><br>' + esc((e.detail && e.detail.error) || '') + '</div>' +
+      '<p class="ayuda">Lo diligenciado sigue en este celular: búscalo en ☰ Menú → Cerrar un ATS e inténtalo de nuevo.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+    return;
+  }
   if (!(b && b.code && b.code === ats.code)) return;
   ats.sucio = true; actualizarEstado();
   panel('<div class="verif mal"><b>El envío pendiente de ' + esc(b.code) + ' no se pudo subir.</b><br>' + esc((e.detail && e.detail.error) || '') + '</div>' +
@@ -1515,21 +1713,34 @@ function guardarNuevos() {
   if (!atsRef) return;
   try { localStorage.setItem(claveNuevos(atsRef.code), JSON.stringify(nuevos)); } catch (e) { /* memoria llena: sigue en pantalla */ }
 }
-async function entrarModoAgregar(code) {
-  if (!urlAts()) { guardarEnServidor(false); return; } // muestra el aviso de "sin servidor"
+/* Trae un ATS del servidor como referencia (para agregar personal o cerrar),
+   sin tocar el borrador principal de este dispositivo. */
+async function traerReferencia(code) {
+  if (!urlAts()) { guardarEnServidor(false); return null; } // muestra el aviso de "sin servidor"
+  code = String(code || '').trim().toUpperCase();
+  if (!/^ATS-\d{8}-\d{4,8}$/.test(code)) { alert('Ese código no tiene la forma de un ATS (ej. ATS-20260928-482173).'); return null; }
   toast('Abriendo ' + code + '…');
   let r;
   try {
     const res = await fetchWithRetry(urlAts() + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     r = await res.json();
-  } catch (e) { alert('Sin señal: no se pudo abrir ' + code + '. Inténtalo cuando haya conexión.'); return; }
-  if (!r.ok) { alert('No se pudo abrir ' + code + ': ' + (r.error || '')); return; }
-  atsRef = Object.assign(nuevoAts(), r.ats, { code: r.code, version: Number(r.version) || 1, sucio: false });
-  atsRef.cab = Object.assign(nuevoAts().cab, r.ats.cab);
+  } catch (e) { alert('Sin señal: no se pudo abrir ' + code + '. Inténtalo cuando haya conexión.'); return null; }
+  if (!r.ok) { alert('No se pudo abrir ' + code + ': ' + (r.error || '')); return null; }
+  const ref = Object.assign(nuevoAts(), r.ats, { code: r.code, version: Number(r.version) || 1, sucio: false, estado: r.estado || 'ABIERTO' });
+  ref.cab = Object.assign(nuevoAts().cab, r.ats.cab);
+  return ref;
+}
+async function entrarModoAgregar(code, origen) {
+  const ref = await traerReferencia(code);
+  if (!ref) return;
+  origenModo = origen || 'menu';
+  atsRef = ref; code = ref.code;
   try { nuevos = JSON.parse(localStorage.getItem(claveNuevos(code)) || '[]'); } catch (e) { nuevos = []; }
   if (!nuevos.length) nuevos.push(personaNueva());
   editando = null;
+  document.body.classList.remove('en-menu', 'modo-cerrar', 'previa');
   document.body.classList.add('modo-agregar');
+  document.body.classList.toggle('ref-cerrado', atsRef.estado === 'CERRADO');
   history.replaceState(null, '', enlaceAgregar(code).replace(location.origin, ''));
   pintarModoAgregar();
   window.scrollTo(0, 0);
@@ -1537,17 +1748,34 @@ async function entrarModoAgregar(code) {
 function personaNueva() {
   return { uid: uid(), nombres: '', apellidos: '', cedula: '', cargo: '', firma: null, tardio: true, socializado: false, ingreso: new Date().toISOString() };
 }
-function pintarModoAgregar() {
-  const a = atsRef, c = a.cab;
+/* Resumen de un ATS del servidor (cabecera de los modos agregar y cerrar). */
+function resumenRef(a) {
+  const c = a.cab;
   const firmados = a.participantes.filter((p) => p.firma).length;
-  $('refAts').innerHTML = '<b class="cod">' + esc(a.code) + '</b> · versión ' + a.version + '<br>' +
+  return '<b class="cod">' + esc(a.code) + '</b> · versión ' + a.version +
+    ' <span class="etiqueta-estado ' + (a.estado === 'CERRADO' ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span><br>' +
     '<b>' + esc(c.trabajo || '(sin trabajo)') + '</b><br>' +
     esc([c.centro.join(', '), c.centroOtro, c.area].filter(Boolean).join(' · ')) + '<br>' +
     esc(fechaCO(c.desde) + (c.hasta ? ' al ' + fechaCO(c.hasta) : '')) + ' · ' + a.tareas.length + ' tareas<br>' +
-    'Ya están <b>' + a.participantes.length + ' participantes</b> (' + firmados + ' firmaron)' +
+    'Están <b>' + a.participantes.length + ' participantes</b> (' + firmados + ' firmaron)' +
     (a.participantes.length ? ': <span style="color:var(--ink-muted)">' + esc(a.participantes.map((p) => ((p.nombres || '') + ' ' + (p.apellidos || '')).trim()).filter(Boolean).join(', ')) + '</span>' : '');
+}
+/* Cómo se cerró un ATS (para mostrarlo en pantalla). */
+function textoCierre(a) {
+  const k = a.cierre || {};
+  return '<b>🔒 ATS cerrado</b> el ' + esc(fechaCO(k.fecha)) + ' a las ' + esc(k.hora || '') + '<br>' +
+    'Motivo: <b>' + esc(k.motivo || '') + '</b><br>' +
+    'Cerró: ' + esc([k.nombre, k.cargo].filter(Boolean).join(' · ')) +
+    (k.observaciones ? '<br>Observaciones: ' + esc(k.observaciones) : '') +
+    ((k.pendientes || []).length ? '<br><span style="color:#7a5600">Pendientes al cerrar: ' + esc(k.pendientes.join('; ')) + '</span>' : '');
+}
+function pintarModoAgregar() {
+  const a = atsRef;
+  $('refAts').innerHTML = resumenRef(a) +
+    (a.estado === 'CERRADO' ? '<div class="cerrado-info" style="margin:10px 0 0;">' + textoCierre(a) + '<br>Ya no se puede agregar personal. Si el trabajo sigue, hay que abrir un ATS nuevo.</div>' : '');
   const cont = $('listaNuevos');
   cont.innerHTML = '';
+  if (a.estado === 'CERRADO') return;
   const cedAts = a.participantes.map((p) => String(p.cedula || '').trim()).filter(Boolean);
   nuevos.forEach((p, i) => {
     const d = filaPersona(p, {
@@ -1561,12 +1789,10 @@ function pintarModoAgregar() {
   });
 }
 function salirModoAgregar() {
-  if (nuevos.some((p) => p.nombres || p.firma) && !confirm('Hay personas sin guardar. Quedan en este celular para cuando vuelvas a este ATS. ¿Salir?')) return;
-  document.body.classList.remove('modo-agregar');
+  if (atsRef && atsRef.estado !== 'CERRADO' && nuevos.some((p) => p.nombres || p.firma) &&
+      !confirm('Hay personas sin guardar. Quedan en este celular para cuando vuelvas a este ATS. ¿Salir?')) return;
   atsRef = null; nuevos = [];
-  history.replaceState(null, '', location.pathname + (ats.code ? '?code=' + encodeURIComponent(ats.code) : ''));
-  cargarTodo(); actualizarEstado();
-  window.scrollTo(0, 0);
+  if (origenModo === 'editor') irAlEditor(); else irAlMenu();
 }
 async function guardarPersonal() {
   guardarYa();
@@ -1599,6 +1825,12 @@ async function guardarPersonal() {
       await Outbox.add(urlAts(), body);
       nuevos = [personaNueva()]; guardarNuevos(); pintarModoAgregar();
       panel('<div class="verif cola"><b>📡 Sin señal: quedó en cola.</b><br>' + listos.length + ' persona(s) se agregan solas a ' + esc(atsRef.code) + ' cuando vuelva la conexión.</div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+      return;
+    }
+    if (!r.ok && r.cerrado) {
+      // Alguien lo cerró mientras tanto: se vuelve a leer para mostrar el cierre.
+      panel('<div class="verif mal"><b>🔒 ' + esc(r.error || 'El ATS ya está cerrado.') + '</b></div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+      entrarModoAgregar(atsRef.code, origenModo);
       return;
     }
     if (!r.ok) { panel('<div class="verif mal"><b>No se pudo guardar.</b><br>' + esc(r.error || '') + '</div><p class="ayuda">Las personas siguen en pantalla; inténtalo de nuevo.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Cerrar</button></div>'); return; }
@@ -1648,7 +1880,7 @@ function compartirAgregar(code) {
     try { await navigator.clipboard.writeText(url); toast('Enlace copiado.'); } catch (e) { prompt('Copia el enlace:', url); }
   });
 }
-$('btnModoAgregar').addEventListener('click', () => entrarModoAgregar(ats.code));
+$('btnModoAgregar').addEventListener('click', () => entrarModoAgregar(ats.code, 'editor'));
 $('btnOtroNuevo').addEventListener('click', () => {
   nuevos.push(personaNueva()); guardarNuevos(); pintarModoAgregar();
   const ult = $('listaNuevos').lastElementChild;
@@ -1662,6 +1894,257 @@ $('btnVerAtsRef').addEventListener('click', () => {
   const propio = ats; ats = atsRef; try { armarHoja(); } finally { ats = propio; }
   document.body.classList.add('previa'); window.scrollTo(0, 0);
 });
+
+/* ================= MODO "CERRAR ATS" =================
+   Como el cierre de los permisos: fecha, hora, motivo, observaciones y firma
+   de quien cierra. Se trabaja sobre el ATS del servidor (atsRef), sin tocar
+   el borrador principal. Lo que falte al cerrar no bloquea (a veces el
+   trabajo se suspende a la mitad), pero queda escrito en el cierre. */
+let cierre = null;
+const claveCierre = (code) => 'ats-cierre-' + code;
+function guardarCierreLocal() {
+  if (!atsRef || !cierre) return;
+  try { localStorage.setItem(claveCierre(atsRef.code), JSON.stringify(cierre)); } catch (e) { /* memoria llena: sigue en pantalla */ }
+}
+function horaAhora() { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); }
+/* Lo que le falta al ATS de referencia, más lo propio de la gente que llegó tarde. */
+function pendientesDe(a) {
+  const propio = ats; ats = a;
+  let out;
+  try { out = pendientes(); } finally { ats = propio; }
+  a.participantes.filter((p) => p.tardio && !p.socializado).forEach((p) =>
+    out.push(((p.nombres || '') + ' ' + (p.apellidos || '')).trim() + ': llegó después y no consta que se le socializó'));
+  return out;
+}
+async function entrarModoCerrar(code, origen) {
+  const ref = await traerReferencia(code);
+  if (!ref) return;
+  origenModo = origen || 'menu';
+  atsRef = ref;
+  editando = null;
+  document.body.classList.remove('en-menu', 'modo-agregar', 'previa');
+  document.body.classList.add('modo-cerrar');
+  document.body.classList.toggle('ref-cerrado', atsRef.estado === 'CERRADO');
+  history.replaceState(null, '', location.pathname + '?code=' + encodeURIComponent(atsRef.code) + '&cerrar=1');
+  pintarModoCerrar();
+  window.scrollTo(0, 0);
+}
+function pintarModoCerrar() {
+  const a = atsRef;
+  $('refCerrar').innerHTML = resumenRef(a);
+  if (a.estado === 'CERRADO') {
+    $('infoCerrado').innerHTML = '<div class="cerrado-info">' + textoCierre(a) + '<br>Queda solo para consulta e impresión.</div>';
+    return;
+  }
+  $('infoCerrado').innerHTML = '';
+  try { cierre = JSON.parse(localStorage.getItem(claveCierre(a.code)) || 'null'); } catch (e) { cierre = null; }
+  if (!cierre) cierre = { fecha: hoyISO(), hora: horaAhora(), motivo: '', observaciones: '', nombre: '', cedula: '', cargo: '', firma: null };
+  const pend = pendientesDe(a);
+  const sinSubir = ats.code === a.code && ats.sucio;
+  $('pendCierre').innerHTML =
+    (sinSubir ? '<div class="pend-cierre" style="background:#fdecea;border-color:#e08a80;color:#7a1f14;"><b>⚠️ Este dispositivo tiene cambios de este ATS sin subir.</b> Súbelos antes de cerrar (☰ Menú → Continuar el ATS en curso → ☁️ Guardar); al cerrar ya no se podrán subir.</div>' : '') +
+    (pend.length
+      ? '<div class="pend-cierre"><b>El ATS tiene pendientes.</b> Se puede cerrar igual (por ejemplo, si el trabajo se suspendió), pero quedan anotados en el cierre:<ul>' + pend.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div>'
+      : '<div class="pend-cierre ok">✓ El ATS está completo: todos firmaron y no falta nada.</div>');
+  ['Fecha', 'Hora', 'Motivo', 'Obs', 'Nombre', 'Cedula', 'Cargo'].forEach((k) => {
+    const campo = { Fecha: 'fecha', Hora: 'hora', Motivo: 'motivo', Obs: 'observaciones', Nombre: 'nombre', Cedula: 'cedula', Cargo: 'cargo' }[k];
+    const el = $('c' + k);
+    el.value = cierre[campo] || '';
+    el.oninput = el.onchange = () => { cierre[campo] = el.value; guardarCierreLocal(); };
+  });
+  // La firma se arma de nuevo cada vez: el lienzo necesita estar visible.
+  const w = $('cFirmaWrap');
+  w.innerHTML = '';
+  const fb = bloqueFirma('firmaCierre', cierre, 'status_firmaCierre');
+  fb.querySelector('canvas').className = 'pad';
+  w.appendChild(fb);
+  const pad = conectarFirma(fb.querySelector('canvas'), cierre, guardarCierreLocal);
+  fb.querySelector('[data-b=undo]').addEventListener('click', () => { pad.undo(); cierre.firma = pad.getDataUrl(); guardarCierreLocal(); });
+  fb.querySelector('[data-b=clear]').addEventListener('click', () => { pad.clear(); cierre.firma = null; guardarCierreLocal(); });
+}
+// El buscador de personal para quien cierra (se conecta una sola vez).
+autocompletar($('cNombre'), (per) => {
+  if (!cierre) return;
+  cierre.nombre = per.nombre; cierre.cedula = String(per.cedula || ''); cierre.cargo = per.cargo || '';
+  $('cNombre').value = cierre.nombre; $('cCedula').value = cierre.cedula; $('cCargo').value = cierre.cargo;
+  guardarCierreLocal();
+});
+async function confirmarCierre() {
+  guardarYa(); // trae la firma recién hecha
+  const a = atsRef, k = cierre;
+  const faltas = [];
+  if (!k.fecha) faltas.push('Fecha de cierre');
+  if (!k.hora) faltas.push('Hora de cierre');
+  if (!k.motivo) faltas.push('Motivo del cierre');
+  if (!(k.nombre || '').trim()) faltas.push('Nombre de quien cierra');
+  if (!k.firma) faltas.push('Firma de quien cierra');
+  if (faltas.length) {
+    panel('<h3>Para cerrar falta:</h3><ul>' + faltas.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Completar</button></div>');
+    return;
+  }
+  const pend = pendientesDe(a);
+  if (!confirm('¿Cerrar ' + a.code + '?\n\nDespués de cerrado ya no se puede modificar ni agregar personal.' +
+               (pend.length ? '\n\nQuedan anotados como pendientes al cerrar:\n- ' + pend.join('\n- ') : ''))) return;
+  const body = { action: 'cerrarAts', token: PORTAL_CONFIG.API_TOKEN,
+                 opId: 'atsc-' + Date.now() + '-' + Math.random().toString(36).slice(2), code: a.code,
+                 cierre: { fecha: k.fecha, hora: k.hora, motivo: k.motivo, observaciones: k.observaciones || '',
+                           nombre: k.nombre.trim(), cedula: (k.cedula || '').trim(), cargo: (k.cargo || '').trim(), firma: k.firma, pendientes: pend } };
+  const btn = $('btnConfirmarCierre');
+  btn.disabled = true; btn.textContent = 'Cerrando…';
+  try {
+    let r;
+    try {
+      const res = await fetchWithRetry(urlAts(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+      r = await res.json();
+    } catch (errRed) {
+      await Outbox.add(urlAts(), body);
+      panel('<div class="verif cola"><b>📡 Sin señal: el cierre quedó en cola.</b><br>' + esc(a.code) + ' se cierra solo cuando vuelva la conexión. No borres los datos de este celular hasta que se envíe.</div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+      return;
+    }
+    if (!r.ok) { panel('<div class="verif mal"><b>No se pudo cerrar.</b><br>' + esc(r.error || 'Error sin detalle') + '</div><p class="ayuda">Lo diligenciado sigue en pantalla.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>'); return; }
+    // Verificación: se vuelve a leer y se confirma que quedó cerrado y con la firma.
+    let v = null;
+    try { v = await (await fetchWithRetry(urlAts() + '?code=' + encodeURIComponent(a.code) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN))).json(); } catch (e) { v = null; }
+    const bien = v && v.ok && v.estado === 'CERRADO' && v.ats.cierre && typeof v.ats.cierre.firma === 'string' && v.ats.cierre.firma.length > 100;
+    if (r.yaCerrado) {
+      panel('<div class="verif cola"><b>Este ATS ya lo había cerrado ' + esc(r.cerradoPor || 'otra persona') + '</b> (' + esc(r.motivo || '') + '). Vale ese primer cierre.</div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+    } else if (!v || !v.ok) {
+      panel('<div class="verif cola"><b>Se cerró, pero no se pudo comprobar.</b><br>Cuando tengas señal, búscalo en el historial para confirmar.</div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+    } else if (!bien) {
+      panel('<div class="verif mal"><b>⚠️ El servidor no muestra el cierre completo.</b><br>Vuelve a intentarlo.</div><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
+      return;
+    }
+    try { localStorage.removeItem(claveCierre(a.code)); } catch (e) {}
+    if (v && v.ok) {
+      atsRef = Object.assign(nuevoAts(), v.ats, { code: v.code, version: Number(v.version) || 1, sucio: false, estado: v.estado });
+      atsRef.cab = Object.assign(nuevoAts().cab, v.ats.cab);
+      // Si el borrador principal es este mismo ATS, queda igual al cerrado.
+      if (ats.code === v.code) {
+        ats = JSON.parse(JSON.stringify(atsRef)); ats.subidoEn = new Date().toISOString();
+        DraftStore.save(CLAVE_BORRADOR, ats);
+      }
+    }
+    document.body.classList.toggle('ref-cerrado', atsRef.estado === 'CERRADO');
+    pintarModoCerrar();
+    window.scrollTo(0, 0);
+    if (bien && !r.yaCerrado) {
+      panel('<div class="verif bien"><b>✓ ' + esc(a.code) + ' cerrado y verificado</b><br>' + esc(k.motivo) + ' · ' + esc(fechaCO(k.fecha)) + ' ' + esc(k.hora) + ' · cerró ' + esc(k.nombre) + '</div>' +
+        '<div class="acciones-tareas"><button type="button" class="btn sec" id="btnImprimirCerrado">🖨️ Ver e imprimir</button><button type="button" class="btn" id="btnMenuTrasCerrar">Volver al menú</button></div>');
+      $('btnImprimirCerrado').addEventListener('click', () => { cerrarPanel(); verRefCompleto(); });
+      $('btnMenuTrasCerrar').addEventListener('click', () => { cerrarPanel(); irAlMenu(); });
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Cerrar ATS';
+  }
+}
+function salirModoCerrar() {
+  guardarYa(); guardarCierreLocal();
+  atsRef = null; cierre = null;
+  if (origenModo === 'editor') irAlEditor(); else irAlMenu();
+}
+/* La hoja completa de un ATS del servidor, sin tocar el borrador principal. */
+function verRefCompleto() {
+  const propio = ats; ats = atsRef; try { armarHoja(); } finally { ats = propio; }
+  document.body.classList.add('previa'); window.scrollTo(0, 0);
+}
+$('btnConfirmarCierre').addEventListener('click', confirmarCierre);
+$('btnSalirCerrar').addEventListener('click', salirModoCerrar);
+$('btnVerAtsCerrar').addEventListener('click', verRefCompleto);
+
+/* ================= MENÚ Y NAVEGACIÓN ================= */
+let origenModo = 'menu';   // a dónde vuelve "Salir" de los modos agregar/cerrar
+function irAlMenu() {
+  guardarYa();
+  document.body.classList.remove('modo-agregar', 'modo-cerrar', 'ref-cerrado', 'previa');
+  document.body.classList.add('en-menu');
+  atsRef = null; nuevos = []; cierre = null; cacheLista = null;
+  history.replaceState(null, '', location.pathname);
+  pintarMenu();
+  window.scrollTo(0, 0);
+}
+function irAlEditor() {
+  document.body.classList.remove('en-menu', 'modo-agregar', 'modo-cerrar', 'ref-cerrado', 'previa');
+  history.replaceState(null, '', location.pathname + (ats.code ? '?code=' + encodeURIComponent(ats.code) : ''));
+  // Se vuelve a pintar con la página ya visible: los lienzos de firma
+  // necesitan su tamaño real.
+  cargarTodo(); actualizarEstado();
+  window.scrollTo(0, 0);
+}
+function hayBorrador() { return !!(ats.tareas.length || ats.participantes.length || (ats.cab.trabajo || '').trim()); }
+function pintarMenu() {
+  const hay = hayBorrador();
+  $('menuContinuar').hidden = !hay;
+  $('menuEnCurso').hidden = !hay;
+  $('menuNuevo').className = hay ? 'btn sec' : 'btn';
+  if (hay) {
+    $('menuEnCurso').innerHTML = '<b>En curso en este dispositivo:</b> ' + esc((ats.cab.trabajo || '(sin trabajo escrito)').slice(0, 90)) + '<br>' +
+      ats.tareas.length + ' tareas · ' + ats.participantes.length + ' participantes · ' +
+      (ats.code ? esc(ats.code) + (ats.estado === 'CERRADO' ? ' (cerrado)' : ats.sucio ? ' (cambios sin subir)' : ' (en el servidor)') : 'sin subir al servidor');
+  }
+  const srv = !!urlAts();
+  ['opCerrar', 'opAgregar'].forEach((id) => {
+    const op = $(id);
+    op.querySelectorAll('button,input').forEach((b) => { b.disabled = !srv; });
+    let aviso = op.querySelector('.sin-srv');
+    if (!srv && !aviso) { aviso = document.createElement('div'); aviso.className = 'sin-srv'; aviso.textContent = 'Necesita el servidor del ATS (URL en config.js).'; op.appendChild(aviso); }
+  });
+}
+let cacheLista = null;
+async function listaServidor(forzar) {
+  if (!forzar && cacheLista && Date.now() - cacheLista.t < 30000) return cacheLista.rows;
+  const res = await fetchWithRetry(urlAts() + '?list=1&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+  const r = await res.json();
+  if (!r.ok) throw new Error(r.error || 'error sin detalle');
+  cacheLista = { t: Date.now(), rows: r.rows };
+  return r.rows;
+}
+const f10 = (x) => (x ? String(x).slice(0, 10) : '');
+function filaLista(x, botones) {
+  const cerrado = x.estado === 'CERRADO';
+  return '<div class="pl-item"><span><b>' + esc(x.code) + '</b><span class="etiqueta-estado ' + (cerrado ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span>' +
+    '<small><br>' + esc(fechaCO(f10(x.fechaDesde))) + (x.fechaHasta ? ' al ' + esc(fechaCO(f10(x.fechaHasta))) : '') + ' · ' + esc([x.centroCostos, x.area].filter(Boolean).join(' · ')) + '<br>' +
+    esc(x.trabajo || '') + '<br>' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados)' +
+    (cerrado ? '<br>Cerrado: ' + esc(x.motivoCierre || '') + (x.cerradoPor ? ' · ' + esc(x.cerradoPor) : '') : '') + '</small></span>' +
+    '<span style="display:flex;flex-direction:column;gap:6px;">' + botones + '</span></div>';
+}
+async function pintarLista(cont, filtro, botones, vacio, conBuscador) {
+  cont.innerHTML = '<p class="ayuda">Cargando…</p>';
+  let rows;
+  try { rows = await listaServidor(); } catch (e) {
+    cont.innerHTML = '<p class="ayuda">' + (navigator.onLine ? 'No se pudo consultar: ' + esc(e.message) : 'Sin señal: no se pudo consultar la lista.') + '</p>';
+    return;
+  }
+  const todos = rows.filter(filtro);
+  const pintar = (q) => {
+    const n = norm(q || '');
+    const vis = todos.filter((x) => !n || norm([x.code, x.trabajo, x.area, x.centroCostos, x.cerradoPor, x.lider].join(' ')).includes(n)).slice(0, 40);
+    const lista = cont.querySelector('.filas');
+    lista.innerHTML = vis.length ? vis.map((x) => filaLista(x, botones(x))).join('') : '<p class="ayuda">' + esc(n ? 'Nada coincide con la búsqueda.' : vacio) + '</p>';
+    lista.querySelectorAll('[data-accion]').forEach((b) => b.addEventListener('click', () => {
+      const code = b.dataset.code;
+      if (b.dataset.accion === 'cerrar' || b.dataset.accion === 'ver') entrarModoCerrar(code, 'menu');
+      else if (b.dataset.accion === 'personal') entrarModoAgregar(code, 'menu');
+    }));
+  };
+  cont.innerHTML = (conBuscador ? '<input type="text" class="inp" placeholder="Buscar por código, trabajo, área o quién cerró…" style="margin:4px 0 6px;">' : '') + '<div class="filas"></div>';
+  if (conBuscador) cont.querySelector('input').addEventListener('input', (e) => pintar(e.target.value));
+  pintar('');
+}
+const botonLista = (accion, code, texto) => '<button type="button" class="btn-mini" style="margin:0;" data-accion="' + accion + '" data-code="' + esc(code) + '">' + texto + '</button>';
+$('menuContinuar').addEventListener('click', irAlEditor);
+$('menuNuevo').addEventListener('click', () => { if (empezarNuevo()) irAlEditor(); });
+$('menuAbrirGuardado').addEventListener('click', () => { irAlEditor(); $('btnPlantillas').click(); });
+$('menuBuscarCerrar').addEventListener('click', () => { const c = $('menuCodCerrar').value.trim(); if (!c) { $('menuCodCerrar').focus(); return; } entrarModoCerrar(c, 'menu'); });
+$('menuBuscarAgregar').addEventListener('click', () => { const c = $('menuCodAgregar').value.trim(); if (!c) { $('menuCodAgregar').focus(); return; } entrarModoAgregar(c, 'menu'); });
+$('menuCodCerrar').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('menuBuscarCerrar').click(); });
+$('menuCodAgregar').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('menuBuscarAgregar').click(); });
+$('menuAbiertosCerrar').addEventListener('click', () => pintarLista($('menuListaCerrar'), (x) => x.estado !== 'CERRADO',
+  (x) => botonLista('cerrar', x.code, 'Cerrar'), 'No hay ATS abiertos.', true));
+$('menuHistorial').addEventListener('click', () => pintarLista($('menuListaCerrar'), (x) => x.estado === 'CERRADO',
+  (x) => botonLista('ver', x.code, 'Ver'), 'Todavía no hay ATS cerrados.', true));
+$('menuAbiertosAgregar').addEventListener('click', () => pintarLista($('menuListaAgregar'), (x) => x.estado !== 'CERRADO',
+  (x) => botonLista('personal', x.code, '+ Personal'), 'No hay ATS abiertos.', true));
+$('btnIrMenu').addEventListener('click', irAlMenu);
 
 /* ================= PANEL / PLANTILLAS ================= */
 function panel(html) { $('panelCaja').innerHTML = html; $('panel').classList.add('show'); $('panelCaja').querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarPanel)); }
@@ -1723,11 +2206,12 @@ async function pintarListaServidor() {
     if (!r.rows.length) { cont.innerHTML = '<p class="ayuda">Todavía no hay ATS guardados.</p>'; return; }
     const f = (x) => (x ? String(x).slice(0, 10) : '');
     cont.innerHTML = r.rows.slice(0, 40).map((x) =>
-      '<div class="pl-item"><span><b>' + esc(x.code) + (x.code === ats.code ? ' · abierto' : '') + '</b><small>' + esc(f(x.fechaDesde)) + (x.fechaHasta ? ' al ' + esc(f(x.fechaHasta)) : '') + ' · ' + esc(x.centroCostos || '') + ' · ' + esc(x.area || '') + '<br>' + esc(x.trabajo || '') + '<br>' +
+      '<div class="pl-item"><span><b>' + esc(x.code) + (x.code === ats.code ? ' · en este equipo' : '') + '</b><span class="etiqueta-estado ' + (x.estado === 'CERRADO' ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span><small><br>' + esc(f(x.fechaDesde)) + (x.fechaHasta ? ' al ' + esc(f(x.fechaHasta)) : '') + ' · ' + esc(x.centroCostos || '') + ' · ' + esc(x.area || '') + '<br>' + esc(x.trabajo || '') + '<br>' +
       x.tareas + ' tareas · ' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados) · v' + x.version + '</small></span>' +
-      '<span style="display:flex;flex-direction:column;gap:6px;"><button type="button" class="btn-mini" style="margin:0;" data-abrir="' + esc(x.code) + '">Abrir</button><button type="button" class="btn-mini" style="margin:0;" data-personal="' + esc(x.code) + '">+ Personal</button></span></div>').join('');
+      '<span style="display:flex;flex-direction:column;gap:6px;"><button type="button" class="btn-mini" style="margin:0;" data-abrir="' + esc(x.code) + '">Abrir</button>' + (x.estado === 'CERRADO' ? '' : '<button type="button" class="btn-mini" style="margin:0;" data-personal="' + esc(x.code) + '">+ Personal</button><button type="button" class="btn-mini" style="margin:0;" data-cerrarats="' + esc(x.code) + '">Cerrar</button>') + '</span></div>').join('');
     cont.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); cargarDesdeServidor(b.dataset.abrir); }));
-    cont.querySelectorAll('[data-personal]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoAgregar(b.dataset.personal); }));
+    cont.querySelectorAll('[data-personal]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoAgregar(b.dataset.personal, 'editor'); }));
+    cont.querySelectorAll('[data-cerrarats]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoCerrar(b.dataset.cerrarats, 'editor'); }));
   } catch (e) {
     if (document.body.contains(cont)) cont.innerHTML = '<p class="ayuda">Sin señal: no se pudo consultar la lista.</p>';
   }
@@ -1735,13 +2219,20 @@ async function pintarListaServidor() {
 
 /* ================= INICIO ================= */
 function empezarNuevo() {
-  if ((ats.tareas.length || ats.participantes.length) && !confirm('¿Empezar un ATS nuevo? El actual se borra de este dispositivo (guárdalo antes como plantilla o PDF si lo necesitas).')) return;
+  // Si el ATS en curso ya está completo en el servidor, no hay nada que perder.
+  const aSalvo = ats.code && !ats.sucio;
+  if (!aSalvo && (ats.tareas.length || ats.participantes.length) && !confirm('¿Empezar un ATS nuevo? El actual se borra de este dispositivo (guárdalo antes como plantilla o PDF si lo necesitas).')) return false;
   ats = nuevoAts(); editando = null; ultimaGuardada = null;
   DraftStore.clear(CLAVE_BORRADOR);
   $('bannerBorrador').classList.remove('show');
-  cargarTodo();
+  cargarTodo(); actualizarEstado();
   window.scrollTo(0, 0);
+  return true;
 }
+$('btnCerrarEste').addEventListener('click', () => {
+  if (ats.sucio && !confirm('Este ATS tiene cambios sin subir. Si lo cierras ahora, esos cambios no quedan en el servidor. ¿Seguir al cierre de todas formas?')) return;
+  entrarModoCerrar(ats.code, 'editor');
+});
 $('btnNuevoDesdeBanner').addEventListener('click', empezarNuevo);
 function cargarTodo() {
   cargarCamposCab(); renderCab(); renderTodoTareas(); renderParticipantes(); renderFirmasFin(); renderAlertaPermisos();
@@ -1758,14 +2249,17 @@ function cargarTodo() {
       $('bannerBorrador').classList.add('show');
     }
   }
-  cargarTodo();
   actualizarEstado();
-  // Enlace directo a un ATS guardado (ats.html?code=ATS-...), por ejemplo desde
-  // el listado o un QR.
+  // Se entra por el menú (como en los permisos). Un enlace directo va al modo
+  // que pide: ?code=…&agregar=1 (QR de la hoja), ?code=…&cerrar=1, o ?code=…
+  // para abrirlo en el editor.
   const qs = new URLSearchParams(location.search);
   const codeUrl = qs.get('code');
-  if (codeUrl && qs.get('agregar') === '1') entrarModoAgregar(codeUrl);
+  pintarMenu();
+  if (codeUrl && qs.get('agregar') === '1') entrarModoAgregar(codeUrl, 'menu');
+  else if (codeUrl && qs.get('cerrar') === '1') entrarModoCerrar(codeUrl, 'menu');
   else if (codeUrl && codeUrl !== ats.code) cargarDesdeServidor(codeUrl);
+  else if (codeUrl) irAlEditor();
   if (urlAts()) { OutboxBadge.init(); Outbox.flush(); }
 })();
 window.addEventListener('load', () => { if (typeof UpdateManager !== 'undefined') UpdateManager.init(); });
