@@ -172,6 +172,174 @@ grupo('Tablero y contador de permisos abiertos', () => {
      'Sin esto, el contador sale por debajo de lo real sin decirlo.');
 });
 
+/* ═══════════════════════════════════════════════════════════
+   ATS interactivo (SSTA-F-007) — base de conocimiento GTC 45
+   ═══════════════════════════════════════════════════════════ */
+grupo('ATS interactivo', () => {
+  const vm = require('vm');
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(leer('ats-catalogo.js') + ';this.D={PELIGROS,TAREAS,EPP,EMERGENCIA,PERMISOS,JERARQUIA,CLASES_GTC45,CONDICIONES,ATS_FORMATO}', ctx);
+  const D = ctx.D;
+  const pid = new Set(D.PELIGROS.map((p) => p.id));
+  const tid = new Set(D.TAREAS.map((t) => t.id));
+  const eid = new Set(D.EPP.map((e) => e.id));
+  const emid = new Set(D.EMERGENCIA.map((e) => e.id));
+
+  ok('los peligros cubren las 7 clases de la GTC 45',
+     D.CLASES_GTC45.length === 7 && D.CLASES_GTC45.every((c) => D.PELIGROS.some((p) => p.clase === c.id)));
+  ok('no hay ids de peligro ni de tarea repetidos',
+     pid.size === D.PELIGROS.length && tid.size === D.TAREAS.length);
+  const sinCtrl = D.PELIGROS.filter((p) => !p.controles.length || p.controles.some((c) => !D.JERARQUIA[c[1]]));
+  ok('todo peligro tiene controles con jerarquía válida (E/S/I/A/P)', !sinCtrl.length, sinCtrl.map((p) => p.id).join(', '));
+  const rotas = [];
+  D.TAREAS.forEach((t) => {
+    if (!t.peligros.length) rotas.push(t.id + ': sin peligros');
+    t.peligros.forEach((x) => { if (!pid.has(x)) rotas.push(t.id + ' → ' + x); });
+    (t.siguiente || []).forEach((x) => { if (!tid.has(x)) rotas.push(t.id + ' sigue → ' + x); });
+  });
+  D.PELIGROS.forEach((p) => {
+    (p.epp || []).forEach((x) => { if (!eid.has(x)) rotas.push(p.id + ' epp → ' + x); });
+    (p.emergencia || []).forEach((x) => { if (!emid.has(x)) rotas.push(p.id + ' emergencia → ' + x); });
+  });
+  D.CONDICIONES.concat(D.PERMISOS).forEach((c) => c.peligros.forEach((x) => { if (!pid.has(x)) rotas.push(c.id + ' → ' + x); }));
+  ok('no hay referencias rotas entre tareas, peligros, EPP y condiciones', !rotas.length, rotas.join(' | '));
+  ok('existen las 3 tareas de inicio y la de orden y aseo',
+     D.TAREAS.filter((t) => t.inicio).length === 3 && tid.has('orden'));
+
+  // Las palabras clave se buscan desde el inicio de palabra (igual que en ats.html).
+  const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const contiene = (t, k) => new RegExp('(^|[^a-z0-9])' + norm(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(norm(t));
+  const detecta = (texto) => D.PELIGROS.filter((p) => (p.claves || []).some((k) => contiene(texto, k))).map((p) => p.id);
+  const sold = detecta('Soldadura TIG de soportes');
+  ok('"soldadura" sugiere humos y radiación del arco, pero NO radiación solar',
+     sold.includes('humos') && sold.includes('rad_soldadura') && !sold.includes('rad_solar'), sold.join(', '));
+  ok('"Gaseosas Lux" no sugiere cilindros de gas', !detecta('Tanque para Gaseosas Lux').includes('tec_gas'));
+  ok('"andamio a 4 metros" sugiere trabajo en alturas', detecta('armado de andamio a 4 metros').includes('alturas'));
+
+  const ats = leer('ats.html');
+  ok('ats.html no usa id="app" (common.css lo oculta en los permisos)', !/id="app"/.test(ats),
+     'Con id="app" la página del ATS salía completamente en blanco.');
+  ok('el autocompletar de personal no se cierra al desplazar la pantalla',
+     !/window\.addEventListener\('scroll', cerrar, true\)/.test(ats.split('function autocompletar')[1] || ''),
+     'En el celular el teclado desplaza la pantalla y cerraba la lista antes de poder tocar un nombre.');
+  ok('el borrador se guarda al cerrar o bloquear el celular (firma recién hecha)',
+     /addEventListener\('pagehide', guardarYa\)/.test(ats));
+  ok('al imprimir no se rearma la hoja si ya está en vista previa (el logo no alcanzaba a cargar)',
+     /beforeprint[\s\S]{0,120}classList\.contains\('previa'\)/.test(ats));
+  ok('el logo del encabezado está en la caché', leer('sw.js').includes("'./logo-indimon.png'") && existe('logo-indimon.png'));
+  ok('la portada enlaza el ATS', leer('index.html').includes('href="ats.html"'));
+  ok('config.js tiene la entrada del backend del ATS', /ats: \{[\s\S]*?url:/.test(leer('config.js')));
+  ok('la cola sin señal no espera al Service Worker para confirmar (se quedaba en "Guardando…")',
+     !/await navigator\.serviceWorker\.ready/.test(leer('common.js').split('async add(')[1].split('async list(')[0]));
+  ok('el ATS avisa conflicto en vez de sobrescribir lo de otro dispositivo', /r\.conflicto/.test(ats) && /versionBase: ats\.version/.test(ats));
+  ok('después de guardar, el ATS se vuelve a leer y se compara (verificación)', /async function verificarGuardado/.test(ats));
+  ok('la cola sin señal verifica un "agregar personal" persona por persona (no basta con que el ATS exista)',
+     /item\.body\.action === 'agregarParticipantes'/.test(leer('common.js')));
+  ok('"Llegó más gente" aparece apenas se guarda el ATS (no solo al recargar)',
+     /function actualizarEstado\(\) \{[\s\S]{0,300}btnModoAgregar/.test(ats));
+  ok('para agregar personal hay que marcar que se le socializó el ATS', /falta marcar que se le socializó el ATS/.test(ats));
+  ok('el ATS abre en un menú como el de los permisos: abrir, cerrar y agregar personal',
+     /<body class="en-menu">/.test(ats) && /id="opAbrir"/.test(ats) && /id="opCerrar"/.test(ats) && /id="opAgregar"/.test(ats));
+  ok('los motivos de cierre del ATS son los mismos en la pantalla y en el backend', (() => {
+    const pant = (/<select id="cMotivo">([\s\S]*?)<\/select>/.exec(ats) || [])[1] || '';
+    const enPant = [...pant.matchAll(/<option>([^<]+)<\/option>/g)].map((m) => m[1]);
+    const back = (/const MOTIVOS_CIERRE = \[([\s\S]*?)\]/.exec(leer('backends/backend-ats.gs')) || [])[1] || '';
+    const enBack = [...back.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    return enPant.length === 5 && JSON.stringify(enPant) === JSON.stringify(enBack);
+  })());
+  ok('la cola sin señal reconoce un cierre de ATS ya aplicado', /action === 'cerrarAts'\) return json\.estado === 'CERRADO'/.test(leer('common.js')));
+  ok('la hoja impresa del ATS lleva QR al modo "Agregar personal" (como los permisos)',
+     /QR\.comoImagen\(enlaceAgregar\(ats\.code\)/.test(ats) && /<script src="qr\.js"><\/script>/.test(ats));
+  const tamQr = /\.hoja \.qr-hoja img\{width:(\d+)px/.exec(ats);
+  ok('el QR impreso mide al menos 100 px (~25 mm) y tiene margen de 4 módulos, para que la cámara lo lea en papel',
+     tamQr && Number(tamQr[1]) >= 100 && /enlaceAgregar\(ats\.code\), \{ px: \d+, margen: 4 \}/.test(ats),
+     'A 72 px (17 mm) y margen 2 un lector no lo decodificaba desde el PDF.');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   Backend del ATS — se EJECUTA en un simulador de Apps Script
+   ═══════════════════════════════════════════════════════════ */
+grupo('Backend del ATS (ejecutado en simulador)', () => {
+  const { crearEntorno } = require('./simulador-apps-script');
+  const vm = require('vm');
+  const cat = {}; vm.createContext(cat);
+  vm.runInContext(leer('ats-catalogo.js') + ';this.D={PELIGROS,TAREAS,CLASES_GTC45}', cat);
+  const { PELIGROS, TAREAS, CLASES_GTC45 } = cat.D;
+  const PEL = Object.fromEntries(PELIGROS.map((p) => [p.id, p]));
+  const CL = Object.fromEntries(CLASES_GTC45.map((c) => [c.id, c.nombre]));
+  const TOKEN = /API_TOKEN: '([^']+)'/.exec(leer('config.js'))[1];
+  const firma = (n, s) => 'data:image/png;base64,' + require('crypto').createHash('sha256').update(String(s)).digest('base64').repeat(Math.ceil(n / 44)).slice(0, n);
+  const inst = (id) => ({ id, clase: CL[PEL[id].clase], sub: PEL[id].sub, texto: PEL[id].texto, efectos: PEL[id].efectos, ctrls: PEL[id].controles.map(([t, j]) => ({ t, j, on: true })), extra: [] });
+  const armar = (nT, nP) => ({ v: 1,
+    cab: { centro: ['Mayekawa'], desde: '2026-09-28', hasta: '', area: 'Bodega', trabajo: 'Prueba', requiere: 'SI', permisos: ['caliente'] },
+    participantes: Array.from({ length: nP }, (_, i) => ({ nombres: 'N' + i, apellidos: 'A' + i, cedula: String(i), cargo: 'X', firma: firma(30000 + i, i) })),
+    tareas: Array.from({ length: nT }, (_, i) => { const t = TAREAS[i % TAREAS.length]; return { uid: 'u' + i, plantilla: t.id, titulo: t.nombre, desc: t.desc, peligros: t.peligros.map(inst), generales: [], responsables: [] }; }),
+    firmas: { lider: { nombre: 'L', firma: firma(40000, 'L') }, jefe: { nombre: 'J', firma: null }, sst: { nombre: 'S', firma: null } } });
+
+  let E;
+  try { E = crearEntorno(path.join(RAIZ, 'backends/backend-ats.gs')); }
+  catch (e) { ok('backend-ats.gs se carga en el simulador', false, e.message); return; }
+
+  ok('rechaza un token inválido', !E.post({ token: 'x', ats: armar(1, 1) }).ok);
+  const grande = armar(22, 12);
+  const r1 = E.post({ token: TOKEN, opId: 'a', code: 'ATS-20260928-111111', versionBase: 0, ats: grande });
+  ok('guarda un ATS de 22 tareas y 12 firmas (' + Math.round(JSON.stringify(grande).length / 1000) + ' mil caracteres)', r1.ok && r1.version === 1, r1.error);
+  const maxCelda = Math.max(...Object.values(E.hojas).flatMap((h) => h.filas.flat()).map((v) => (typeof v === 'string' ? v.length : 0)));
+  ok('ninguna celda supera 50.000 caracteres (el límite de Google Sheets)', maxCelda <= 50000, 'celda más grande: ' + maxCelda);
+  const leido = E.get({ token: TOKEN, code: 'ATS-20260928-111111' }).ats || {};
+  delete leido.code; delete leido.version;
+  ok('lo que se lee es idéntico a lo que se guardó, firmas incluidas', JSON.stringify(leido) === JSON.stringify(grande));
+  ok('un reenvío con el mismo opId no duplica', E.post({ token: TOKEN, opId: 'a', code: 'ATS-20260928-111111', ats: grande }).duplicado === true);
+  ok('guardar sobre la versión vigente sube a v2', E.post({ token: TOKEN, opId: 'b', code: 'ATS-20260928-111111', versionBase: 1, ats: grande }).version === 2);
+  const conf = E.post({ token: TOKEN, opId: 'c', code: 'ATS-20260928-111111', versionBase: 1, ats: armar(1, 1) });
+  ok('guardar sobre una versión vieja NO sobrescribe (conflicto entre dispositivos)', !conf.ok && conf.conflicto === true);
+  ok('"Datos" y "Peligros" se reemplazan al volver a guardar, no se acumulan',
+     E.hojas.Peligros.filas.filter((f) => f[0] === 'ATS-20260928-111111').length === grande.tareas.reduce((a, t) => a + t.peligros.length, 0));
+  const i = E.hojas.Firmas.filas.findIndex((f) => f[0] === 'ATS-20260928-111111' && !String(f[1]).includes('~'));
+  E.hojas.Firmas.filas.splice(i, 1);
+  E.ctx.auditarIntegridad();
+  ok('la auditoría detecta una firma cuya imagen se perdió', /imagen perdida/.test(E.hojas.Auditoria.filas.find((f) => f[1] === 'ATS-20260928-111111')[6]));
+
+  // Gente que llega después a la obra: se SUMA sin reemplazar el ATS.
+  const code2 = 'ATS-20260928-222222';
+  E.post({ token: TOKEN, opId: 'd1', code: code2, versionBase: 0, ats: armar(2, 1) });
+  const ag = E.post({ token: TOKEN, action: 'agregarParticipantes', opId: 'd2', code: code2, participantes: [
+    { uid: 'n1', nombres: 'Nuevo', apellidos: 'Uno', cedula: '777', firma: firma(30000, 'n1'), socializado: true },
+    { uid: 'n2', nombres: 'Repetido', cedula: '0', firma: firma(30000, 'n2'), socializado: true }] });
+  ok('agregar personal suma a la persona nueva y omite la cédula que ya estaba', ag.ok && ag.agregados.length === 1 && ag.omitidos.length === 1);
+  const tras = E.get({ token: TOKEN, code: code2 }).ats;
+  ok('la persona agregada queda firmada, marcada como tardía y socializada, sin tocar las tareas',
+     tras.participantes.length === 2 && tras.participantes[1].tardio && tras.participantes[1].socializado && tras.participantes[1].firma.length > 100 && tras.tareas.length === 2);
+  const viejo = E.post({ token: TOKEN, opId: 'd3', code: code2, versionBase: 1, ats: armar(2, 1) });
+  ok('quien editaba el ATS completo sobre una versión vieja no borra a los agregados (conflicto)', !viejo.ok && viejo.conflicto && E.get({ token: TOKEN, code: code2 }).ats.participantes.length === 2);
+
+  // Cierre del ATS (como el de los permisos).
+  const cierre = { fecha: '2026-09-28', hora: '17:30', motivo: 'Actividad finalizada', observaciones: 'Área entregada limpia',
+                   nombre: 'Carlos Ríos', cedula: '123', cargo: 'Líder SST', firma: firma(30000, 'cierre'), pendientes: ['Firma de SSTA'] };
+  ok('un ATS recién guardado queda ABIERTO', E.get({ token: TOKEN, code: code2 }).estado === 'ABIERTO');
+  ok('no cierra sin firma de quien cierra', !E.post({ token: TOKEN, action: 'cerrarAts', opId: 'k0', code: code2, cierre: Object.assign({}, cierre, { firma: null }) }).ok);
+  ok('no cierra con un motivo que no está en la lista', !E.post({ token: TOKEN, action: 'cerrarAts', opId: 'k0b', code: code2, cierre: Object.assign({}, cierre, { motivo: 'porque sí' }) }).ok);
+  const cz = E.post({ token: TOKEN, action: 'cerrarAts', opId: 'k1', code: code2, cierre });
+  const trasCierre = E.get({ token: TOKEN, code: code2 });
+  ok('cierra el ATS: queda CERRADO, con la firma del cierre y los pendientes anotados',
+     cz.ok && trasCierre.estado === 'CERRADO' && trasCierre.ats.cierre.firma.length > 100 && trasCierre.ats.cierre.pendientes[0] === 'Firma de SSTA', cz.error);
+  ok('el cierre no borra participantes ni tareas', trasCierre.ats.participantes.length === 2 && trasCierre.ats.tareas.length === 2);
+  ok('la hoja "ATS" muestra estado, quién cerró y el motivo',
+     (() => { const f = E.hojas.ATS.filas.find((x) => x[0] === code2); return f[16] === 'CERRADO' && f[18] === 'Carlos Ríos' && f[19] === 'Actividad finalizada'; })());
+  ok('el listado trae el estado de cada ATS', E.get({ token: TOKEN, list: '1' }).rows.find((x) => x.code === code2).estado === 'CERRADO');
+  ok('un reenvío del cierre no lo repite', E.post({ token: TOKEN, action: 'cerrarAts', opId: 'k1', code: code2, cierre }).duplicado === true);
+  const segundo = E.post({ token: TOKEN, action: 'cerrarAts', opId: 'k2', code: code2, cierre: Object.assign({}, cierre, { nombre: 'Otra persona' }) });
+  ok('un segundo cierre no reemplaza al primero', segundo.ok && segundo.yaCerrado && E.get({ token: TOKEN, code: code2 }).ats.cierre.nombre === 'Carlos Ríos');
+  const agTarde = E.post({ token: TOKEN, action: 'agregarParticipantes', opId: 'k3', code: code2, participantes: [
+    { uid: 'n9', nombres: 'Tarde', cedula: '999', firma: firma(30000, 'n9'), socializado: true }] });
+  ok('a un ATS cerrado no se le puede agregar personal', !agTarde.ok && agTarde.cerrado);
+  const edTarde = E.post({ token: TOKEN, opId: 'k4', code: code2, versionBase: E.get({ token: TOKEN, code: code2 }).version, ats: armar(1, 1) });
+  ok('un ATS cerrado no se puede sobrescribir (ni siquiera sobre la versión vigente)', !edTarde.ok && edTarde.cerrado && E.get({ token: TOKEN, code: code2 }).ats.tareas.length === 2);
+  ok('forzar tampoco sobrescribe un ATS cerrado', !E.post({ token: TOKEN, opId: 'k5', code: code2, force: true, ats: armar(1, 1) }).ok);
+  ok('la hoja "ATS" tiene el encabezado de las columnas de cierre', E.hojas.ATS.filas[0][16] === 'estado' && E.hojas.ATS.filas[0][19] === 'motivoCierre');
+});
+
 grupo('Inspección de EPP', () => {
   const back = leer('backends/backend-epp.gs');
   const front = leer('inspeccion-epp.html');
@@ -472,6 +640,77 @@ grupo('Código QR e impresión', () => {
   ok('los ejecutantes se imprimen en dos columnas',
      /\.exec-cards\{[\s\S]{0,160}?grid-template-columns:1fr 1fr/.test(css));
   ok('el QR sale en la impresión', /@media print\{[\s\S]*?\.qr-permiso\{[\s\S]{0,120}?display:block/.test(css));
+});
+
+grupo('ATS: otros, QR centrado y errores del servidor', () => {
+  const h = leer('ats.html');
+  const gs = leer('backends/backend-ats.gs');
+  ok('hay ficha "Otro" en los permisos, con campo para escribirlo',
+     /PERMISOS_UI = PERMISOS\.concat\(\[\{ id: 'otro'/.test(h) && h.includes('id="permisoOtro"'));
+  ok('"Otro" no entra al catálogo (no dispara la alerta de permisos por peligros)',
+     !/id: 'otro'/.test(leer('ats-catalogo.js')));
+  ok('el otro permiso se guarda, se recarga y sale en la hoja',
+     h.includes("permisoOtro: ''") && (h.match(/\['permisoOtro', 'permisoOtro'\]/g) || []).length === 2 && /OTRO: ' \+/.test(h));
+  ok('si marcan "Otro" sin escribirlo, queda como pendiente', h.includes('Escribir cuál es el otro permiso'));
+  ok('el backend guarda el texto del otro permiso en la columna', /x === 'otro' \? 'otro: '/.test(gs));
+  ok('herramientas tiene campo visible para escribir otras', /Otras herramientas o equipos \(escríbelas\)/.test(h) && /<textarea[^>]*id="herrOtro"/.test(h));
+  const col = /col style="width:' \+ \(qr \? (\d+) : 57\) \+ '%"><col style="width:25%">' \+ \(qr \? '<col style="width:(\d+)%">'/.exec(h);
+  ok('las columnas del encabezado suman 100% con QR', col && 18 + (+col[1]) + 25 + (+col[2]) === 100);
+  ok('la columna del QR cabe la imagen de 115 px (900 px de hoja)', col && 900 * (+col[2]) / 100 - 4 >= 115,
+     'Con 12% quedaban ~98 px: el QR se salía por la derecha y no quedaba centrado.');
+  ok('el QR no puede desbordar su celda', /\.qr-hoja img\{[^}]*max-width:100%/.test(h));
+  ok('"Load failed" se explica en vez de mostrarse crudo',
+     h.includes('function motivoFallaSrv') && !/No se pudo consultar: ' \+ esc\(e\.message\)/.test(h));
+  ok('el backend funciona aunque el script no esté creado desde la hoja',
+     /function libro_\(\)[\s\S]{0,400}?getActiveSpreadsheet\(\)[\s\S]{0,200}?ATS_SHEET_ID/.test(gs) && !/function hoja_[\s\S]{0,80}?getActiveSpreadsheet/.test(gs));
+  ok('el backend termina en una llave (sin texto pegado de más al final)', /\}\s*$/.test(gs));
+});
+
+grupo('ATS: tocar un ATS lo abre de una para revisarlo', () => {
+  const h = leer('ats.html');
+  ok('las tarjetas de las listas del menú son revisables', /class="pl-item" data-revisar="' \+ esc\(x\.code\)/.test(h) && /tarjetasRevisables\(lista, 'menu'\)/.test(h));
+  ok('las tarjetas de la lista "Abrir" también', /tarjetasRevisables\(cont, 'editor', cerrarPanel\)/.test(h));
+  ok('tocar un botón dentro de la tarjeta hace lo del botón, no revisa', /if \(e\.target\.closest\('button'\)\) return;/.test(h));
+  ok('revisar no toca el borrador del dispositivo', /function revisarAts[\s\S]{0,500}?const propio = ats; ats = ref; try \{ armarHoja\(\); \} finally \{ ats = propio; \}/.test(h));
+  ok('desde la revisión se puede agregar personal o cerrar', h.includes('id="btnRevPersonal"') && h.includes('id="btnRevCerrar"'));
+  ok('un ATS cerrado no muestra agregar/cerrar en la revisión', /body\.revision\.rev-cerrado \.rev-acc\{display:none;\}/.test(h));
+  ok('el menú se oculta mientras se revisa', /body\.previa #menuAts\{display:none !important;\}/.test(h));
+  ok('"Volver" sale de la revisión y deja el botón como estaba', /function salirRevision[\s\S]{0,200}?'← Volver a editar'/.test(h));
+});
+
+grupo('ATS: catálogo ampliado y editor más guiado', () => {
+  const vm = require('vm');
+  const ctx = {}; vm.createContext(ctx);
+  vm.runInContext(leer('ats-catalogo.js') + ';this.D={PELIGROS,TAREAS,HERRAMIENTAS,CONDICIONES,CONTROLES_ADICIONALES,JERARQUIA}', ctx);
+  const D = ctx.D, h = leer('ats.html');
+  const pid = new Set(D.PELIGROS.map((p) => p.id));
+  const herr = D.HERRAMIENTAS.flatMap((g) => g.items);
+  ok('hay condición de manipulación manual de cargas', D.CONDICIONES.some((c) => c.id === 'manual' && c.peligros.includes('cargas')));
+  ok('al menos 25 condiciones de trabajo', D.CONDICIONES.length >= 25);
+  ok('las condiciones apuntan a peligros que existen', D.CONDICIONES.every((c) => c.peligros.every((x) => pid.has(x))));
+  ok('toda condición tiene palabras clave para sugerirse', D.CONDICIONES.every((c) => (c.claves || []).length));
+  ok('hay condición "Otra" para escribir', /concat\(\[\{ id: 'otra', nombre: 'Otra \(escribir\)' \}\]\)/.test(h) && h.includes('id="edCondOtro"'));
+  ok('las condiciones salen en la hoja impresa', /function textoCondiciones/.test(h) && /Condiciones: ' \+ esc\(textoCondiciones\(t\)\)/.test(h));
+  ok('todos los peligros tienen controles adicionales', D.PELIGROS.every((p) => (D.CONTROLES_ADICIONALES[p.id] || []).length >= 2));
+  ok('los controles adicionales usan niveles de la jerarquía', Object.values(D.CONTROLES_ADICIONALES).flat().every(([t, j]) => t && D.JERARQUIA[j]));
+  ok('los adicionales se ofrecen sin marcar', /className = 'ctrl opcional'/.test(h));
+  ok('cada nivel de control tiene su campo "Otro"', /className = 'j-otro'/.test(h) && /propio: true/.test(h));
+  ok('al menos 140 herramientas en 12 grupos, sin repetidas', herr.length >= 140 && D.HERRAMIENTAS.length >= 12 && new Set(herr).size === herr.length);
+  ok('cada grupo de herramientas tiene su "Otra"', /Otra en ' \+ esc\(g\.grupo\.toLowerCase\(\)\)/.test(h) && /herrOtros\[g\.grupo\]/.test(h));
+  ok('las herramientas de las tareas tipo existen', D.TAREAS.every((t) => (t.herr || []).every((x) => herr.includes(x))));
+  ok('al menos 45 tareas tipo, con peligros y siguientes válidos', D.TAREAS.length >= 45 &&
+     D.TAREAS.every((t) => t.peligros.every((x) => pid.has(x)) && (t.siguiente || []).every((x) => D.TAREAS.some((y) => y.id === x))));
+  ok('sugerencias en vivo con palabra a medias ("valv")', /w\.startsWith\(e\)/.test(h));
+  ok('se pueden ver todas las tareas tipo', h.includes('Ver todas las tareas tipo'));
+  ok('"cuarto frío" no se sugiere solo por la tarea tipo', D.CONDICIONES.find((c) => c.id === 'frio').soloTexto === true && /!c\.soloTexto/.test(h));
+  ok('la tarea nueva va antes de "Orden y aseo" por defecto', /function posicionPorDefecto/.test(h) && /ats\.tareas\.splice\(pos, 0, t\)/.test(h));
+  ok('se escoge dónde va la tarea y hay "+ Tarea después"', h.includes('id="edPos"') && h.includes('data-a="despues"'));
+  ok('la tarea agregada después de firmado queda marcada e impresa', /t\.agregadaDespues = new Date\(\)\.toISOString\(\)/.test(h) && h.includes('Tarea agregada después de firmado el ATS'));
+  ok('desde la revisión se agrega una tarea olvidada', h.includes('id="btnRevTarea"'));
+  ok('un ATS cerrado no admite tareas nuevas', /function abrirEditor[\s\S]{0,120}?ats\.estado === 'CERRADO'/.test(h));
+  ok('copiar ATS: sin firmas, sin código y con fecha de hoy', /function copiaSinFirmas[\s\S]*?n\.code = null[\s\S]*?n\.cab\.desde = hoyISO\(\)[\s\S]*?firma: null/.test(h));
+  ok('copiar ATS está en la revisión y en "Abrir"', h.includes('id="btnRevCopiar"') && h.includes('id="cpActual"') && h.includes('data-copiar='));
+  ok('"_pos" no se guarda en la tarea', /delete t\._pos/.test(h));
 });
 
 grupo('Caché y despliegue', () => {
