@@ -713,6 +713,27 @@ grupo('ATS: catálogo ampliado y editor más guiado', () => {
   ok('"_pos" no se guarda en la tarea', /delete t\._pos/.test(h));
 });
 
+grupo('Permisos: hoja compacta para imprimir / PDF (como el ATS)', () => {
+  const core = leer('permiso-core.js');
+  const css = leer('common.css');
+  ok('el botón Imprimir arma la hoja compacta antes de imprimir', /\$\('printBtn'\)\.addEventListener\('click', imprimirHoja\)/.test(core) && /async function imprimirHoja[\s\S]{0,200}?prepararImpresion\(\)[\s\S]{0,200}?window\.print\(\)/.test(core));
+  ok('espera a que carguen las imágenes (logo, firmas, QR) antes del diálogo', /imagenesListas_\(cont, \d+\)/.test(core));
+  ok('imprimir desde el menú del navegador también usa la hoja', /addEventListener\('beforeprint'/.test(core));
+  ok('no se vuelve a armar si el botón acaba de armarla (las imágenes no cargarían)', /Date\.now\(\) - hojaArmadaEn_ < \d+\) return/.test(core));
+  ok('el logo va como dataURL (sale aunque se imprima desde el menú)', /readAsDataURL/.test(core) && /logoHoja_ \|\| 'logo-indimon\.png'/.test(core));
+  ok('si el armado falla, se imprime el formulario como antes', /catch \(e\) \{[\s\S]{0,200}?classList\.remove\('hp-lista'\)/.test(core));
+  ok('carta horizontal solo en los permisos (no cambia otras páginas)', /@page\{size:letter landscape;margin:8mm;\}/.test(core) && !/@page\{size:letter landscape/.test(css));
+  ok('al imprimir se ve SOLO la hoja', /body\.hp-lista > \*:not\(#hojaPermiso\)\{display:none !important;\}/.test(css));
+  ok('en pantalla la hoja no se ve', /#hojaPermiso\{display:none;\}/.test(css));
+  ok('preguntas de a dos por renglón con su respuesta', /hp-qa[\s\S]{0,200}?width:42%[\s\S]{0,60}?width:8%/.test(core));
+  ok('campos de a tres por renglón', /if \(fila\.length === 3\) cerrarFila\(\)/.test(core));
+  ok('firmas en cuadrícula y ejecutantes en tabla', /hp-firmas/.test(core) && /hp-ejec/.test(core));
+  ok('lee las listas, SÍ/NO sueltas, cierre, cálculos, tablas y casillas', ['check-item', 'yn-row', 'close-q', 'calc-row', "el.tagName === 'TABLE'", 'casillas.length >= 2', 'sig-block', 'exec-card'].every((x) => core.includes(x)));
+  ok('incluye la bitácora de lecturas de gases, legible en blanco y negro', /c\.contains\('gasLog'\)/.test(core) && core.includes('FUERA DE RANGO'));
+  ok('una firma vacía no se imprime como imagen en blanco', /p\.hasInk && !p\.hasInk\(\) \? null/.test(core));
+  ok('lo oculto en pantalla no sale en la hoja', /function visibleHoja_[\s\S]{0,80}?getClientRects\(\)\.length > 0/.test(core));
+});
+
 grupo('Caché y despliegue', () => {
   const sw = leer('sw.js');
   const v = /const CACHE_NAME = '([^']+)'/.exec(sw);
