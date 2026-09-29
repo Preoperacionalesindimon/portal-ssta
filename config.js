@@ -72,7 +72,8 @@ const PORTAL_CONFIG = {
       // Pegar aquí la URL /exec del Apps Script backends/backend-ats.gs una vez
       // desplegado. Mientras esté vacía, el ATS funciona igual pero solo se
       // guarda en el dispositivo (y se entrega impreso o en PDF).
-      url: ''
+      url: 'https://script.google.com/macros/s/AKfycbxLE_qhVS45hlQEuQTTAvOaQ-BtAXoR76ZTefApZcpz3cJJGEKH9FTVAy_G5bH2ksY_/exec';
+'
     },
     personal: {
       nombre: 'Personal Autorizado',
