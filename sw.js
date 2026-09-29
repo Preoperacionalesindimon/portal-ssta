@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v66';
+const CACHE_NAME = 'ssta-portal-v70';
 
 const PAGES = [
   './',
@@ -29,6 +29,7 @@ const PAGES = [
   './permiso-trabajo-electrico.html',
   './personal-autorizado.html',
   './inspeccion-epp.html',
+  './ats.html',
   './dashboard.html'
 ];
 const STATIC_ASSETS = [
@@ -37,6 +38,8 @@ const STATIC_ASSETS = [
   './common.js',
   './permiso-core.js',
   './qr.js',
+  './ats-catalogo.js',
+  './logo-indimon.png',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

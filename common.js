@@ -205,18 +205,21 @@ const Outbox = {
       tx.objectStore('pending').add({ url, body, savedAt: new Date().toISOString(), intentos: 0 });
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Outbox: transacción abortada'));
-      tx.oncomplete = async () => {
-        // Registra el Background Sync si el navegador lo soporta; si no,
-        // igual queda guardado y se reintentará la próxima vez que la
-        // página cargue con señal (ver flush() en init de cada formulario).
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
-          try {
-            const reg = await navigator.serviceWorker.ready;
-            await reg.sync.register('sync-outbox');
-          } catch (e) { /* sin soporte o permiso denegado; no es crítico */ }
-        }
+      tx.oncomplete = () => {
+        // Ya quedó guardado en la cola: se confirma YA. Antes se esperaba a
+        // que el Service Worker estuviera listo para registrar el Background
+        // Sync, y si el Service Worker no estaba activo (primera visita, modo
+        // privado, registro fallido) esa espera no terminaba nunca: el botón
+        // quedaba en "Guardando…" y el aviso de "quedó en cola" no salía.
         Outbox._avisar();
         resolve();
+        // El Background Sync se registra aparte, sin bloquear. Si el navegador
+        // no lo soporta, igual se reintenta al volver la señal o al recargar.
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          navigator.serviceWorker.ready
+            .then((reg) => reg.sync.register('sync-outbox'))
+            .catch(() => { /* sin soporte o permiso denegado; no es crítico */ });
+        }
       };
     });
   },
@@ -314,6 +317,14 @@ const Outbox = {
       const res = await fetch(item.url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
       const json = await res.json();
       if (!json || !json.ok) return false;
+      // Un "agregar personal" del ATS solo cuenta como guardado si cada una de
+      // esas personas ya aparece en el ATS del servidor (que el ATS exista no
+      // basta: si se diera por enviado, esas firmas se perderían).
+      if (item.body.action === 'agregarParticipantes') {
+        const hay = (json.ats && json.ats.participantes) || [];
+        return (item.body.participantes || []).every((p) =>
+          hay.some((q) => (p.uid && q.uid === p.uid) || (String(p.cedula || '').trim() && String(q.cedula || '').trim() === String(p.cedula).trim())));
+      }
       // Si el pendiente era un CIERRE, solo cuenta como guardado si allá ya
       // figura cerrado; si no, el cierre todavía tiene que salir.
       if (item.body.status === 'CERRADO') return json.status === 'CERRADO';

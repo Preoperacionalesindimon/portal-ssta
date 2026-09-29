@@ -65,6 +65,15 @@ const PORTAL_CONFIG = {
       url: 'https://script.google.com/macros/s/AKfycbxl32LhwhEkkAIG79LyRNmN1vlI3OtMAacaMPRKu5HoHgNQwCtPKOQBaxbffdWFtil4/exec',
       listQuery: 'list=1'
     },
+    ats: {
+      nombre: 'ATS - Análisis de Trabajo Seguro',
+      icono: '🧭',
+      archivo: 'ats.html',
+      // Pegar aquí la URL /exec del Apps Script backends/backend-ats.gs una vez
+      // desplegado. Mientras esté vacía, el ATS funciona igual pero solo se
+      // guarda en el dispositivo (y se entrega impreso o en PDF).
+      url: ''
+    },
     personal: {
       nombre: 'Personal Autorizado',
       icono: '👷',

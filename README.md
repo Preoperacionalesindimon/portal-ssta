@@ -33,6 +33,11 @@ historial y no hay a qué volver si algo se rompe.
 | `permiso-*.html` | Los 5 formularios de permiso (solo su parte propia) |
 | `permiso-core.js` | Toda la lógica compartida de los 5 permisos |
 | `inspeccion-epp.html` | Inspección de EPP (SSTA-F-006) |
+| `ats.html` | ATS interactivo (SSTA-F-007): tareas una a una, peligros GTC 45, controles, firmas e impresión con la forma del Excel |
+| `backends/backend-ats.gs` | Backend del ATS (hoja propia) |
+| `pruebas/simulador-apps-script.js` | Ejecuta los backends `.gs` en Node para probarlos sin Google |
+| `ats-catalogo.js` | **Base de conocimiento del ATS**: peligros, consecuencias, controles, tareas tipo, EPP, herramientas. Se edita sin tocar la pantalla |
+| `logo-indimon.png` | Logo del encabezado de los formatos impresos |
 | `personal-autorizado.html` | Anexo de personal autorizado |
 | `common.js` | Firmas, modo sin conexión, cola de envíos, banner de actualización |
 | `common.css` | Sistema de diseño: colores, tipografía, componentes compartidos |
@@ -123,6 +128,26 @@ sale mal, solo hay que revertir uno.
 
 Igual, pero es un solo archivo (`backend-epp.gs` / `backend-personal-autorizado.gs`).
 
+### ATS (primera vez)
+
+El ATS tiene su propia hoja de cálculo. Solo se hace una vez:
+
+1. En Google Drive, **crear una hoja de cálculo nueva** (por ejemplo "ATS SSTA-F-007 — Registro").
+2. En esa hoja: **Extensiones → Apps Script**. Borrar lo que haya y pegar
+   todo `backends/backend-ats.gs`. Guardar.
+3. **Implementar → Nueva implementación → ⚙️ Aplicación web.**
+   Ejecutar como: **Yo**. Quién tiene acceso: **Cualquier usuario**.
+   Implementar y autorizar los permisos que pida Google.
+4. Copiar la URL que termina en `/exec` y pegarla en `config.js`, en
+   `BACKENDS.ats.url`.
+5. Probar abriendo en el navegador: `<URL>?action=ping&token=<API_TOKEN>`.
+   Debe responder `{"ok":true,"servicio":"ATS SSTA-F-007"}`.
+6. Subir `config.js` al sitio (y el resto de archivos de la versión).
+
+Las pestañas (ATS, Datos, Firmas, Peligros, Eventos) se crean solas con el
+primer guardado. Para cambios posteriores del `.gs`: **Nueva versión**, nunca
+"Nueva implementación" (ver arriba).
+
 ### Si es la primera vez que se despliega
 
 Al ejecutarse, Google pide autorizar permisos (hojas de cálculo y envío de
@@ -130,6 +155,57 @@ correo). Es normal: acepta con la cuenta que debe aparecer como remitente de
 los correos automáticos.
 
 ---
+
+## ATS interactivo: cómo mantener la base de conocimiento
+
+Todo lo que el ATS sugiere sale de `ats-catalogo.js`. Es solo datos, así que
+se puede ajustar sin tocar la pantalla:
+
+- **Agregar un control** a un peligro: añadirlo a su lista `controles` con la
+  letra de jerarquía (E eliminación, S sustitución, I ingeniería,
+  A administrativo, P EPP).
+- **Agregar un peligro**: copiar uno existente, darle un `id` nuevo y
+  asignarle una de las 7 clases de la GTC 45.
+- **Agregar una tarea tipo**: añadirla a `TAREAS` con los ids de sus peligros
+  y, si aplica, las tareas que suelen seguirla (`siguiente`).
+- **Código del formato**: `ATS_FORMATO.codigo`. En los ATS de referencia
+  aparecen SSTA-F-007 y SSTA-F-046 para el mismo formato; dejar aquí el
+  vigente según el listado maestro.
+
+Después de editar: `node pruebas/pruebas.js` (revisa que no queden
+referencias rotas) y subir `CACHE_NAME` en `sw.js`.
+
+### Cómo guarda el ATS
+
+- Mientras se diligencia, todo queda como **borrador en el dispositivo**.
+- **☁️ Guardar** lo sube al servidor con un código `ATS-AAAAMMDD-NNNNNN`,
+  vuelve a leerlo y compara que haya llegado completo (tareas, peligros,
+  participantes y firmas). Se puede guardar las veces que haga falta: cada
+  guardado es una versión nueva y queda en la bitácora ("Eventos").
+- **Sin señal**: queda en la cola y se sube solo cuando vuelve la conexión.
+- **Dos dispositivos con el mismo ATS**: si uno guardó una versión más nueva,
+  el otro recibe un aviso en vez de borrarle las firmas; puede abrir la del
+  servidor o, confirmando, sobrescribir.
+- **📁 Abrir** lista los ATS guardados. También se abre directo con
+  `ats.html?code=ATS-...`.
+- **Gente que llega después a la obra**: botón «👷 Llegó más gente» (en
+  Participantes), «+ Personal» en 📁 Abrir, o el enlace/QR
+  `ats.html?code=ATS-...&agregar=1` que se puede mandar por WhatsApp. Ese modo
+  solo SUMA personas al ATS del servidor (no toca tareas ni firmas, y no choca
+  con quien lo esté editando). Cada persona queda con la hora de ingreso y
+  con la constancia de que se le socializó el ATS; en la hoja impresa aparece
+  como «(ingresó dd-mm hh:mm · ATS socializado)». Si la cédula ya está, no se
+  duplica.
+
+Hojas del backend: **ATS** (una fila por ATS, para consultar), **Datos** (el
+contenido completo, troceado porque un ATS grande no cabe en una celda),
+**Firmas**, **Peligros** (una fila por peligro con su clase GTC 45 y cuántos
+controles de cada jerarquía: sirve para indicadores) y **Eventos**.
+
+Mantenimiento: en el editor de Apps Script están `auditarIntegridad`
+(revisa todos los ATS: firmas perdidas, participantes sin firma, peligros sin
+controles) e `investigarATS` (historia completa de un código; cambiar
+`CODIGO_A_INVESTIGAR` antes de ejecutar).
 
 ## Tareas de mantenimiento
 
