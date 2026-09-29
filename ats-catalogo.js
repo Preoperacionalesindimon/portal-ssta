@@ -502,6 +502,48 @@ const PELIGROS = [
       ['Aplicar plan de emergencias: ruta de evacuación, brigadistas y divulgación del punto de encuentro', 'A']
     ],
     claves: ['charla', 'inspeccion', 'techo', 'intemperie', 'exterior', 'altura', 'andamio', 'patio']
+  },
+
+  /* ── Agregados (versión 2 del catálogo) ─────────────────── */
+  {
+    id: 'mec_atrapamiento', clase: 'seguridad', sub: 'Mecánico',
+    texto: 'Máquinas y equipos con partes móviles (bandas, poleas, ejes, engranajes, rodillos): atrapamiento o arrastre.',
+    efectos: 'Atrapamiento de manos o extremidades, amputaciones, fracturas, heridas, aplastamiento.',
+    controles: [
+      ['Aplicar bloqueo y etiquetado (LOTO) del equipo antes de intervenirlo', 'E'],
+      ['Guardas de protección instaladas en poleas, bandas, ejes y transmisiones', 'I'],
+      ['Verificar parada total y energía cero antes de meter las manos', 'A'],
+      ['No usar ropa suelta, anillos, cadenas ni cabello suelto cerca de partes móviles', 'A'],
+      ['Uso de guantes ajustados y gafas de seguridad', 'P']
+    ],
+    epp: ['g_vaqueta', 'gafas'],
+    claves: ['banda', 'transportador', 'polea', 'rodillo', 'engranaje', 'maquina', 'motor', 'bomba', 'reductor', 'eje', 'linea de produccion', 'envasadora', 'llenadora']
+  },
+  {
+    id: 'excavacion', clase: 'seguridad', sub: 'Locativo',
+    texto: 'Excavaciones y zanjas: derrumbe de paredes, caída a diferente nivel, contacto con redes enterradas.',
+    efectos: 'Sepultamiento, asfixia, fracturas, golpes, electrocución por redes enterradas.',
+    controles: [
+      ['Consultar planos de redes enterradas (eléctricas, gas, agua) antes de excavar', 'E'],
+      ['Entibado o taludes en zanjas de más de 1,5 m de profundidad', 'I'],
+      ['Material excavado a más de 60 cm del borde de la zanja', 'A'],
+      ['Barandas, señalización y delimitación del perímetro de la excavación', 'I'],
+      ['Escalera de acceso y salida dentro de la zanja', 'I'],
+      ['Uso de casco, botas y guantes de vaqueta', 'P']
+    ],
+    epp: ['casco', 'botas', 'g_vaqueta'],
+    claves: ['excava', 'zanja', 'cimentacion', 'hueco', 'brecha', 'pala', 'pica', 'tierra', 'suelo']
+  },
+  {
+    id: 'repetitivo', clase: 'biomecanico', sub: 'Movimiento repetitivo',
+    texto: 'Movimientos repetitivos de manos, brazos y hombros.',
+    efectos: 'Tendinitis, síndrome del túnel carpiano, epicondilitis, dolor de hombro y fatiga muscular.',
+    controles: [
+      ['Pausas activas cada hora con ejercicios de manos, muñecas y hombros', 'A'],
+      ['Rotación de tareas entre el personal', 'A'],
+      ['Uso de herramientas eléctricas o ergonómicas en lugar de manuales cuando sea posible', 'S']
+    ],
+    claves: ['repetit', 'atornill', 'lijado', 'enmasillar', 'empacar', 'embalaje', 'rotulacion']
   }
 ];
 
@@ -583,17 +625,235 @@ const EPP = [
   { id: 'tapabocas', nombre: 'Tapabocas' }
 ];
 
+/* ============================================================
+   CONTROLES ADICIONALES POR PELIGRO — aparecen como opciones SIN marcar
+   dentro de cada peligro, ordenados por la jerarquía de controles, para
+   que quien hace el ATS escoja los que aplican. Se suman a los controles
+   de arriba (que sí vienen marcados). [texto, jerarquía]
+   ============================================================ */
+const CONTROLES_ADICIONALES = {
+  loc: [
+    ['Retirar del área materiales, cables y obstáculos que no se necesiten', 'E'],
+    ['Cubrir huecos, rejillas y desniveles o señalizarlos', 'I'],
+    ['Instalar tapetes antideslizantes o pasarelas en zonas de tránsito', 'I'],
+    ['Organizar las extensiones y mangueras por encima o por el borde del área', 'A'],
+    ['Inspección de orden y aseo al inicio y al final de la jornada', 'A']
+  ],
+  loc_objetos: [
+    ['Rodapiés y mallas en plataformas y andamios', 'I'],
+    ['No dejar herramientas ni materiales sueltos en bordes o plataformas', 'A'],
+    ['Subir y bajar materiales con cuerda y balde, nunca lanzándolos', 'A'],
+    ['Vigía que controle el paso de personas bajo el punto de trabajo', 'A']
+  ],
+  loc_derrame: [
+    ['Bandejas de contención bajo equipos que puedan gotear', 'I'],
+    ['Revisar mangueras y acoples antes de iniciar', 'A'],
+    ['Reportar y limpiar de inmediato cualquier derrame', 'A']
+  ],
+  mec_manual: [
+    ['Usar la herramienta adecuada para cada labor; no improvisar herramientas', 'A'],
+    ['Herramienta con mangos en buen estado, sin fisuras ni reparaciones hechizas', 'A'],
+    ['Transportar herramientas en caja o cinturón porta herramientas', 'A'],
+    ['Uso de herramienta antichispa en áreas con atmósferas inflamables', 'S']
+  ],
+  mec_rotativa: [
+    ['Usar el disco adecuado al material y a las RPM de la pulidora', 'I'],
+    ['Nunca retirar la guarda ni usar la pulidora sin mango lateral', 'A'],
+    ['Esperar la detención total del disco antes de apoyar la herramienta', 'A'],
+    ['Pantallas o mamparas para proteger a personas cercanas de las chispas', 'I'],
+    ['Posición firme y agarre con las dos manos durante el corte', 'A']
+  ],
+  mec_taladro: [
+    ['Asegurar la pieza con prensa o mordaza; no sostenerla con la mano', 'I'],
+    ['Usar la velocidad y la broca adecuadas al material', 'A'],
+    ['Retirar la llave del mandril antes de encender', 'A']
+  ],
+  mec_lamina: [
+    ['Manipular láminas grandes entre dos personas', 'A'],
+    ['Almacenar láminas de canto en soportes o racks', 'I'],
+    ['Retirar rebabas con lima o pulidora después del corte', 'E']
+  ],
+  mec_izaje: [
+    ['Verificar el peso de la carga y la capacidad de los aparejos antes de izar', 'A'],
+    ['Un solo señalero con señales acordadas y radio de comunicación', 'A'],
+    ['Suspender el izaje con vientos fuertes o lluvia', 'E'],
+    ['No dejar cargas suspendidas sin vigilancia', 'A']
+  ],
+  energia: [
+    ['Candado y tarjeta personal por cada trabajador que interviene', 'A'],
+    ['Identificar todas las fuentes de energía en el diagrama o en campo', 'A'],
+    ['Instalar bridas ciegas o desconectar físicamente la línea cuando sea posible', 'E']
+  ],
+  electrico: [
+    ['Tablero o toma con protección diferencial (GFCI)', 'I'],
+    ['Herramienta con doble aislamiento', 'S'],
+    ['Extensiones colgadas o protegidas del tránsito, sin empalmes', 'A'],
+    ['Desconectar la herramienta para cambiar discos, brocas o accesorios', 'A']
+  ],
+  electrico_sold: [
+    ['Retirar electrodos del porta electrodo al terminar', 'A'],
+    ['No soldar en superficies mojadas o con ropa húmeda', 'A'],
+    ['Apagar el equipo de soldar en pausas largas', 'A']
+  ],
+  tec_caliente: [
+    ['Hacer el trabajo en el taller cuando sea posible, fuera del área del cliente', 'E'],
+    ['Humedecer o proteger pisos y superficies combustibles cercanas', 'I'],
+    ['Inspección del área 30 minutos después de terminar para detectar puntos de fuego', 'A'],
+    ['Coordinar con el cliente la desactivación temporal de detectores de humo', 'A']
+  ],
+  tec_gas: [
+    ['Transportar cilindros en carro porta cilindros con cadena', 'I'],
+    ['Cerrar válvulas de los cilindros al terminar y en pausas', 'A'],
+    ['Prueba de fugas con agua jabonosa en conexiones', 'A'],
+    ['Cilindros con capuchón cuando no están en uso', 'I']
+  ],
+  tec_inflamable: [
+    ['Usar productos base agua o menos inflamables cuando sea posible', 'S'],
+    ['Ventilar el área antes y durante la aplicación', 'I'],
+    ['Solo la cantidad de producto necesaria para la jornada en el área', 'A']
+  ],
+  tec_presion: [
+    ['Probar con agua (hidrostática) en lugar de aire cuando sea posible', 'S'],
+    ['Asegurar mangueras y acoples con cable de seguridad (whip check)', 'I'],
+    ['Despresurizar completamente antes de ajustar uniones', 'A']
+  ],
+  transito: [
+    ['Delimitar el área de trabajo con conos y cinta frente a vehículos', 'I'],
+    ['Coordinar con el cliente el cierre temporal de vías internas', 'A'],
+    ['Alarma de reversa y luces en montacargas', 'I']
+  ],
+  publico: [
+    ['Coordinar con seguridad del cliente el ingreso y salida del personal', 'A'],
+    ['Evitar desplazamientos en horarios nocturnos', 'A']
+  ],
+  alturas: [
+    ['Hacer en el piso los trabajos que se puedan prefabricar abajo', 'E'],
+    ['Usar plataforma elevadora o andamio en lugar de escalera', 'S'],
+    ['Plan de rescate en alturas socializado y kit de rescate en sitio', 'A'],
+    ['Suspender la actividad con lluvia o vientos fuertes', 'E'],
+    ['Verificar que el espacio libre de caída sea suficiente para el sistema usado', 'A']
+  ],
+  confinados: [
+    ['Hacer la tarea desde afuera del espacio confinado cuando sea posible', 'E'],
+    ['Bloqueo y aislamiento de todas las líneas que entran al espacio', 'I'],
+    ['Plan de rescate y equipo de rescate (trípode, arnés, línea) en la entrada', 'A'],
+    ['Registro de entrada y salida del personal', 'A']
+  ],
+  ruido: [
+    ['Usar equipos de menor ruido o con silenciador', 'S'],
+    ['Aislar o encerrar la fuente de ruido cuando sea posible', 'I'],
+    ['Señalizar las zonas de uso obligatorio de protección auditiva', 'A']
+  ],
+  vibracion: [
+    ['Herramientas con mangos antivibración', 'S'],
+    ['Mantenimiento de la herramienta (discos balanceados, rodamientos en buen estado)', 'I'],
+    ['Rotación del personal en tareas con vibración', 'A']
+  ],
+  rad_soldadura: [
+    ['Biombos o cortinas de soldadura alrededor del punto de trabajo', 'I'],
+    ['Advertir al personal cercano antes de iniciar el arco', 'A']
+  ],
+  rad_solar: [
+    ['Programar las tareas pesadas fuera de las horas de mayor radiación (10 a. m. a 3 p. m.)', 'A'],
+    ['Uso de cubrenucas o casco con ala', 'P']
+  ],
+  temperatura: [
+    ['Aislar o proteger las superficies calientes cercanas', 'I'],
+    ['Señalizar tuberías y equipos calientes', 'A'],
+    ['Hidratación y descansos en ambientes calurosos', 'A'],
+    ['Ropa térmica en cuartos fríos o bajas temperaturas', 'P']
+  ],
+  iluminacion: [
+    ['Reflectores portátiles en el punto de trabajo', 'I'],
+    ['Linterna de casco (manos libres)', 'P']
+  ],
+  humos: [
+    ['Soldar en áreas abiertas o bien ventiladas', 'I'],
+    ['Limpiar pintura, grasa o galvanizado antes de soldar o cortar', 'E'],
+    ['Ubicarse fuera de la columna de humo (a favor del viento)', 'A']
+  ],
+  particulado: [
+    ['Humedecer la superficie para evitar polvo (corte en húmedo)', 'I'],
+    ['Aspiradora industrial en lugar de barrer en seco', 'S'],
+    ['Aislar el área con plástico o polisombra', 'I']
+  ],
+  vapores: [
+    ['Usar productos de menor toxicidad', 'S'],
+    ['Mantener los recipientes cerrados cuando no se usan', 'A'],
+    ['Rotación del personal durante la aplicación', 'A']
+  ],
+  quimico_piel: [
+    ['Kit lavaojos disponible en el área', 'I'],
+    ['Trasvasar solo a recipientes rotulados', 'A'],
+    ['Delantal o traje de protección química cuando haya salpicaduras', 'P']
+  ],
+  cargas: [
+    ['Reducir el peso de la carga fraccionándola o pidiéndola en empaques menores', 'E'],
+    ['Usar carretilla, patín o tecle para trasladar cargas', 'S'],
+    ['Técnica segura: espalda recta, flexionar rodillas, carga pegada al cuerpo, sin girar el tronco', 'A'],
+    ['Despejar la ruta antes de trasladar la carga', 'A'],
+    ['Capacitación en manejo manual de cargas', 'A'],
+    ['Uso de guantes y botas con puntera', 'P']
+  ],
+  posturas: [
+    ['Ajustar la altura del trabajo (mesa, caballetes, andamio) a la altura del trabajador', 'I'],
+    ['Rodilleras para trabajos arrodillado', 'P'],
+    ['Alternar posturas de pie y sentado cuando sea posible', 'A']
+  ],
+  biologico: [
+    ['Disposición de basuras en recipientes cerrados', 'A'],
+    ['No consumir alimentos en el área de trabajo', 'A'],
+    ['Esquema de vacunación al día (tétano, fiebre amarilla si aplica)', 'A'],
+    ['Uso de guantes en contacto con aguas residuales o residuos', 'P']
+  ],
+  psicosocial: [
+    ['Respetar la jornada laboral y los descansos', 'A'],
+    ['Planear el trabajo con tiempos reales; evitar presión por entregas', 'A'],
+    ['Canal de comunicación con el supervisor para reportar dificultades', 'A']
+  ],
+  natural: [
+    ['Consultar el pronóstico del clima antes de trabajos a la intemperie', 'A'],
+    ['Identificar el punto de encuentro y la ruta de evacuación del cliente', 'A']
+  ],
+  mec_atrapamiento: [
+    ['Parada de emergencia accesible y probada', 'I'],
+    ['Coordinar con el operador del cliente el paro de la máquina', 'A'],
+    ['No retirar guardas; reinstalarlas antes de poner en marcha', 'A']
+  ],
+  excavacion: [
+    ['Excavación mecánica en lugar de manual cuando sea posible', 'S'],
+    ['Inspección diaria de las paredes de la excavación, sobre todo después de lluvia', 'A'],
+    ['Detector de redes enterradas antes de excavar', 'I']
+  ],
+  repetitivo: [
+    ['Ajustar la altura del plano de trabajo', 'I'],
+    ['Alternar la mano de trabajo cuando sea posible', 'A']
+  ]
+};
+
 /* Herramientas, agrupadas como en sus ATS. */
 const HERRAMIENTAS = [
-  { grupo: 'Herramientas eléctricas', items: ['Pulidoras', 'Motor tool', 'Lijadoras', 'Rotosfera', 'Grata eléctrica', 'Taladro para metal', 'Taladro de árbol', 'Taladro percutor', 'Taladro magnético', 'Cortadora orbital', 'Extensiones eléctricas'] },
-  { grupo: 'Soldadura y corte', items: ['Equipo de soldar SMAW', 'Equipo de soldar TIG', 'Equipo de soldar MIG', 'Equipo de oxicorte', 'Soplete', 'Cilindros de gas', 'Discos de corte y desbaste'] },
-  { grupo: 'Herramientas manuales', items: ['Llaves expansivas', 'Llaves mixtas', 'Llaves fijas', 'Martillos', 'Pinzas', 'Hombre solo', 'Destornilladores', 'Ratches', 'Flexómetro', 'Escuadras', 'Niveles', 'Limas', 'Boquilleras'] },
-  { grupo: 'Herramientas mecánicas', items: ['Gato estibador', 'Gato hidráulico', 'Patines', 'Roladora', 'Prensa hidráulica', 'Montacargas'] },
-  { grupo: 'Trabajo en alturas', items: ['EPCC completo', 'Líneas de vida', 'Puntos de anclaje certificados', 'Conectores de anclaje (Tie-Off)', 'Andamio certificado', 'Andamio multidireccional', 'Escalera tipo tijera', 'Plataforma elevadora'] },
-  { grupo: 'Izaje', items: ['Diferencial (polipasto)', 'Grúa tipo pórtico', 'Eslingas', 'Ganchos y grilletes certificados', 'Cuerdas guía'] },
-  { grupo: 'Medición y END', items: ['Tintas penetrantes', 'Pirómetro', 'Crayón térmico', 'Multímetro', 'Medidor de atmósferas (multigás)', 'Extractor de aire', 'Manómetro'] },
-  { grupo: 'Bloqueo y señalización', items: ['Tarjetas y candados de bloqueo (LOTO)', 'Extintor multipropósito', 'Manta ignífuga', 'Cinta y conos de delimitación'] },
-  { grupo: 'Complementaria', items: ['Polines de madera', 'Estibas', 'Manilas', 'Prensas mordazas', 'Burros niveladores'] }
+  { grupo: 'Herramientas eléctricas', items: ['Pulidoras', 'Motor tool', 'Lijadoras', 'Rotosfera', 'Grata eléctrica', 'Taladro para metal', 'Taladro de árbol', 'Taladro percutor', 'Taladro magnético', 'Cortadora orbital', 'Extensiones eléctricas',
+    'Tronzadora', 'Sierra circular', 'Sierra sinfín', 'Caladora', 'Atornillador inalámbrico', 'Martillo demoledor', 'Pistola de calor', 'Remachadora eléctrica'] },
+  { grupo: 'Soldadura y corte', items: ['Equipo de soldar SMAW', 'Equipo de soldar TIG', 'Equipo de soldar MIG', 'Equipo de oxicorte', 'Soplete', 'Cilindros de gas', 'Discos de corte y desbaste',
+    'Cortadora de plasma', 'Electrodos y material de aporte', 'Horno para electrodos', 'Biombos o cortinas de soldadura', 'Carro porta cilindros'] },
+  { grupo: 'Herramientas manuales', items: ['Llaves expansivas', 'Llaves mixtas', 'Llaves fijas', 'Martillos', 'Pinzas', 'Hombre solo', 'Destornilladores', 'Ratches', 'Flexómetro', 'Escuadras', 'Niveles', 'Limas', 'Boquilleras',
+    'Llave de tubo (Stilson)', 'Llaves Allen', 'Alicates', 'Seguetas', 'Cinceles y puntos', 'Tijeras para lámina', 'Cortatubos', 'Machuelos y terrajas', 'Palanca o pata de cabra', 'Espátulas', 'Calibrador (pie de rey)', 'Remachadora manual'] },
+  { grupo: 'Herramientas mecánicas', items: ['Gato estibador', 'Gato hidráulico', 'Patines', 'Roladora', 'Prensa hidráulica', 'Montacargas',
+    'Carretilla', 'Tecle de cadena', 'Tirfor (malacate manual)', 'Compresor de aire', 'Torquímetro', 'Extractor de rodamientos', 'Bomba hidráulica manual', 'Dobladora de tubo'] },
+  { grupo: 'Trabajo en alturas', items: ['EPCC completo', 'Líneas de vida', 'Puntos de anclaje certificados', 'Conectores de anclaje (Tie-Off)', 'Andamio certificado', 'Andamio multidireccional', 'Escalera tipo tijera', 'Plataforma elevadora',
+    'Escalera de extensión', 'Sistema autorretráctil', 'Eslinga de posicionamiento', 'Kit de rescate en alturas'] },
+  { grupo: 'Izaje', items: ['Diferencial (polipasto)', 'Grúa tipo pórtico', 'Eslingas', 'Ganchos y grilletes certificados', 'Cuerdas guía',
+    'Tecle de palanca', 'Grúa móvil o camión grúa', 'Cáncamos', 'Cadenas de izaje', 'Viga separadora', 'Radios de comunicación'] },
+  { grupo: 'Medición y END', items: ['Tintas penetrantes', 'Pirómetro', 'Crayón térmico', 'Multímetro', 'Medidor de atmósferas (multigás)', 'Extractor de aire', 'Manómetro',
+    'Nivel láser', 'Medidor de espesores (ultrasonido)', 'Luxómetro', 'Sonómetro', 'Galgas'] },
+  { grupo: 'Trabajo eléctrico', items: ['Herramienta aislada 1000 V', 'Pinza voltiamperimétrica', 'Probador de tensión (detector)', 'Pelacables', 'Ponchadora', 'Guía pasacables', 'Tapete dieléctrico', 'Pértiga', 'Megóhmetro'] },
+  { grupo: 'Obra civil', items: ['Palas', 'Picas', 'Barras', 'Mezcladora de concreto', 'Vibrador de concreto', 'Baldes', 'Llanas y palustres', 'Formaleta', 'Hilo y plomada'] },
+  { grupo: 'Pintura y limpieza', items: ['Pistola de pintura', 'Equipo airless', 'Brochas y rodillos', 'Hidrolavadora', 'Aspiradora industrial', 'Material absorbente', 'Químicos de limpieza (con SDS)', 'Cepillos y escobas'] },
+  { grupo: 'Bloqueo y señalización', items: ['Tarjetas y candados de bloqueo (LOTO)', 'Extintor multipropósito', 'Manta ignífuga', 'Cinta y conos de delimitación',
+    'Candado múltiple (hasp)', 'Bloqueo de breakers', 'Avisos de seguridad', 'Polisombra o cerramiento', 'Barreras plásticas'] },
+  { grupo: 'Complementaria', items: ['Polines de madera', 'Estibas', 'Manilas', 'Prensas mordazas', 'Burros niveladores',
+    'Planta eléctrica', 'Reflector portátil', 'Carpa', 'Mesa de trabajo portátil', 'Caja de herramientas'] }
 ];
 
 const EMERGENCIA = [
@@ -765,6 +1025,81 @@ const TAREAS = [
     desc: 'Arreglo y adecuación de cajones portaherramientas, mesas de trabajo, escaleras, carros porta cilindros, carpas y activos en general.',
     peligros: ['loc', 'cargas', 'posturas', 'tec_caliente', 'mec_manual', 'ruido', 'electrico', 'particulado'],
     siguiente: ['orden'], claves: ['mantenimiento', 'adecuacion', 'arreglo', 'reparacion de activos'] },
+  { id: 'traslado_manual', nombre: 'Traslado manual de materiales, equipos y herramientas',
+    desc: 'Traslado de materiales, equipos y herramientas desde el punto de descargue o bodega hasta el sitio de trabajo, con carretilla, patines o entre varias personas.',
+    peligros: ['cargas', 'posturas', 'loc', 'loc_objetos', 'mec_manual', 'transito'],
+    herr: ['Carretilla', 'Patines'], siguiente: ['andamio', 'fabricacion', 'tuberia', 'orden'],
+    claves: ['traslado', 'trasladar', 'transportar', 'llevar', 'cargar', 'manipulacion', 'mover material'] },
+  { id: 'cargue', nombre: 'Cargue de vehículo y transporte de materiales o fabricaciones',
+    desc: 'Cargue del vehículo con montacargas, grúa o manualmente, amarre y aseguramiento de la carga y transporte hasta el sitio del cliente.',
+    peligros: ['cargas', 'posturas', 'mec_izaje', 'loc_objetos', 'transito', 'mec_lamina'],
+    herr: ['Montacargas', 'Eslingas', 'Manilas', 'Carretilla'], siguiente: ['descargue', 'orden'],
+    claves: ['cargue', 'cargar el camion', 'vehiculo', 'camion', 'transporte', 'amarre de carga'] },
+  { id: 'medicion', nombre: 'Visita técnica, levantamiento de medidas y replanteo',
+    desc: 'Recorrido por el área del cliente para tomar medidas, verificar interferencias y marcar los puntos de trabajo.',
+    peligros: ['loc', 'transito', 'posturas', 'ruido', 'biologico', 'natural'],
+    herr: ['Flexómetro', 'Nivel láser', 'Escalera tipo tijera'], siguiente: ['orden'],
+    claves: ['medida', 'medicion', 'levantamiento', 'visita', 'replanteo', 'marcacion'] },
+  { id: 'estructura', nombre: 'Montaje de estructura metálica (vigas, columnas, cerchas, plataformas)',
+    desc: 'Presentación, izaje, nivelación, fijación con pernos y/o soldadura de elementos estructurales, con apoyo de andamio o plataforma elevadora.',
+    peligros: ['mec_izaje', 'alturas', 'loc_objetos', 'mec_manual', 'cargas', 'posturas', 'tec_caliente'],
+    herr: ['Diferencial (polipasto)', 'Eslingas', 'Cuerdas guía', 'Llaves mixtas', 'Torquímetro', 'Niveles'], siguiente: ['soldadura', 'tornilleria', 'pintura', 'orden'],
+    claves: ['estructura', 'viga', 'columna', 'cercha', 'plataforma metalica', 'escalera metalica', 'pasarela', 'montaje de estructura'] },
+  { id: 'cubierta', nombre: 'Instalación o cambio de cubierta, láminas o canales en techo',
+    desc: 'Retiro e instalación de láminas de cubierta, canales o bajantes, desplazándose sobre la cubierta con línea de vida y tablones.',
+    peligros: ['alturas', 'mec_lamina', 'loc_objetos', 'cargas', 'rad_solar', 'natural', 'mec_manual'],
+    herr: ['Líneas de vida', 'EPCC completo', 'Atornillador inalámbrico', 'Tijeras para lámina', 'Remachadora manual'], siguiente: ['orden'],
+    claves: ['cubierta', 'techo', 'teja', 'lamina de techo', 'canal', 'bajante', 'claraboya'] },
+  { id: 'valvulas', nombre: 'Cambio de válvulas, bridas o empaques',
+    desc: 'Con la línea bloqueada, despresurizada y drenada, se desmonta la válvula o brida, se cambian empaques y se instala el elemento nuevo aplicando torque.',
+    peligros: ['energia', 'tec_presion', 'temperatura', 'mec_manual', 'cargas', 'posturas', 'loc_derrame'],
+    herr: ['Llaves mixtas', 'Llave de tubo (Stilson)', 'Torquímetro', 'Tarjetas y candados de bloqueo (LOTO)', 'Material absorbente'], siguiente: ['presion', 'orden'],
+    claves: ['valvula', 'brida', 'empaque', 'cambio de valvula', 'trampa de vapor', 'filtro'] },
+  { id: 'bombas', nombre: 'Mantenimiento de bombas, motores o reductores',
+    desc: 'Bloqueo del equipo, desacople, desarme, cambio de rodamientos, sellos o retenes, armado, alineación y prueba de funcionamiento.',
+    peligros: ['mec_atrapamiento', 'energia', 'electrico', 'mec_manual', 'cargas', 'posturas', 'loc_derrame', 'ruido'],
+    herr: ['Extractor de rodamientos', 'Llaves mixtas', 'Tecle de cadena', 'Tarjetas y candados de bloqueo (LOTO)', 'Multímetro'], siguiente: ['orden'],
+    claves: ['bomba', 'motor', 'reductor', 'rodamiento', 'sello mecanico', 'alineacion', 'acople', 'compresor'] },
+  { id: 'banda', nombre: 'Mantenimiento de bandas transportadoras o máquinas de línea de producción',
+    desc: 'Con la máquina detenida y bloqueada, se ajustan o cambian bandas, rodillos, cadenas o piezas de la línea de producción del cliente.',
+    peligros: ['mec_atrapamiento', 'energia', 'electrico', 'mec_manual', 'posturas', 'ruido', 'loc'],
+    herr: ['Tarjetas y candados de bloqueo (LOTO)', 'Llaves mixtas', 'Llaves Allen'], siguiente: ['orden'],
+    claves: ['banda', 'transportador', 'linea de produccion', 'maquina', 'rodillo', 'cadena', 'envasadora', 'llenadora'] },
+  { id: 'instalacion_electrica', nombre: 'Instalación o conexión eléctrica (tableros, cableado, acometidas)',
+    desc: 'Con el circuito desenergizado y bloqueado, se tiende y conecta el cableado, se instalan tableros o tomas y se verifica ausencia de tensión antes y después.',
+    peligros: ['electrico', 'energia', 'mec_manual', 'posturas', 'loc'],
+    herr: ['Herramienta aislada 1000 V', 'Probador de tensión (detector)', 'Pinza voltiamperimétrica', 'Pelacables', 'Tarjetas y candados de bloqueo (LOTO)'], siguiente: ['orden'],
+    claves: ['electric', 'cableado', 'cable', 'tablero', 'acometida', 'toma', 'luminaria', 'breaker', 'conexion electrica'] },
+  { id: 'instrumentacion', nombre: 'Instalación de instrumentación (sensores, manómetros, termómetros)',
+    desc: 'Montaje y conexión de instrumentos en tuberías o equipos, con la línea bloqueada y despresurizada.',
+    peligros: ['energia', 'tec_presion', 'mec_manual', 'posturas', 'electrico'],
+    herr: ['Llaves mixtas', 'Manómetro', 'Multímetro'], siguiente: ['presion', 'orden'],
+    claves: ['instrument', 'sensor', 'transmisor', 'manometro', 'termometro', 'termopozo'] },
+  { id: 'aislamiento', nombre: 'Aislamiento térmico de tubería o equipos',
+    desc: 'Instalación de cañuela o lana mineral y recubrimiento con lámina de aluminio sobre tuberías o equipos.',
+    peligros: ['particulado', 'mec_lamina', 'quimico_piel', 'posturas', 'temperatura', 'loc_objetos'],
+    herr: ['Tijeras para lámina', 'Remachadora manual', 'Flexómetro'], siguiente: ['orden'],
+    claves: ['aislamiento', 'aislar', 'canuela', 'lana mineral', 'lana de vidrio', 'recubrimiento de aluminio'] },
+  { id: 'hidrolavado', nombre: 'Lavado a presión (hidrolavado) de equipos o superficies',
+    desc: 'Limpieza con hidrolavadora de equipos, pisos o estructuras, controlando el agua residual y las conexiones eléctricas cercanas.',
+    peligros: ['tec_presion', 'loc_derrame', 'electrico', 'ruido', 'quimico_piel', 'posturas'],
+    herr: ['Hidrolavadora', 'Extensiones eléctricas', 'Cinta y conos de delimitación'], siguiente: ['orden'],
+    claves: ['hidrolav', 'lavado', 'lavar', 'presion de agua', 'limpieza con agua'] },
+  { id: 'limpieza_tanque', nombre: 'Limpieza interna de tanques o recipientes',
+    desc: 'Vaciado, bloqueo de líneas, ventilación, medición de atmósfera y limpieza interna del tanque con vigía permanente.',
+    peligros: ['confinados', 'vapores', 'quimico_piel', 'biologico', 'posturas', 'loc_derrame', 'energia'],
+    herr: ['Medidor de atmósferas (multigás)', 'Extractor de aire', 'Hidrolavadora', 'Reflector portátil'], siguiente: ['inspeccion_visual', 'orden'],
+    claves: ['limpieza de tanque', 'tanque', 'silo', 'recipiente', 'marmita', 'interior del tanque'] },
+  { id: 'excavacion', nombre: 'Excavación manual o zanja',
+    desc: 'Excavación con pala y pica para cimentaciones, ductos o tuberías enterradas, con verificación previa de redes y señalización del perímetro.',
+    peligros: ['excavacion', 'cargas', 'posturas', 'mec_manual', 'rad_solar', 'natural', 'particulado'],
+    herr: ['Palas', 'Picas', 'Barras', 'Carretilla', 'Cinta y conos de delimitación'], siguiente: ['obra_civil', 'tuberia', 'orden'],
+    claves: ['excava', 'zanja', 'hueco', 'cimentacion', 'brecha'] },
+  { id: 'obra_civil', nombre: 'Obra civil: demolición, resanes, concreto o mampostería',
+    desc: 'Demolición menor, preparación y vaciado de concreto, resanes y mampostería en el área del cliente.',
+    peligros: ['particulado', 'cargas', 'posturas', 'mec_manual', 'ruido', 'vibracion', 'loc', 'quimico_piel'],
+    herr: ['Martillo demoledor', 'Mezcladora de concreto', 'Palas', 'Baldes', 'Llanas y palustres'], siguiente: ['orden'],
+    claves: ['obra civil', 'demol', 'concreto', 'resane', 'mamposteria', 'pañete', 'base de concreto', 'placa'] },
   { id: 'orden', nombre: 'Orden y aseo', fin: true,
     desc: 'Retiro de residuos (virutas, restos de soldadura, empaques), limpieza del área, recolección y almacenamiento de herramientas verificando su estado, y retiro de la señalización una vez el área sea segura.',
     peligros: ['loc', 'cargas', 'posturas', 'biologico', 'natural'],
@@ -794,15 +1129,37 @@ const PLAN_RESCATE = {
    CONDICIONES DE LA TAREA — atajos que agregan de una vez los peligros de
    una condición ("esta tarea se hace en altura"). Si el encabezado del ATS
    ya marca el permiso correspondiente, la condición se resalta.
+   claves     palabras que, escritas en la tarea, la sugieren
+   soloTexto  se sugiere solo por lo escrito, no por los peligros de la
+              tarea tipo (ej. "cuarto frío" comparte peligro con "superficies calientes")
    ============================================================ */
 const CONDICIONES = [
-  { id: 'altura', nombre: 'En altura', peligros: ['alturas', 'loc_objetos'], permiso: 'alturas' },
-  { id: 'caliente', nombre: 'En caliente', peligros: ['tec_caliente'], permiso: 'caliente' },
-  { id: 'confinado', nombre: 'Espacio confinado', peligros: ['confinados'], permiso: 'confinados' },
-  { id: 'izaje', nombre: 'Con izaje de cargas', peligros: ['mec_izaje'], permiso: 'izaje' },
-  { id: 'electrica', nombre: 'Herramienta eléctrica', peligros: ['electrico', 'ruido'] },
-  { id: 'energias', nombre: 'Líneas energizadas o a presión', peligros: ['energia'], permiso: 'electrico' },
-  { id: 'quimicos', nombre: 'Con químicos', peligros: ['vapores', 'quimico_piel'] },
-  { id: 'intemperie', nombre: 'A la intemperie', peligros: ['rad_solar', 'natural'] },
-  { id: 'vehiculos', nombre: 'Cerca de vehículos o montacargas', peligros: ['transito'] }
+  { id: 'altura', nombre: 'En altura', peligros: ['alturas', 'loc_objetos'], permiso: 'alturas', claves: ['altura', 'andamio', 'techo', 'cubierta', 'escalera', 'plataforma', 'manlift'] },
+  { id: 'caliente', nombre: 'En caliente', peligros: ['tec_caliente'], permiso: 'caliente', claves: ['sold', 'oxicorte', 'soplete', 'corte con pulidora', 'caliente', 'chispa'] },
+  { id: 'confinado', nombre: 'Espacio confinado', peligros: ['confinados'], permiso: 'confinados', claves: ['confinado', 'tanque', 'silo', 'pozo', 'interior del', 'ducto'] },
+  { id: 'izaje', nombre: 'Con izaje de cargas', peligros: ['mec_izaje'], permiso: 'izaje', claves: ['izaje', 'izar', 'diferencial', 'grua', 'polipasto', 'tecle'] },
+  { id: 'manual', nombre: 'Manipulación manual de cargas', peligros: ['cargas', 'posturas'], claves: ['cargar', 'cargue', 'descargue', 'traslado', 'trasladar', 'mover', 'levantar', 'manipulacion', 'bulto', 'a mano', 'subir material', 'bajar material', 'peso'] },
+  { id: 'posturas', nombre: 'Posturas forzadas o prolongadas', peligros: ['posturas'], claves: ['arrodill', 'agachad', 'acostado', 'de pie', 'bajo el equipo', 'dificil acceso'] },
+  { id: 'repetitivo', nombre: 'Movimientos repetitivos', peligros: ['repetitivo'], claves: ['repetit', 'atornill', 'lijado', 'embalaje', 'empacar'] },
+  { id: 'reducido', nombre: 'Espacio reducido o de difícil acceso', peligros: ['posturas', 'loc'], claves: ['reducido', 'estrecho', 'dificil acceso', 'debajo', 'bajo el equipo'] },
+  { id: 'electrica', nombre: 'Herramienta eléctrica', peligros: ['electrico', 'ruido'], claves: ['pulid', 'taladr', 'motortool', 'electric', 'lijadora', 'tronzadora'] },
+  { id: 'energias', nombre: 'Líneas energizadas o a presión', peligros: ['energia'], permiso: 'electrico', claves: ['energiz', 'vapor', 'aire comprimido', 'presion', 'linea', 'tablero'] },
+  { id: 'partes_moviles', nombre: 'Máquinas con partes móviles', peligros: ['mec_atrapamiento'], claves: ['banda', 'polea', 'motor', 'bomba', 'maquina', 'rodillo', 'reductor', 'linea de produccion'] },
+  { id: 'presion', nombre: 'Equipos o pruebas a presión', peligros: ['tec_presion'], claves: ['prueba de presion', 'hidrostatica', 'neumatica', 'hidrolav', 'compresor'] },
+  { id: 'gases', nombre: 'Con cilindros de gas', peligros: ['tec_gas'], claves: ['cilindro', 'oxicorte', 'acetileno', 'propano', 'soplete', 'oxigeno'] },
+  { id: 'inflamables', nombre: 'Cerca de inflamables o combustibles', peligros: ['tec_inflamable'], claves: ['inflamable', 'combustible', 'solvente', 'thinner', 'gasolina', 'acpm', 'pintura'] },
+  { id: 'superficies_calientes', nombre: 'Superficies o líneas calientes', peligros: ['temperatura'], claves: ['vapor', 'caldera', 'horno', 'caliente', 'marmita', 'aceite termico'] },
+  { id: 'frio', nombre: 'Cuarto frío o bajas temperaturas', peligros: ['temperatura'], soloTexto: true, claves: ['cuarto frio', 'refriger', 'congel', 'camara fria'] },
+  { id: 'quimicos', nombre: 'Con químicos', peligros: ['vapores', 'quimico_piel'], claves: ['quimic', 'decap', 'pasiv', 'solvente', 'acido', 'soda', 'desengras', 'pintura'] },
+  { id: 'polvo', nombre: 'Genera polvo o partículas', peligros: ['particulado'], claves: ['pulid', 'lij', 'desbast', 'demol', 'corte', 'polvo', 'grata', 'sandblast'] },
+  { id: 'humos', nombre: 'Genera humos o gases', peligros: ['humos'], claves: ['sold', 'oxicorte', 'humo', 'soplete'] },
+  { id: 'ruido', nombre: 'Ruido alto', peligros: ['ruido'], claves: ['ruido', 'pulid', 'martillo', 'compresor', 'demol'] },
+  { id: 'vibracion', nombre: 'Herramientas que vibran', peligros: ['vibracion'], claves: ['vibra', 'pulid', 'martillo demoledor', 'rotomartillo', 'lijadora'] },
+  { id: 'humedo', nombre: 'Superficies mojadas o con aceite', peligros: ['loc_derrame'], claves: ['mojad', 'humed', 'agua', 'aceite', 'hidrolav', 'lavado', 'derrame'] },
+  { id: 'excavacion', nombre: 'Excavación o zanja', peligros: ['excavacion'], claves: ['excava', 'zanja', 'hueco', 'cimentacion'] },
+  { id: 'filos', nombre: 'Láminas o piezas con filos', peligros: ['mec_lamina'], claves: ['lamina', 'chapa', 'filo', 'lamina de aluminio', 'cubierta'] },
+  { id: 'intemperie', nombre: 'A la intemperie', peligros: ['rad_solar', 'natural'], claves: ['intemperie', 'exterior', 'techo', 'cubierta', 'patio', 'al aire libre'] },
+  { id: 'nocturno', nombre: 'Nocturno o poca iluminación', peligros: ['iluminacion', 'psicosocial'], claves: ['noche', 'nocturno', 'turno', 'oscur', 'poca luz'] },
+  { id: 'vehiculos', nombre: 'Cerca de vehículos o montacargas', peligros: ['transito'], claves: ['montacarga', 'vehiculo', 'camion', 'parqueadero', 'via', 'patio de maniobras'] },
+  { id: 'residuos', nombre: 'Con residuos o aguas residuales', peligros: ['biologico'], claves: ['ptar', 'residual', 'alcantarill', 'residuo', 'basura', 'trampa de grasa'] }
 ];

@@ -110,6 +110,33 @@
   .ctrl{display:flex;gap:10px;align-items:flex-start;min-height:40px;padding:6px 2px;font-size:13px;line-height:1.35;cursor:pointer;}
   .ctrl input{flex:0 0 22px;width:22px;height:22px;margin:0;accent-color:var(--brand-ats);}
   .ctrl-propio{display:flex;gap:6px;margin-top:8px;}
+  .ctrl.opcional span{color:var(--ink-soft);}
+  .ctrl.propio span::after{content:" (escrito en este ATS)";font-size:11px;color:var(--ink-muted);}
+  .j-otro{display:flex;gap:6px;margin:4px 0 2px 32px;}
+  .j-otro input{flex:1;min-height:38px;padding:6px 10px;font-size:13px;}
+  .j-otro button{flex:0 0 auto;margin:0;}
+  .j-vacio{font-size:12px;color:var(--ink-muted);margin:0 0 2px 32px;}
+  /* Herramientas por grupo, plegables (son muchas en el celular). */
+  .herr-grupo{border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fff;}
+  .herr-grupo summary{padding:11px 12px;font-weight:700;font-size:13.5px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:8px;}
+  .herr-grupo summary::-webkit-details-marker{display:none;}
+  .herr-grupo summary::after{content:"▾";color:var(--ink-muted);}
+  .herr-grupo[open] summary::after{content:"▴";}
+  .herr-grupo summary small{font-weight:600;color:var(--brand-ats);}
+  .herr-grupo .cuerpo{padding:0 12px 12px;}
+  .herr-grupo .inp{margin-top:8px;}
+  /* Dónde va la tarea nueva (para la que se olvidó). */
+  .pos-tarea{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--brand-ats-soft);}
+  .pos-tarea select{width:100%;min-height:42px;border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:14px;background:#fff;}
+  .t-despues{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;color:#8a5a00;background:#fff4d6;border-radius:8px;padding:2px 8px;}
+  .todas-tareas{margin-top:10px;}
+  .todas-tareas summary{font-weight:700;font-size:13px;color:var(--brand-ats);cursor:pointer;padding:6px 0;}
+  .sug-vivo{margin-top:6px;border:1.5px solid var(--brand-ats);border-radius:10px;overflow:hidden;background:#fff;}
+  .sug-vivo button{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-soft);background:#fff;padding:10px 12px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;}
+  .sug-vivo button:last-child{border-bottom:none;}
+  .sug-vivo button small{display:block;font-weight:500;font-size:12px;color:var(--ink-muted);margin-top:2px;}
+  .sug-vivo button:active{background:var(--brand-ats-soft);}
+  .sug-vivo .rot{display:block;padding:7px 12px;font-size:11.5px;font-weight:800;color:var(--brand-ats);background:var(--brand-ats-soft);text-transform:uppercase;letter-spacing:.04em;}
   .ctrl-propio input{flex:1;}
   .ctrl-propio button{flex:0 0 auto;}
   .gtc-clase{border:1px solid var(--line);border-radius:10px;margin-top:6px;}
@@ -217,6 +244,8 @@
   #avisoPersonal{bottom:calc(84px + env(safe-area-inset-bottom));}
   .panel{position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:80;display:none;align-items:flex-end;justify-content:center;}
   .panel.show{display:flex;}
+  /* El aviso flotante de la base de personal no debe tapar el panel ni el formato. */
+  body.con-panel #avisoPersonal, body.previa #avisoPersonal{display:none !important;}
   .panel .caja{background:#fff;border-radius:16px 16px 0 0;max-width:620px;width:100%;max-height:85vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));}
   @media(min-width:640px){ .panel{align-items:center;} .panel .caja{border-radius:16px;} }
   .panel h3{margin:0 0 10px;font-size:15px;font-family:var(--font-display);}
@@ -232,6 +261,11 @@
   .rev-acc{display:none;}
   body.revision .rev-acc{display:inline-block;}
   body.revision.rev-cerrado .rev-acc{display:none;}
+  .rev-copiar{display:none;}
+  body.revision .rev-copiar{display:inline-block;}
+  .copia-op{display:block;width:100%;text-align:left;margin-top:8px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .copia-op small{display:block;font-weight:500;font-size:12.5px;color:var(--ink-muted);margin-top:3px;}
+  .copia-op:active{background:var(--brand-ats-soft);}
 
   /* ── Hoja (formato SSTA-F-007) ── */
   #vistaPrevia{display:none;}
@@ -414,6 +448,7 @@
       <div class="section-title">Herramientas y equipos a utilizar <span class="cuenta" id="cuentaHerr"></span></div>
       <div class="section-body">
         <div id="sugHerr"></div>
+        <p class="ayuda" style="margin:10px 0 0;">Toca cada tipo para ver sus herramientas; en cada uno puedes escribir otra.</p>
         <div id="fHerr"></div>
         <div class="grupo-fichas otro-libre"><span class="etq">✏️ Otras herramientas o equipos (escríbelas)</span></div>
         <textarea class="inp area" id="herrOtro" placeholder="Ej: Taladro percutor, tecle de cadena 1 t, andamio certificado…"></textarea>
@@ -463,7 +498,9 @@
   <div class="previa-barra">
     <button type="button" class="btn sec" id="btnVolverEditar">← Volver a editar</button>
     <button type="button" class="btn" id="btnImprimirPrevia">🖨️ Imprimir / guardar PDF</button>
+    <button type="button" class="btn sec rev-acc" id="btnRevTarea">✏️ Agregar tarea olvidada</button>
     <button type="button" class="btn sec rev-acc" id="btnRevPersonal">👷 Agregar personal</button>
+    <button type="button" class="btn sec rev-copiar" id="btnRevCopiar">📋 Copiar como ATS nuevo</button>
     <button type="button" class="btn sec rev-acc" id="btnRevCerrar">✅ Cerrar este ATS</button>
   </div>
   <div class="hoja-scroll"><div class="hoja" id="hoja"></div></div>
@@ -532,7 +569,7 @@ function nuevoAts() {
       centro: [], centroOtro: '', desde: hoyISO(), hasta: '', horaDesde: '07:00', horaHasta: '17:00',
       area: '', trabajo: '', requiere: '', permisos: [], permisoOtro: '',
       epp: EPP.filter((e) => e.base).map((e) => e.id), eppDescartados: [], eppOtro: '',
-      herr: [], herrOtro: '',
+      herr: [], herrOtro: '', herrOtros: {},
       emergencia: EMERGENCIA.filter((e) => e.base).map((e) => e.id), emergDescartados: [], emergOtro: '',
       ambiental: AMBIENTAL.filter((e) => e.base).map((e) => e.id), ambOtro: ''
     },
@@ -561,13 +598,13 @@ function tareaDesdePlantilla(tid) {
   const t = TAR[tid];
   const peligros = t.peligros.map(instanciaPeligro);
   return {
-    uid: uid(), plantilla: tid, titulo: t.nombre, desc: t.desc, conds: [],
+    uid: uid(), plantilla: tid, titulo: t.nombre, desc: t.desc, conds: [], condOtro: '',
     peligros, generales: generalesSugeridos(peligros), generalesOtro: '',
     responsables: ['Supervisor de obra', 'Personal SSTA', 'Personal operativo'], rescate: false
   };
 }
 function tareaVacia() {
-  return { uid: uid(), plantilla: null, titulo: '', desc: '', conds: [], peligros: [], generales: GENERALES_BASE.slice(), generalesOtro: '',
+  return { uid: uid(), plantilla: null, titulo: '', desc: '', conds: [], condOtro: '', peligros: [], generales: GENERALES_BASE.slice(), generalesOtro: '',
     responsables: ['Supervisor de obra', 'Personal SSTA', 'Personal operativo'], rescate: false };
 }
 function tareaRescate() {
@@ -592,15 +629,39 @@ function peligrosDetectados(texto) {
   PELIGROS.forEach((p) => { if ((p.claves || []).some((k) => contiene(t, k))) res.push(p.id); });
   return res;
 }
-function plantillasPorTexto(texto) {
+function plantillasPorTexto(texto, max) {
   const t = norm(texto);
   if (t.trim().length < 3) return [];
+  // Lo que se va escribiendo también cuenta a medias: "valv" ya encuentra
+  // "Cambio de válvulas" aunque la palabra no esté completa.
+  const escritas = t.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
   return TAREAS.map((tar) => {
     let s = 0;
     (tar.claves || []).forEach((k) => { if (contiene(t, k)) s += 3; });
+    const palabras = norm(tar.nombre + ' ' + (tar.claves || []).join(' ')).split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
     norm(tar.nombre).split(/[^a-z0-9]+/).filter((w) => w.length > 4).forEach((w) => { if (contiene(t, w)) s += 1; });
+    escritas.forEach((e) => { if (palabras.some((w) => w.startsWith(e) && w !== e)) s += 2; });
     return { tar, s };
-  }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 5).map((x) => x.tar);
+  }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, max || 5).map((x) => x.tar);
+}
+/* Condiciones que sugiere lo escrito o la tarea tipo escogida. */
+function condicionesSugeridas(t) {
+  const txt = norm((t.titulo || '') + ' ' + (t.desc || ''));
+  const base = new Set((TAR[t.plantilla] && TAR[t.plantilla].peligros) || []);
+  const out = {};
+  CONDICIONES.forEach((c) => {
+    if (t.conds.includes(c.id)) return;
+    if ((c.claves || []).some((k) => contiene(txt, k))) out[c.id] = 'por lo que escribiste';
+    else if (!c.soloTexto && c.peligros.length && c.peligros.every((x) => base.has(x)) && t.plantilla) out[c.id] = 'por la tarea tipo';
+  });
+  return out;
+}
+/* Controles que ofrece el catálogo para un peligro (los de siempre y los
+   adicionales), para mostrar sin marcar los que la tarea todavía no tiene. */
+function controlesCatalogo(id) {
+  const p = PEL[id];
+  if (!p) return [];
+  return p.controles.concat((typeof CONTROLES_ADICIONALES !== 'undefined' && CONTROLES_ADICIONALES[id]) || []);
 }
 
 /* ================= GUARDADO ================= */
@@ -757,15 +818,29 @@ function renderEpp() {
     () => { falt.forEach((x) => c.epp.push(x.id)); c.eppDescartados = []; renderEpp(); guardar(); });
   $('cuentaEpp').textContent = '(' + (c.epp.length + (c.eppOtro ? 1 : 0)) + ')';
 }
+const herrAbiertos = new Set();   // grupos desplegados (se recuerdan al repintar)
 function renderHerr() {
   const c = ats.cab;
+  c.herrOtros = c.herrOtros || {};
   const cont = $('fHerr');
   cont.innerHTML = '';
   HERRAMIENTAS.forEach((g) => {
-    const d = document.createElement('div');
-    d.className = 'grupo-fichas';
-    d.innerHTML = '<span class="etq">' + esc(g.grupo) + '</span><div class="fichas"></div>';
-    fichas(d.querySelector('.fichas'), g.items.map((x) => ({ id: x, nombre: x })), c.herr, () => { renderHerr(); guardar(); });
+    const n = g.items.filter((x) => c.herr.includes(x)).length + ((c.herrOtros[g.grupo] || '').trim() ? 1 : 0);
+    const d = document.createElement('details');
+    d.className = 'herr-grupo';
+    d.open = herrAbiertos.has(g.grupo);
+    d.innerHTML = '<summary><span>' + esc(g.grupo) + '</span><small>' + (n ? n + ' marcada' + (n > 1 ? 's' : '') : '') + '</small></summary>' +
+      '<div class="cuerpo"><div class="fichas"></div><input type="text" class="inp" placeholder="✏️ Otra en ' + esc(g.grupo.toLowerCase()) + '…"></div>';
+    d.addEventListener('toggle', () => { if (d.open) herrAbiertos.add(g.grupo); else herrAbiertos.delete(g.grupo); });
+    fichas(d.querySelector('.fichas'), g.items.map((x) => ({ id: x, nombre: x })), c.herr, () => { herrAbiertos.add(g.grupo); renderHerr(); guardar(); });
+    const inO = d.querySelector('input');
+    inO.value = c.herrOtros[g.grupo] || '';
+    inO.addEventListener('input', () => {
+      c.herrOtros[g.grupo] = inO.value;
+      const k = g.items.filter((x) => c.herr.includes(x)).length + (inO.value.trim() ? 1 : 0);
+      d.querySelector('summary small').textContent = k ? k + ' marcada' + (k > 1 ? 's' : '') : '';
+      contarHerr(); guardar();
+    });
     cont.appendChild(d);
   });
   const sug = new Set();
@@ -776,7 +851,11 @@ function renderHerr() {
   bloqueSugeridos($('sugHerr'), 'Sugeridas por las tareas', falt,
     (id) => { c.herr.push(id); renderHerr(); guardar(); },
     () => { falt.forEach((x) => c.herr.push(x.id)); renderHerr(); guardar(); });
-  const nHerr = c.herr.length + (c.herrOtro && c.herrOtro.trim() ? 1 : 0);
+  contarHerr();
+}
+function contarHerr() {
+  const c = ats.cab;
+  const nHerr = c.herr.length + (c.herrOtro && c.herrOtro.trim() ? 1 : 0) + Object.values(c.herrOtros || {}).filter((v) => v && v.trim()).length;
   $('cuentaHerr').textContent = nHerr ? '(' + nHerr + ')' : '';
 }
 function renderEmerg() {
@@ -828,14 +907,16 @@ function renderTareas() {
     d.className = 'tarea-card';
     d.innerHTML =
       '<div class="t-cab"><span class="t-num">' + (i + 1) + '</span><div class="t-titulo">' + esc(t.titulo || '(sin nombre)') +
-      '<div class="t-resumen">' + resumenTarea(t) + '</div><div class="t-clases">' + clases.map((c) => '<span>' + esc(c) + '</span>').join('') + '</div></div></div>' +
+      '<div class="t-resumen">' + resumenTarea(t) + '</div><div class="t-clases">' + clases.map((c) => '<span>' + esc(c) + '</span>').join('') + '</div>' +
+      (t.agregadaDespues ? '<span class="t-despues">Agregada después de firmado · ' + esc(fechaHora(t.agregadaDespues)) + '</span>' : '') + '</div></div>' +
       '<div class="t-acciones"><button type="button" class="editar">✏️ Revisar / editar</button>' +
       (i > 0 ? '<button type="button" data-a="subir" aria-label="Subir">↑</button>' : '') +
       (i < ats.tareas.length - 1 ? '<button type="button" data-a="bajar" aria-label="Bajar">↓</button>' : '') +
-      '<button type="button" data-a="duplicar">Duplicar</button><button type="button" class="quitar" data-a="quitar">Quitar</button></div>';
+      '<button type="button" data-a="duplicar">Duplicar</button><button type="button" data-a="despues">+ Tarea después</button><button type="button" class="quitar" data-a="quitar">Quitar</button></div>';
     d.querySelector('.editar').addEventListener('click', () => abrirEditor(JSON.parse(JSON.stringify(t))));
     d.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.a;
+      if (a === 'despues') { abrirEditor(tareaVacia(), i + 1); return; }
       if (a === 'subir') { ats.tareas.splice(i - 1, 0, ats.tareas.splice(i, 1)[0]); }
       else if (a === 'bajar') { ats.tareas.splice(i + 1, 0, ats.tareas.splice(i, 1)[0]); }
       else if (a === 'duplicar') { const c = JSON.parse(JSON.stringify(t)); c.uid = uid(); ats.tareas.splice(i + 1, 0, c); toast('Tarea duplicada: cámbiale el nombre a la copia.'); }
@@ -922,7 +1003,23 @@ function aplicarSugerenciasCab() {
 }
 
 /* ================= TAREAS: EDITOR ================= */
-function abrirEditor(t) {
+/* Dónde queda una tarea nueva: si ya está "Orden y aseo" (la de cierre), la
+   nueva va antes de ella; si no, al final. Así una tarea olvidada no queda
+   después del cierre. Se puede cambiar en el editor. */
+function posicionPorDefecto(t) {
+  if (TAR[t.plantilla] && TAR[t.plantilla].fin) return ats.tareas.length;
+  const i = ats.tareas.findIndex((x) => TAR[x.plantilla] && TAR[x.plantilla].fin);
+  return i === -1 ? ats.tareas.length : i;
+}
+/* Hay firmas en el ATS: lo que se agregue ahora se marca como agregado
+   después, para que se socialice con quienes ya firmaron. */
+function atsYaFirmado() {
+  return ats.participantes.some((p) => p.firma) || ['lider', 'jefe', 'sst'].some((k) => ats.firmas[k] && ats.firmas[k].firma);
+}
+function abrirEditor(t, pos) {
+  if (ats.estado === 'CERRADO') { alert('Este ATS está cerrado: ya no se le pueden agregar ni cambiar tareas. Puedes copiarlo como un ATS nuevo.'); return; }
+  const esNueva = !ats.tareas.some((x) => x.uid === t.uid);
+  if (esNueva && t._pos == null) t._pos = pos != null ? pos : posicionPorDefecto(t);
   editando = t;
   renderTodoTareas();
   requestAnimationFrame(() => $('editorTarea').scrollIntoView({ block: 'start', behavior: 'smooth' }));
@@ -952,7 +1049,19 @@ function renderEditor() {
   const esNueva = !ats.tareas.some((x) => x.uid === t.uid);
   const ed = document.createElement('div');
   ed.className = 'editor';
-  ed.innerHTML = '<h3>' + (esNueva ? 'Nueva tarea (#' + (ats.tareas.length + 1) + ')' : 'Editar tarea') + '</h3>';
+  ed.innerHTML = '<h3>' + (esNueva ? 'Nueva tarea (#' + ((t._pos != null ? t._pos : ats.tareas.length) + 1) + ')' : 'Editar tarea') + '</h3>';
+  if (esNueva && ats.tareas.length) {
+    const pos = document.createElement('div');
+    pos.className = 'pos-tarea';
+    pos.innerHTML = '<span class="etq">¿Dónde va esta tarea?</span><select id="edPos"></select>' +
+      (atsYaFirmado() ? '<p class="ayuda" style="margin:6px 0 0;">⚠️ Este ATS ya tiene firmas: la tarea quedará marcada como <b>agregada después</b>. Socialízala con el personal que ya firmó.</p>' : '');
+    const sel = pos.querySelector('select');
+    sel.innerHTML = ats.tareas.map((x, i) => '<option value="' + i + '">Antes de ' + (i + 1) + '. ' + esc((x.titulo || '').slice(0, 55)) + '</option>').join('') +
+      '<option value="' + ats.tareas.length + '">Al final (después de ' + ats.tareas.length + '. ' + esc((ats.tareas[ats.tareas.length - 1].titulo || '').slice(0, 40)) + ')</option>';
+    sel.value = String(t._pos != null ? t._pos : ats.tareas.length);
+    sel.addEventListener('change', () => { t._pos = +sel.value; ed.querySelector('h3').textContent = 'Nueva tarea (#' + (t._pos + 1) + ')'; });
+    ed.appendChild(pos);
+  }
 
   /* Paso 1: qué se va a hacer */
   const p1 = document.createElement('div');
@@ -960,62 +1069,89 @@ function renderEditor() {
   p1.innerHTML = '<span class="etq"><b>1</b>¿Qué se va a hacer?</span>' +
     '<input type="text" class="inp" id="edTitulo" placeholder="Escribe la tarea: ej. soldadura de soportes en altura" autocomplete="off">' +
     '<div class="plantillas-sug" id="edPlantillas"></div>' +
+    '<details class="todas-tareas" id="edTodas"><summary>📋 Ver todas las tareas tipo (' + TAREAS.length + ')</summary><div class="sug-vivo"></div></details>' +
     '<span class="etq" style="margin-top:10px;">Descripción</span><textarea class="inp area" id="edDesc" placeholder="Cómo se hace, con qué equipos, dónde…"></textarea>';
   ed.appendChild(p1);
   const inT = p1.querySelector('#edTitulo'), inD = p1.querySelector('#edDesc');
   inT.value = t.titulo; inD.value = t.desc;
+  const usarPlantilla = (tar) => {
+    const titulo = inT.value.trim();
+    const pos = t._pos, conds = t.conds.slice(), condOtro = t.condOtro;
+    aplicarPlantilla(tar.id);
+    // Se conserva dónde va la tarea y las condiciones ya marcadas.
+    editando._pos = pos; editando.condOtro = condOtro;
+    conds.forEach((cid) => { if (!editando.conds.includes(cid)) { editando.conds.push(cid); const o = CONDICIONES.find((c) => c.id === cid); if (o) o.peligros.forEach((x) => agregarPeligro(x)); } });
+    // Si ya habían escrito un nombre propio (ej. "CN-096 Fabricación de ductos"),
+    // se conserva: la plantilla solo trae peligros, controles y descripción.
+    if (titulo && norm(titulo) !== norm(tar.nombre) && titulo.length > 12) editando.titulo = titulo;
+    renderEditor();
+    toast('Se trajeron ' + editando.peligros.length + ' peligros con sus controles. Revisa las condiciones y los controles.');
+  };
+  const filaTarea = (tar) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = esc(tar.nombre) + '<small>' + esc(tar.peligros.length + ' peligros · ' + (tar.desc || '').slice(0, 90) + ((tar.desc || '').length > 90 ? '…' : '')) + '</small>';
+    b.addEventListener('click', () => usarPlantilla(tar));
+    return b;
+  };
+  // Todas las tareas tipo, para quien no sabe qué escribir.
+  const todas = p1.querySelector('#edTodas .sug-vivo');
+  TAREAS.forEach((tar) => todas.appendChild(filaTarea(tar)));
   const pintarPlantillas = () => {
     const c = p1.querySelector('#edPlantillas');
     const txt = inT.value + ' ' + inD.value;
-    let lista = plantillasPorTexto(txt);
-    let rotulo = 'Tareas parecidas en nuestros ATS (toca una para traer sus peligros y controles):';
+    let lista = plantillasPorTexto(txt, 6);
+    let rotulo = '💡 Tareas parecidas: toca una para traer sus peligros y controles';
     if (!lista.length && !inT.value.trim()) {
-      const ult = ats.tareas[ats.tareas.length - 1];
-      const sig = ult && TAR[ult.plantilla] ? TAR[ult.plantilla].siguiente || [] : [];
-      lista = (sig.length ? sig : ['fabricacion', 'soldadura', 'desbaste', 'andamio', 'izaje', 'recepcion']).map((id) => TAR[id]);
-      rotulo = sig.length ? 'Suele seguir:' : 'Tareas frecuentes:';
+      const antes = t._pos != null && t._pos > 0 ? ats.tareas[t._pos - 1] : ats.tareas[ats.tareas.length - 1];
+      const sig = antes && TAR[antes.plantilla] ? TAR[antes.plantilla].siguiente || [] : [];
+      lista = (sig.length ? sig : ['fabricacion', 'soldadura', 'traslado_manual', 'andamio', 'izaje', 'valvulas']).map((id) => TAR[id]).filter(Boolean);
+      rotulo = sig.length ? '💡 Suele seguir después de «' + (antes.titulo || '').slice(0, 40) + '»' : '💡 Tareas frecuentes';
     }
     c.innerHTML = '';
     if (t.plantilla && t.plantilla !== 'rescate' && lista.every((x) => x.id === t.plantilla)) return;
-    if (!lista.length) return;
-    c.innerHTML = '<span class="etq" style="margin-top:8px;text-transform:none;letter-spacing:0;font-weight:600;">' + rotulo + '</span><div class="fichas"></div>';
-    lista.forEach((tar) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'ficha sug';
-      b.textContent = tar.nombre;
-      b.addEventListener('click', () => {
-        const titulo = inT.value.trim();
-        aplicarPlantilla(tar.id);
-        // Si ya habían escrito un nombre propio (ej. "CN-096 Fabricación de ductos"),
-        // se conserva: la plantilla solo trae peligros, controles y descripción.
-        if (titulo && norm(titulo) !== norm(tar.nombre) && titulo.length > 12) { editando.titulo = titulo; renderEditor(); }
-      });
-      c.querySelector('.fichas').appendChild(b);
-    });
+    if (!lista.length) {
+      if (inT.value.trim().length >= 3) c.innerHTML = '<p class="ayuda" style="margin:6px 0 0;">No hay una tarea tipo parecida: sigue con las condiciones (paso 2) y los peligros sugeridos (paso 3), o mira todas las tareas tipo.</p>';
+      return;
+    }
+    const caja = document.createElement('div');
+    caja.className = 'sug-vivo';
+    caja.innerHTML = '<span class="rot">' + esc(rotulo) + '</span>';
+    lista.forEach((tar) => caja.appendChild(filaTarea(tar)));
+    c.appendChild(caja);
   };
-  const alEscribir = () => { t.titulo = inT.value; t.desc = inD.value; pintarPlantillas(); pintarDetectados(); };
+  const alEscribir = () => { t.titulo = inT.value; t.desc = inD.value; pintarPlantillas(); pintarDetectados(); pintarConds(); };
   inT.addEventListener('input', alEscribir);
   inD.addEventListener('input', alEscribir);
 
   /* Paso 2: condiciones */
   const p2 = document.createElement('div');
   p2.className = 'paso-ed';
-  p2.innerHTML = '<span class="etq"><b>2</b>¿En qué condiciones se hace?</span><div class="fichas" id="edConds"></div>';
+  p2.innerHTML = '<span class="etq"><b>2</b>¿En qué condiciones se hace?</span>' +
+    '<p class="ayuda" style="margin:0 0 6px;">Marca todas las que apliquen: cada una agrega sus peligros. Las de borde amarillo son sugeridas.</p>' +
+    '<div class="fichas" id="edConds"></div>' +
+    '<input type="text" class="inp libre" id="edCondOtro" placeholder="✏️ ¿Qué otra condición? Escríbela aquí…" hidden>';
   ed.appendChild(p2);
+  const inCO = p2.querySelector('#edCondOtro');
+  inCO.value = t.condOtro || '';
+  inCO.addEventListener('input', () => { t.condOtro = inCO.value; });
   const pintarConds = () => {
-    const opciones = CONDICIONES.map((c) => ({
-      id: c.id, nombre: c.nombre,
-      marca: c.permiso && ats.cab.permisos.includes(c.permiso) && !t.conds.includes(c.id),
-      pista: c.permiso && ats.cab.permisos.includes(c.permiso) && !t.conds.includes(c.id) ? 'el ATS tiene este permiso' : ''
-    }));
+    const sug = condicionesSugeridas(t);
+    const opciones = CONDICIONES.map((c) => {
+      const porPermiso = c.permiso && ats.cab.permisos.includes(c.permiso) && !t.conds.includes(c.id);
+      return { id: c.id, nombre: c.nombre, marca: porPermiso || !!sug[c.id],
+        pista: porPermiso ? 'el ATS tiene este permiso' : (sug[c.id] ? 'sugerida ' + sug[c.id] : '') };
+    }).concat([{ id: 'otra', nombre: 'Otra (escribir)' }]);
+    inCO.hidden = !t.conds.includes('otra');
     fichas(p2.querySelector('#edConds'), opciones, t.conds, (id, on) => {
+      if (id === 'otra') { pintarConds(); if (on) inCO.focus(); return; }
       const cnd = CONDICIONES.find((c) => c.id === id);
       if (on) cnd.peligros.forEach((pid) => agregarPeligro(pid));
       else {
         // Quitar solo los peligros que vinieron por esta condición y que no
         // son propios de la tarea tipo ni de otra condición marcada.
         const base = new Set((TAR[t.plantilla] && TAR[t.plantilla].peligros) || []);
-        t.conds.forEach((cid) => CONDICIONES.find((c) => c.id === cid).peligros.forEach((x) => base.add(x)));
+        t.conds.forEach((cid) => { const o = CONDICIONES.find((c) => c.id === cid); if (o) o.peligros.forEach((x) => base.add(x)); });
         t.peligros = t.peligros.filter((p) => base.has(p.id) || !cnd.peligros.includes(p.id));
       }
       renderEditor();
@@ -1072,8 +1208,8 @@ function renderEditor() {
         '<div class="pel-cuerpo">' +
         '<span class="etq">Peligro (así se imprime)</span><textarea class="inp area" data-f="texto"></textarea>' +
         '<span class="etq" style="margin-top:8px;">Consecuencia</span><textarea class="inp area" data-f="efectos"></textarea>' +
+        '<span class="etq" style="margin-top:10px;">Controles (marca los que aplican; en cada tipo puedes escribir otro)</span>' +
         '<div class="ctrls"></div>' +
-        '<div class="ctrl-propio"><input type="text" class="inp" placeholder="Agregar otro control…"><button type="button" class="btn-mini" style="margin:0;">Agregar</button></div>' +
         '</div>';
       card.querySelector('.pel-cab').addEventListener('click', (e) => {
         if (e.target.closest('.pel-quitar')) return;
@@ -1089,19 +1225,48 @@ function renderEditor() {
         ta.addEventListener('input', () => { pi[ta.dataset.f] = ta.value; });
       });
       const cc = card.querySelector('.ctrls');
+      // Los 5 tipos de control (jerarquía) siempre visibles: los del ATS,
+      // los adicionales del catálogo sin marcar, y un campo para escribir otro.
       Object.keys(JERARQUIA).sort((a, b) => JERARQUIA[a].orden - JERARQUIA[b].orden).forEach((j) => {
         const lista = pi.ctrls.filter((x) => x.j === j);
-        if (!lista.length) return;
+        const tiene = new Set(pi.ctrls.map((x) => norm(x.t)));
+        const disp = controlesCatalogo(pi.id).filter(([tx, jj]) => jj === j && !tiene.has(norm(tx)));
         const g = document.createElement('div');
         g.className = 'j-grupo';
         g.innerHTML = '<span class="j-badge j-' + j + '">' + esc(JERARQUIA[j].nombre) + '</span>';
         lista.forEach((ct) => {
           const l = document.createElement('label');
-          l.className = 'ctrl';
+          l.className = 'ctrl' + (ct.propio ? ' propio' : '');
           l.innerHTML = '<input type="checkbox"' + (ct.on ? ' checked' : '') + '><span>' + esc(ct.t) + '</span>';
-          l.querySelector('input').addEventListener('change', (e) => { ct.on = e.target.checked; actualizarConteo(); });
+          l.querySelector('input').addEventListener('change', (e) => {
+            if (ct.propio && !e.target.checked) { pi.ctrls = pi.ctrls.filter((x) => x !== ct); renderEditor(); return; }
+            ct.on = e.target.checked; actualizarConteo();
+          });
           g.appendChild(l);
         });
+        disp.forEach(([tx]) => {
+          const l = document.createElement('label');
+          l.className = 'ctrl opcional';
+          l.innerHTML = '<input type="checkbox"><span>' + esc(tx) + '</span>';
+          l.querySelector('input').addEventListener('change', (e) => {
+            if (!e.target.checked) return;
+            pi.ctrls.push({ t: tx, j, on: true }); pi.abierto = true; renderEditor();
+          });
+          g.appendChild(l);
+        });
+        if (!lista.length && !disp.length) g.insertAdjacentHTML('beforeend', '<p class="j-vacio">Sin controles de este tipo para este peligro.</p>');
+        const otro = document.createElement('div');
+        otro.className = 'j-otro';
+        otro.innerHTML = '<input type="text" class="inp" placeholder="✏️ Otro control…" aria-label="Otro control de ' + esc(JERARQUIA[j].nombre.toLowerCase()) + '"><button type="button" class="btn-mini">+ Agregar</button>';
+        const inO = otro.querySelector('input');
+        const agregarOtro = () => {
+          const v = inO.value.trim();
+          if (!v) { inO.focus(); return; }
+          pi.ctrls.push({ t: v, j, on: true, propio: true }); pi.abierto = true; renderEditor();
+        };
+        otro.querySelector('button').addEventListener('click', agregarOtro);
+        inO.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); agregarOtro(); } });
+        g.appendChild(otro);
         cc.appendChild(g);
       });
       if ((pi.extra || []).length) {
@@ -1117,10 +1282,6 @@ function renderEditor() {
         });
         cc.appendChild(g);
       }
-      const inp = card.querySelector('.ctrl-propio input');
-      const add = () => { const v = inp.value.trim(); if (!v) return; (pi.extra = pi.extra || []).push(v); pi.abierto = true; renderEditor(); };
-      card.querySelector('.ctrl-propio button').addEventListener('click', add);
-      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
       function actualizarConteo() {
         const n = pi.ctrls.filter((x) => x.on).length + (pi.extra || []).length;
         const s = card.querySelector('.pel-conteo');
@@ -1197,13 +1358,21 @@ function renderEditor() {
     const sinCtrl = t.peligros.filter((p) => !p.ctrls.some((c) => c.on) && !(p.extra || []).length);
     if (sinCtrl.length && !confirm('Hay ' + sinCtrl.length + ' peligro(s) sin ningún control marcado:\n\n• ' + sinCtrl.map((p) => pelDe(p).sub).join('\n• ') + '\n\n¿Guardar de todas formas?')) return;
     t.peligros.forEach((p) => { p.abierto = false; });
+    if (!t.conds.includes('otra')) t.condOtro = '';
     const i = ats.tareas.findIndex((x) => x.uid === t.uid);
-    if (i === -1) ats.tareas.push(t); else ats.tareas[i] = t;
+    let tardia = false;
+    if (i === -1) {
+      const pos = t._pos != null ? Math.max(0, Math.min(t._pos, ats.tareas.length)) : ats.tareas.length;
+      delete t._pos;
+      if (atsYaFirmado()) { t.agregadaDespues = new Date().toISOString(); tardia = true; }
+      ats.tareas.splice(pos, 0, t);
+    } else { delete t._pos; ats.tareas[i] = t; }
     ultimaGuardada = t;
     editando = null;
     const agregados = aplicarSugerenciasCab();
     renderTodoTareas(); guardar();
-    toast(agregados.length ? 'Tarea guardada. Se agregó al encabezado: ' + agregados.join(', ') + '.' : 'Tarea guardada.');
+    toast((tardia ? 'Tarea agregada después de firmado: socialízala con el personal' + (ats.code ? ' y guarda (☁️) para subirla' : '') + '.' : 'Tarea guardada.') +
+      (agregados.length ? ' Se agregó al encabezado: ' + agregados.join(', ') + '.' : ''));
     requestAnimationFrame(() => $('queSigue').scrollIntoView({ block: 'center', behavior: 'smooth' }));
   });
 
@@ -1423,6 +1592,11 @@ function renderFirmasFin() {
 
 /* ================= HOJA IMPRESA (forma del Excel) ================= */
 const fechaCO = (iso) => { if (!iso) return ''; const [a, m, d] = iso.split('-'); return d + '-' + m + '-' + a; };
+function textoCondiciones(t) {
+  const out = (t.conds || []).map((id) => { const c = CONDICIONES.find((x) => x.id === id); return c ? c.nombre : ''; }).filter(Boolean);
+  if ((t.conds || []).includes('otra') && t.condOtro && t.condOtro.trim()) out.push(t.condOtro.trim());
+  return out.join(', ');
+}
 function textoPeligro(pi) { return claseDe(pi) + ': ' + pelDe(pi).sub + ': ' + pi.texto; }
 function textoMedidas(t) {
   const gen = t.generales.slice();
@@ -1445,7 +1619,15 @@ function lista(ids, catalogo, otro) {
 }
 function herramientasTexto() {
   const c = ats.cab;
-  const partes = HERRAMIENTAS.map((g) => { const it = g.items.filter((x) => c.herr.includes(x)); return it.length ? g.grupo + ': ' + it.join(', ') + '.' : ''; }).filter(Boolean);
+  const otros = c.herrOtros || {};
+  const partes = HERRAMIENTAS.map((g) => {
+    const it = g.items.filter((x) => c.herr.includes(x));
+    if (otros[g.grupo] && otros[g.grupo].trim()) it.push(otros[g.grupo].trim());
+    return it.length ? g.grupo + ': ' + it.join(', ') + '.' : '';
+  }).filter(Boolean);
+  const conocidas = new Set(HERRAMIENTAS.flatMap((g) => g.items));
+  const sueltas = c.herr.filter((x) => !conocidas.has(x));
+  if (sueltas.length) partes.push('Otras: ' + sueltas.join(', ') + '.');
   if (c.herrOtro && c.herrOtro.trim()) partes.push('Otras: ' + c.herrOtro.trim() + '.');
   return partes.join('\n');
 }
@@ -1471,7 +1653,9 @@ function armarHoja() {
   const vacias = Math.max(0, 4 - ats.participantes.length);
   const filasVacias = Array.from({ length: vacias }, () => '<tr><td>&nbsp;</td><td></td><td></td><td></td><td class="firma" style="height:26px;"></td></tr>').join('');
   const filasTareas = ats.tareas.map((t, i) =>
-    '<tr><td class="paso"><b>' + (i + 1) + '.\n' + esc(t.titulo) + '</b>' + (t.desc ? '\n' + esc(t.desc) : '') + '</td>' +
+    '<tr><td class="paso"><b>' + (i + 1) + '.\n' + esc(t.titulo) + '</b>' + (t.desc ? '\n' + esc(t.desc) : '') +
+    (textoCondiciones(t) ? '\n<i>Condiciones: ' + esc(textoCondiciones(t)) + '.</i>' : '') +
+    (t.agregadaDespues ? '\n<span style="font-size:8px;">(Tarea agregada después de firmado el ATS: ' + esc(fechaHora(t.agregadaDespues)) + ')</span>' : '') + '</td>' +
     '<td>' + t.peligros.map((pi, k) => (k + 1) + '. ' + esc(textoPeligro(pi))).join('\n') + '</td>' +
     '<td>' + t.peligros.map((pi, k) => (k + 1) + '. ' + esc(pi.efectos)).join('\n') + '</td>' +
     '<td>' + esc(textoMedidas(t)) + '</td>' +
@@ -1583,6 +1767,71 @@ function salirRevision() {
 }
 $('btnRevPersonal').addEventListener('click', () => { const c = revRef && revRef.code, o = revOrigen; salirRevision(); if (c) entrarModoAgregar(c, o); });
 $('btnRevCerrar').addEventListener('click', () => { const c = revRef && revRef.code, o = revOrigen; salirRevision(); if (c) entrarModoCerrar(c, o); });
+/* ================= COPIAR UN ATS (sin firmas) =================
+   Para el trabajo que se repite con las mismas tareas: se copia todo el
+   ATS (encabezado, tareas con sus peligros y controles, EPP, herramientas,
+   emergencia y ambiental) a uno NUEVO con fecha de hoy, sin ninguna firma
+   y sin código (al guardarlo recibe el suyo). La lista de personas es
+   opcional; si se copia, cada uno debe volver a firmar. */
+function copiaSinFirmas(src, conParticipantes) {
+  const c = JSON.parse(JSON.stringify(src));
+  const base = nuevoAts();
+  const n = Object.assign(base, c);
+  n.cab = Object.assign(nuevoAts().cab, c.cab);
+  n.code = null; n.version = 0; n.subidoEn = null; n.sucio = true; n.estado = 'ABIERTO';
+  delete n.cierre;
+  // Fechas: desde hoy, con la misma duración que el original.
+  const dur = c.cab && c.cab.desde && c.cab.hasta ? Math.round((new Date(c.cab.hasta) - new Date(c.cab.desde)) / 86400000) : null;
+  n.cab.desde = hoyISO();
+  if (dur != null && dur >= 0) { const d = new Date(n.cab.desde + 'T12:00:00'); d.setDate(d.getDate() + dur); n.cab.hasta = d.toISOString().slice(0, 10); } else n.cab.hasta = '';
+  n.tareas = (c.tareas || []).map((t) => { const x = Object.assign({}, t, { uid: uid() }); delete x.agregadaDespues; delete x._pos; return x; });
+  n.participantes = conParticipantes ? (c.participantes || []).map((p) => ({ uid: uid(), nombres: p.nombres || '', apellidos: p.apellidos || '', cedula: p.cedula || '', cargo: p.cargo || '', firma: null })) : [];
+  const f = nuevoAts().firmas;
+  ['lider', 'jefe', 'sst'].forEach((k) => { f[k].nombre = (c.firmas && c.firmas[k] && c.firmas[k].nombre) || ''; });
+  n.firmas = f;
+  return n;
+}
+function preguntarCopia(src) {
+  const np = (src.participantes || []).length;
+  panel('<h3>📋 Copiar como ATS nuevo</h3><p class="ayuda">Se copia <b>' + esc(src.code || 'el ATS actual') + '</b> con sus ' + src.tareas.length + ' tareas, peligros, controles, EPP y herramientas, con fecha de hoy y <b>sin ninguna firma</b>. Al guardarlo recibe un código nuevo.</p>' +
+    (np ? '<button type="button" class="copia-op" id="cpCon">👷 Copiar con ' + (np === 1 ? 'el mismo participante' : 'los mismos ' + np + ' participantes') + '<small>Nombres, cédulas y cargos; cada uno vuelve a firmar.</small></button>' : '') +
+    '<button type="button" class="copia-op" id="cpSin">📄 Copiar sin participantes<small>Solo el trabajo y las tareas; el personal se agrega de nuevo.</small></button>' +
+    '<div class="acciones-tareas"><button type="button" class="btn sec" data-cerrar>Cancelar</button></div>');
+  const hacer = (con) => {
+    const aSalvo = ats.code && !ats.sucio;
+    const hayLocal = ats.tareas.length || ats.participantes.length || (ats.cab.trabajo || '').trim();
+    if (!aSalvo && hayLocal && src !== ats && !confirm('El ATS que tienes en este equipo tiene cambios sin subir y se reemplaza por la copia. ¿Continuar?')) return;
+    ats = copiaSinFirmas(src, con);
+    editando = null; ultimaGuardada = null;
+    DraftStore.save(CLAVE_BORRADOR, ats);
+    cerrarPanel();
+    document.body.classList.remove('previa', 'revision', 'rev-cerrado');
+    $('btnVolverEditar').textContent = '← Volver a editar';
+    revRef = null;
+    irAlEditor();
+    toast('Copia lista con fecha de hoy. Revisa fechas y condiciones, y que todos firmen. Guarda (☁️) para darle código.');
+  };
+  if (np) $('cpCon').addEventListener('click', () => hacer(true));
+  $('cpSin').addEventListener('click', () => hacer(false));
+}
+async function copiarDelServidor(code) {
+  const ref = await traerReferencia(code);
+  if (ref) preguntarCopia(ref);
+}
+$('btnRevCopiar').addEventListener('click', () => { if (revRef) preguntarCopia(revRef); });
+/* Tarea olvidada en un ATS ya guardado: se abre en el editor (si es el
+   mismo que está en este equipo, se usa ese para no perder cambios) y se
+   abre de una la tarea nueva, que por defecto va antes de "Orden y aseo". */
+$('btnRevTarea').addEventListener('click', async () => {
+  const code = revRef && revRef.code;
+  if (!code) return;
+  salirRevision();
+  if (ats.code === code) irAlEditor();
+  else { await cargarDesdeServidor(code); if (ats.code !== code) return; }
+  abrirEditor(tareaVacia());
+  toast('Escribe la tarea que faltó y escoge dónde va. Después guarda (☁️) para subirla.');
+});
+
 /* Tarjetas de ATS: tocar fuera de los botones = revisar. */
 function tarjetasRevisables(cont, origen, antes) {
   cont.querySelectorAll('.pl-item[data-revisar]').forEach((it) => it.addEventListener('click', (e) => {
@@ -2231,8 +2480,8 @@ $('menuAbiertosAgregar').addEventListener('click', () => pintarLista($('menuList
 $('btnIrMenu').addEventListener('click', irAlMenu);
 
 /* ================= PANEL / PLANTILLAS ================= */
-function panel(html) { $('panelCaja').innerHTML = html; $('panel').classList.add('show'); $('panelCaja').querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarPanel)); }
-function cerrarPanel() { $('panel').classList.remove('show'); }
+function panel(html) { $('panelCaja').innerHTML = html; $('panel').classList.add('show'); document.body.classList.add('con-panel'); $('panelCaja').querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarPanel)); }
+function cerrarPanel() { $('panel').classList.remove('show'); document.body.classList.remove('con-panel'); }
 $('panel').addEventListener('click', (e) => { if (e.target === $('panel')) cerrarPanel(); });
 function leerPlantillas() { try { return JSON.parse(localStorage.getItem(CLAVE_PLANTILLAS) || '[]'); } catch (e) { return []; } }
 function escribirPlantillas(l) { try { localStorage.setItem(CLAVE_PLANTILLAS, JSON.stringify(l)); return true; } catch (e) { return false; } }
@@ -2248,11 +2497,13 @@ function comoPlantilla() {
 }
 $('btnPlantillas').addEventListener('click', () => {
   const l = leerPlantillas();
-  panel((urlAts() ? '<h3>ATS guardados en el servidor</h3><div id="srvLista"><p class="ayuda">Cargando…</p></div>' : '') +
+  panel((ats.tareas.length ? '<button type="button" class="copia-op" id="cpActual" style="margin:0 0 14px;">📋 Copiar el ATS actual como nuevo<small>Mismas tareas y controles, fecha de hoy, sin firmas.</small></button>' : '') +
+    (urlAts() ? '<h3>ATS guardados en el servidor</h3><div id="srvLista"><p class="ayuda">Cargando…</p></div>' : '') +
     '<h3' + (urlAts() ? ' style="margin-top:18px;"' : '') + '>Plantillas de ATS</h3><p class="ayuda">Guarda un ATS que se repite (por ejemplo, la bodega semanal) y cárgalo la próxima vez: trae el trabajo, las tareas, el EPP y las herramientas, pero sin fechas, participantes ni firmas. Se guardan en este dispositivo.</p>' +
     '<div id="plLista">' + (l.length ? l.map((p, i) => '<div class="pl-item"><span><b>' + esc(p.nombre) + '</b><small>' + p.data.tareas.length + ' tareas · ' + esc(p.fecha) + '</small></span><span><button type="button" class="btn-mini" data-cargar="' + i + '">Usar</button> <button type="button" class="btn-mini" style="border-color:#e3b3ad;color:#a02d20;" data-borrar="' + i + '">✕</button></span></div>').join('') : '<p class="ayuda">Todavía no hay plantillas.</p>') + '</div>' +
     '<div class="field" style="margin-top:14px;"><label>Guardar el ATS actual como plantilla</label><input type="text" class="inp" id="plNombre" placeholder="Nombre: ej. Bodega INDIMON semanal"></div>' +
     '<div class="acciones-tareas"><button type="button" class="btn" id="plGuardar">Guardar plantilla</button><button type="button" class="btn sec" data-cerrar>Cerrar</button><button type="button" class="btn peligro" id="plNuevo">Empezar ATS nuevo</button></div>');
+  if ($('cpActual')) $('cpActual').addEventListener('click', () => preguntarCopia(ats));
   $('plNombre').value = (ats.cab.trabajo || '').slice(0, 60);
   $('plGuardar').addEventListener('click', () => {
     const nombre = $('plNombre').value.trim();
@@ -2292,9 +2543,10 @@ async function pintarListaServidor() {
     cont.innerHTML = r.rows.slice(0, 40).map((x) =>
       '<div class="pl-item" data-revisar="' + esc(x.code) + '"><span><b>' + esc(x.code) + (x.code === ats.code ? ' · en este equipo' : '') + '</b><span class="etiqueta-estado ' + (x.estado === 'CERRADO' ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span><small><br>' + esc(f(x.fechaDesde)) + (x.fechaHasta ? ' al ' + esc(f(x.fechaHasta)) : '') + ' · ' + esc(x.centroCostos || '') + ' · ' + esc(x.area || '') + '<br>' + esc(x.trabajo || '') + '<br>' +
       x.tareas + ' tareas · ' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados) · v' + x.version + '</small><span class="toca">👁 Toca para revisarlo</span></span>' +
-      '<span style="display:flex;flex-direction:column;gap:6px;"><button type="button" class="btn-mini" style="margin:0;" data-abrir="' + esc(x.code) + '">Abrir</button>' + (x.estado === 'CERRADO' ? '' : '<button type="button" class="btn-mini" style="margin:0;" data-personal="' + esc(x.code) + '">+ Personal</button><button type="button" class="btn-mini" style="margin:0;" data-cerrarats="' + esc(x.code) + '">Cerrar</button>') + '</span></div>').join('');
+      '<span style="display:flex;flex-direction:column;gap:6px;"><button type="button" class="btn-mini" style="margin:0;" data-abrir="' + esc(x.code) + '">Abrir</button><button type="button" class="btn-mini" style="margin:0;" data-copiar="' + esc(x.code) + '">Copiar</button>' + (x.estado === 'CERRADO' ? '' : '<button type="button" class="btn-mini" style="margin:0;" data-personal="' + esc(x.code) + '">+ Personal</button><button type="button" class="btn-mini" style="margin:0;" data-cerrarats="' + esc(x.code) + '">Cerrar</button>') + '</span></div>').join('');
     cont.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); cargarDesdeServidor(b.dataset.abrir); }));
     cont.querySelectorAll('[data-personal]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoAgregar(b.dataset.personal, 'editor'); }));
+    cont.querySelectorAll('[data-copiar]').forEach((b) => b.addEventListener('click', () => copiarDelServidor(b.dataset.copiar)));
     cont.querySelectorAll('[data-cerrarats]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoCerrar(b.dataset.cerrarats, 'editor'); }));
     tarjetasRevisables(cont, 'editor', cerrarPanel);
   } catch (e) {
