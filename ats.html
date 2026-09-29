@@ -224,6 +224,14 @@
   .pl-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:13px;}
   .pl-item b{display:block;}
   .pl-item small{color:var(--ink-muted);}
+  /* Tocar la tarjeta de un ATS abre su formato para revisarlo. */
+  .pl-item[data-revisar]{cursor:pointer;border-radius:8px;transition:background .15s;}
+  .pl-item[data-revisar]:active,.pl-item[data-revisar]:hover{background:var(--line-soft);}
+  .pl-item .toca{display:block;margin-top:3px;font-size:11.5px;font-weight:700;color:var(--brand-ats);}
+  body.previa #menuAts{display:none !important;}
+  .rev-acc{display:none;}
+  body.revision .rev-acc{display:inline-block;}
+  body.revision.rev-cerrado .rev-acc{display:none;}
 
   /* ── Hoja (formato SSTA-F-007) ── */
   #vistaPrevia{display:none;}
@@ -455,6 +463,8 @@
   <div class="previa-barra">
     <button type="button" class="btn sec" id="btnVolverEditar">← Volver a editar</button>
     <button type="button" class="btn" id="btnImprimirPrevia">🖨️ Imprimir / guardar PDF</button>
+    <button type="button" class="btn sec rev-acc" id="btnRevPersonal">👷 Agregar personal</button>
+    <button type="button" class="btn sec rev-acc" id="btnRevCerrar">✅ Cerrar este ATS</button>
   </div>
   <div class="hoja-scroll"><div class="hoja" id="hoja"></div></div>
 </div>
@@ -1540,7 +1550,47 @@ $('btnVistaPrevia').addEventListener('click', () => {
     '<div class="acciones-tareas"><button type="button" class="btn sec" data-cerrar>Completar</button><button type="button" class="btn" id="btnPreviaIgual">Ver el formato de todas formas</button></div>');
   $('btnPreviaIgual').addEventListener('click', () => { cerrarPanel(); abrirVistaPrevia(); });
 });
-$('btnVolverEditar').addEventListener('click', () => { document.body.classList.remove('previa'); sigMgr.refreshIn(document.body); });
+$('btnVolverEditar').addEventListener('click', () => {
+  if (document.body.classList.contains('revision')) { salirRevision(); return; }
+  document.body.classList.remove('previa'); sigMgr.refreshIn(document.body);
+});
+
+/* ================= REVISAR UN ATS DE UNA =================
+   Al tocar un ATS en cualquier lista se abre directo su formato completo
+   (el mismo que se imprime), traído del servidor y sin tocar el borrador de
+   este dispositivo. Desde ahí se imprime, se agrega personal o se cierra. */
+let revRef = null, revOrigen = 'menu', revScroll = 0, revCargando = false;
+async function revisarAts(code, origen) {
+  if (revCargando) return;
+  revCargando = true;
+  try {
+    const ref = await traerReferencia(code);
+    if (!ref) return;
+    revRef = ref; revOrigen = origen || 'menu'; revScroll = window.scrollY;
+    const propio = ats; ats = ref; try { armarHoja(); } finally { ats = propio; }
+    document.body.classList.add('previa', 'revision');
+    document.body.classList.toggle('rev-cerrado', ref.estado === 'CERRADO');
+    $('btnVolverEditar').textContent = revOrigen === 'menu' ? '← Volver a la lista' : '← Volver';
+    window.scrollTo(0, 0);
+  } finally { revCargando = false; }
+}
+function salirRevision() {
+  document.body.classList.remove('previa', 'revision', 'rev-cerrado');
+  $('btnVolverEditar').textContent = '← Volver a editar';
+  revRef = null;
+  if (revOrigen === 'menu') window.scrollTo(0, revScroll);
+  else { sigMgr.refreshIn(document.body); window.scrollTo(0, 0); }
+}
+$('btnRevPersonal').addEventListener('click', () => { const c = revRef && revRef.code, o = revOrigen; salirRevision(); if (c) entrarModoAgregar(c, o); });
+$('btnRevCerrar').addEventListener('click', () => { const c = revRef && revRef.code, o = revOrigen; salirRevision(); if (c) entrarModoCerrar(c, o); });
+/* Tarjetas de ATS: tocar fuera de los botones = revisar. */
+function tarjetasRevisables(cont, origen, antes) {
+  cont.querySelectorAll('.pl-item[data-revisar]').forEach((it) => it.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    if (antes) antes();
+    revisarAts(it.dataset.revisar, origen);
+  }));
+}
 // En modo "Agregar personal" la hoja que se imprime es la del ATS de referencia.
 $('btnImprimirPrevia').addEventListener('click', () => window.print());
 // Si imprimen desde el menú del navegador sin pasar por la vista previa, la
@@ -2134,10 +2184,10 @@ async function listaServidor(forzar) {
 const f10 = (x) => (x ? String(x).slice(0, 10) : '');
 function filaLista(x, botones) {
   const cerrado = x.estado === 'CERRADO';
-  return '<div class="pl-item"><span><b>' + esc(x.code) + '</b><span class="etiqueta-estado ' + (cerrado ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span>' +
+  return '<div class="pl-item" data-revisar="' + esc(x.code) + '"><span><b>' + esc(x.code) + '</b><span class="etiqueta-estado ' + (cerrado ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span>' +
     '<small><br>' + esc(fechaCO(f10(x.fechaDesde))) + (x.fechaHasta ? ' al ' + esc(fechaCO(f10(x.fechaHasta))) : '') + ' · ' + esc([x.centroCostos, x.area].filter(Boolean).join(' · ')) + '<br>' +
     esc(x.trabajo || '') + '<br>' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados)' +
-    (cerrado ? '<br>Cerrado: ' + esc(x.motivoCierre || '') + (x.cerradoPor ? ' · ' + esc(x.cerradoPor) : '') : '') + '</small></span>' +
+    (cerrado ? '<br>Cerrado: ' + esc(x.motivoCierre || '') + (x.cerradoPor ? ' · ' + esc(x.cerradoPor) : '') : '') + '</small><span class="toca">👁 Toca para revisarlo</span></span>' +
     '<span style="display:flex;flex-direction:column;gap:6px;">' + botones + '</span></div>';
 }
 async function pintarLista(cont, filtro, botones, vacio, conBuscador) {
@@ -2158,6 +2208,7 @@ async function pintarLista(cont, filtro, botones, vacio, conBuscador) {
       if (b.dataset.accion === 'cerrar' || b.dataset.accion === 'ver') entrarModoCerrar(code, 'menu');
       else if (b.dataset.accion === 'personal') entrarModoAgregar(code, 'menu');
     }));
+    tarjetasRevisables(lista, 'menu');
   };
   cont.innerHTML = (conBuscador ? '<input type="text" class="inp" placeholder="Buscar por código, trabajo, área o quién cerró…" style="margin:4px 0 6px;">' : '') + '<div class="filas"></div>';
   if (conBuscador) cont.querySelector('input').addEventListener('input', (e) => pintar(e.target.value));
@@ -2239,12 +2290,13 @@ async function pintarListaServidor() {
     if (!r.rows.length) { cont.innerHTML = '<p class="ayuda">Todavía no hay ATS guardados.</p>'; return; }
     const f = (x) => (x ? String(x).slice(0, 10) : '');
     cont.innerHTML = r.rows.slice(0, 40).map((x) =>
-      '<div class="pl-item"><span><b>' + esc(x.code) + (x.code === ats.code ? ' · en este equipo' : '') + '</b><span class="etiqueta-estado ' + (x.estado === 'CERRADO' ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span><small><br>' + esc(f(x.fechaDesde)) + (x.fechaHasta ? ' al ' + esc(f(x.fechaHasta)) : '') + ' · ' + esc(x.centroCostos || '') + ' · ' + esc(x.area || '') + '<br>' + esc(x.trabajo || '') + '<br>' +
-      x.tareas + ' tareas · ' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados) · v' + x.version + '</small></span>' +
+      '<div class="pl-item" data-revisar="' + esc(x.code) + '"><span><b>' + esc(x.code) + (x.code === ats.code ? ' · en este equipo' : '') + '</b><span class="etiqueta-estado ' + (x.estado === 'CERRADO' ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span><small><br>' + esc(f(x.fechaDesde)) + (x.fechaHasta ? ' al ' + esc(f(x.fechaHasta)) : '') + ' · ' + esc(x.centroCostos || '') + ' · ' + esc(x.area || '') + '<br>' + esc(x.trabajo || '') + '<br>' +
+      x.tareas + ' tareas · ' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados) · v' + x.version + '</small><span class="toca">👁 Toca para revisarlo</span></span>' +
       '<span style="display:flex;flex-direction:column;gap:6px;"><button type="button" class="btn-mini" style="margin:0;" data-abrir="' + esc(x.code) + '">Abrir</button>' + (x.estado === 'CERRADO' ? '' : '<button type="button" class="btn-mini" style="margin:0;" data-personal="' + esc(x.code) + '">+ Personal</button><button type="button" class="btn-mini" style="margin:0;" data-cerrarats="' + esc(x.code) + '">Cerrar</button>') + '</span></div>').join('');
     cont.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); cargarDesdeServidor(b.dataset.abrir); }));
     cont.querySelectorAll('[data-personal]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoAgregar(b.dataset.personal, 'editor'); }));
     cont.querySelectorAll('[data-cerrarats]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoCerrar(b.dataset.cerrarats, 'editor'); }));
+    tarjetasRevisables(cont, 'editor', cerrarPanel);
   } catch (e) {
     if (document.body.contains(cont)) cont.innerHTML = '<p class="ayuda">' + esc(motivoFallaSrv(e)) + '</p>';
   }
