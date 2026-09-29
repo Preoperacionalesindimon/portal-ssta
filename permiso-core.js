@@ -1608,7 +1608,7 @@ const PermisoCore = (function () {
       });
     });
 
-    $('printBtn').addEventListener('click', () => window.print());
+    $('printBtn').addEventListener('click', imprimirHoja);
     $('backToStartBtn').addEventListener('click', () => {
       $('footerActions').style.display = 'none';
       location.href = 'index.html';
@@ -1630,6 +1630,334 @@ const PermisoCore = (function () {
 
   let saveOpenDraftDebounced = null;
   let saveCloseDraftDebounced = null;
+
+  /* ================= HOJA COMPACTA PARA IMPRIMIR / PDF =================
+     Antes se imprimía el formulario tal como se ve en pantalla: una pregunta
+     por renglón con botones grandes, pensado para el dedo. Un permiso lleno
+     salía en 6 a 9 hojas. Ahora, al imprimir, se arma una hoja en tablas como
+     la del ATS (carta horizontal): campos de a tres por renglón, preguntas de
+     a dos con su respuesta, firmas en cuadrícula y ejecutantes en una tabla.
+
+     Se arma LEYENDO lo que está en pantalla (no los datos guardados), así
+     sirve igual para los cinco permisos, con sus secciones propias (gases en
+     confinados, cálculos y EPCC en alturas, tensiones en eléctrico) y
+     siempre imprime exactamente lo que la persona ve. Lo oculto no sale. */
+  const fechaHoja_ = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v.slice(8, 10) + '-' + v.slice(5, 7) + '-' + v.slice(0, 4) : v);
+  const limpio_ = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+  function visibleHoja_(el) { return el.type === 'hidden' || el.getClientRects().length > 0; }
+  function textoPropio_(el) {
+    return limpio_([...el.childNodes].filter((n) => n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('progress-pill'))).map((n) => n.textContent).join(''));
+  }
+  function valorHoja_(el) {
+    if (el.tagName === 'SELECT') { const o = el.options[el.selectedIndex]; return el.value && o ? limpio_(o.textContent) : ''; }
+    if (el.type === 'date') return fechaHoja_(el.value);
+    return String(el.value || '').trim();
+  }
+  function respuestaHoja_(g) {
+    if (!g) return '';
+    const a = g.querySelector('.active-si,.active-no,.active-na,.active-c,button[aria-pressed="true"]');
+    return a ? limpio_(a.textContent) : '';
+  }
+  function firmaHoja_(canvas) {
+    if (!canvas) return null;
+    const p = pads[canvas.id];
+    if (p) return p.hasInk && !p.hasInk() ? null : p.getDataUrl();
+    try { return canvas.toDataURL('image/png'); } catch (e) { return null; }
+  }
+  const NOMBRES_OCULTOS_ = { cualPermiso: '¿Cuál permiso adicional?', herramientas: 'Herramientas y/o equipos', gasesDetecta: 'Gases que detecta el equipo' };
+  function etiquetaPrevia_(el) {
+    let prev = el.previousElementSibling;
+    while (prev && !limpio_(prev.textContent) && prev.tagName !== 'LABEL') prev = prev.previousElementSibling;
+    if (prev && (prev.tagName === 'LABEL' || prev.tagName === 'B' || prev.classList.contains('tension-sub'))) return limpio_(prev.textContent);
+    return NOMBRES_OCULTOS_[el.id] || '';
+  }
+  function campoHoja_(field, items) {
+    const lab = field.querySelector(':scope > label');
+    const etiqueta = lab ? limpio_(lab.textContent) : '';
+    const yn = field.querySelector('.yn-opts, .toggle');
+    if (yn) { items.push({ t: 'qa', q: etiqueta, a: respuestaHoja_(yn) }); return; }
+    const vals = [];
+    let largo = false;
+    field.querySelectorAll('input, textarea, select').forEach((el) => {
+      if (el.type === 'radio') { if (el.checked) vals.push(limpio_(el.parentElement.textContent) || el.value); return; }
+      if (el.type === 'checkbox') { if (el.checked) vals.push(limpio_(el.parentElement.textContent) || el.value); return; }
+      if (el.type !== 'hidden' && !visibleHoja_(el)) return;
+      if (el.tagName === 'TEXTAREA') largo = true;
+      const v = valorHoja_(el);
+      if (v) vals.push(v);
+    });
+    const v = vals.join(' · ');
+    items.push({ t: 'campo', l: etiqueta, v, largo: largo || v.length > 70 || !etiqueta });
+  }
+  function tablaHoja_(tabla) {
+    const c = tabla.cloneNode(true);
+    const orig = [...tabla.querySelectorAll('input, select, textarea, .yn-opts, .toggle')];
+    [...c.querySelectorAll('input, select, textarea, .yn-opts, .toggle')].forEach((el, i) => {
+      const o = orig[i];
+      let v = '';
+      if (o.classList && (o.classList.contains('yn-opts') || o.classList.contains('toggle'))) v = respuestaHoja_(o);
+      else if (o.type === 'checkbox' || o.type === 'radio') v = o.checked ? '☒' : '☐';
+      else v = valorHoja_(o);
+      el.replaceWith(document.createTextNode(v));
+    });
+    c.querySelectorAll('button').forEach((b) => b.remove());
+    c.removeAttribute('id'); c.removeAttribute('style'); c.className = 'hp-tabla';
+    c.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
+    return c.outerHTML;
+  }
+  function recolectarHoja_(nodo, items) {
+    for (const el of nodo.children) {
+      if (!visibleHoja_(el)) continue;
+      const c = el.classList;
+      if (c.contains('section-title') || c.contains('sig-actions') || c.contains('add-row-btn') || c.contains('autocomplete-box') ||
+          c.contains('tension-sub') || el.tagName === 'BUTTON' || el.tagName === 'CANVAS' || el.id === 'closeLockedMsg' || /Sel$/.test(el.id)) continue;
+      if (c.contains('check-cat') && el.querySelector('.check-item')) {
+        const h = el.querySelector('h4');
+        if (h) items.push({ t: 'sub', x: limpio_(h.textContent) });
+        el.querySelectorAll('.check-item').forEach((ci) => items.push({ t: 'qa', q: limpio_((ci.querySelector('p') || ci).textContent), a: respuestaHoja_(ci.querySelector('.toggle')) }));
+        continue;
+      }
+      if (c.contains('check-item')) { items.push({ t: 'qa', q: limpio_((el.querySelector('p') || el).textContent), a: respuestaHoja_(el.querySelector('.toggle')) }); continue; }
+      if (c.contains('yn-row')) { items.push({ t: 'qa', q: limpio_((el.querySelector('.yn-label') || el).textContent), a: respuestaHoja_(el.querySelector('.yn-opts')) }); continue; }
+      if (c.contains('close-q')) {
+        const ch = el.querySelector('input:checked');
+        items.push({ t: 'qa', q: limpio_((el.querySelector('p') || el).textContent), a: ch ? limpio_(ch.parentElement.textContent) || ch.value : '' });
+        continue;
+      }
+      if (c.contains('exec-card')) {
+        const campos = [...el.querySelectorAll('.exec-fields input, .exec-fields select')];
+        items.push({ t: 'ejec',
+          cab: campos.map((i) => limpio_((i.placeholder || (i.tagName === 'SELECT' && i.options[0] ? i.options[0].textContent : '')).replace(/\(escribe para buscar\)/i, ''))),
+          vals: campos.map(valorHoja_), firma: firmaHoja_(el.querySelector('canvas')) });
+        continue;
+      }
+      if (c.contains('sig-block')) {
+        const vals = [...el.querySelectorAll('input:not([type=hidden]), select')].map(valorHoja_).filter(Boolean);
+        items.push({ t: 'firma', rol: limpio_((el.querySelector('h5') || {}).textContent), nombre: vals.join(' · '), firma: firmaHoja_(el.querySelector('canvas')) });
+        continue;
+      }
+      if (c.contains('sig-pad-wrap')) {
+        items.push({ t: 'firma', rol: limpio_((el.querySelector('label') || {}).textContent) || 'Firma', nombre: '', firma: firmaHoja_(el.querySelector('canvas')) });
+        continue;
+      }
+      if (c.contains('calc-row')) {
+        const sp = el.querySelectorAll('span'), inp = el.querySelector('input');
+        items.push({ t: 'campo', l: limpio_(sp[0] ? sp[0].textContent : ''), v: inp ? valorHoja_(inp) : limpio_(sp[sp.length - 1].textContent) });
+        continue;
+      }
+      if (el.tagName === 'TABLE') { items.push({ t: 'tabla', html: tablaHoja_(el) }); continue; }
+      // Bitácora de lecturas de gases (confinados): una fila por lectura.
+      if (c.contains('gasLog')) {
+        const lecturas = [...el.children].filter((x) => x.querySelector('[data-del-lectura]'));
+        if (!lecturas.length) { items.push({ t: 'nota', x: 'Lecturas registradas: ninguna.' }); continue; }
+        items.push({ t: 'sub', x: 'Lecturas registradas (' + lecturas.length + ')' });
+        lecturas.forEach((lec) => {
+          const partes = [...lec.children];
+          const cab = partes[0] ? limpio_(partes[0].textContent.replace(/Eliminar\s*$/, '')) : '';
+          // En blanco y negro 🔴 y 🟢 se ven iguales: se escribe el estado.
+          const vals = partes[1] ? [...partes[1].querySelectorAll('span')].map((x) => {
+            const t = limpio_(x.textContent);
+            if (t.indexOf('🔴') === 0) return '⚠ ' + limpio_(t.slice(2)) + ' FUERA DE RANGO';
+            if (t.indexOf('🟢') === 0) return limpio_(t.slice(2)) + ' ✓';
+            return t;
+          }).join('   ') : '';
+          items.push({ t: 'campo', l: cab, v: vals, largo: true });
+        });
+        continue;
+      }
+      if (c.contains('gasAlertBanner')) { items.push({ t: 'nota', x: limpio_(el.textContent), fuerte: true }); continue; }
+      if (c.contains('section-note') || c.contains('alert-result') || el.tagName === 'P') {
+        const x = limpio_(el.textContent);
+        if (x) items.push({ t: 'nota', x, fuerte: c.contains('alert-result') });
+        continue;
+      }
+      if (c.contains('field')) { campoHoja_(el, items); continue; }
+      if (c.contains('radio-row')) {
+        const ch = el.querySelector('input:checked');
+        const labPropio = [...el.children].find((x) => x.tagName === 'LABEL' && !x.querySelector('input'));
+        const extra = [...el.querySelectorAll('select')].map(valorHoja_).filter(Boolean);
+        const v = [ch ? limpio_(ch.parentElement.textContent) || ch.value : ''].concat(extra).filter(Boolean).join(' · ');
+        items.push({ t: 'campo', l: labPropio ? limpio_(labPropio.textContent) : etiquetaPrevia_(el), v });
+        continue;
+      }
+      // Grupo de casillas (EPP de confinados, tensiones de eléctrico…): se
+      // imprimen todas las opciones marcadas ☒ o no ☐, como en el ATS.
+      const casillas = [...el.children].filter((x) => x.tagName === 'LABEL' && x.querySelector('input[type=checkbox]'));
+      if (casillas.length >= 2) {
+        const v = casillas.map((x) => (x.querySelector('input').checked ? '☒ ' : '☐ ') + limpio_(x.textContent)).join('   ');
+        const l = etiquetaPrevia_(el);
+        items.push({ t: 'campo', l, v, largo: true });
+        continue;
+      }
+      if (el.tagName === 'B' || el.tagName === 'STRONG' || el.tagName === 'H4' || el.tagName === 'H5') { items.push({ t: 'sub', x: limpio_(el.textContent) }); continue; }
+      if (el.tagName === 'LABEL' && !el.querySelector('input')) continue; // se usa como etiqueta del bloque siguiente
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+        if (el.type === 'radio' || el.type === 'checkbox') continue;
+        const v = valorHoja_(el);
+        if (el.type === 'hidden' && !v) continue;
+        items.push({ t: 'campo', l: etiquetaPrevia_(el) || limpio_(el.placeholder), v, largo: el.tagName === 'TEXTAREA' || v.length > 70 });
+        continue;
+      }
+      recolectarHoja_(el, items);
+    }
+  }
+  function bloquesHoja_(items) {
+    // Agrupa elementos seguidos del mismo tipo (los subtítulos van con las preguntas).
+    const out = [];
+    items.forEach((it) => {
+      const tipo = it.t === 'sub' ? 'qa' : it.t;
+      const ult = out[out.length - 1];
+      if (ult && ult.tipo === tipo && tipo !== 'tabla') ult.items.push(it);
+      else out.push({ tipo, items: [it] });
+    });
+    return out;
+  }
+  function htmlBloque_(b) {
+    const e = esc;
+    if (b.tipo === 'campo') {
+      let h = '<table class="hp-campos"><colgroup><col style="width:13%"><col style="width:20.33%"><col style="width:13%"><col style="width:20.33%"><col style="width:13%"><col style="width:20.34%"></colgroup>';
+      let fila = [];
+      const cerrarFila = () => {
+        if (!fila.length) return;
+        while (fila.length < 3) fila.push('<td class="l"></td><td></td>');
+        h += '<tr>' + fila.join('') + '</tr>'; fila = [];
+      };
+      b.items.forEach((it) => {
+        if (it.largo) {
+          cerrarFila();
+          h += '<tr>' + (it.l ? '<td class="l">' + e(it.l) + '</td><td colspan="5">' + e(it.v) + '</td>' : '<td colspan="6">' + e(it.v) + '</td>') + '</tr>';
+        } else {
+          fila.push('<td class="l">' + e(it.l) + '</td><td>' + e(it.v) + '</td>');
+          if (fila.length === 3) cerrarFila();
+        }
+      });
+      cerrarFila();
+      return h + '</table>';
+    }
+    if (b.tipo === 'qa') {
+      let h = '<table class="hp-qa"><colgroup><col style="width:42%"><col style="width:8%"><col style="width:42%"><col style="width:8%"></colgroup>';
+      let par = [];
+      const cerrar = () => {
+        if (!par.length) return;
+        if (par.length === 1) par.push('<td></td><td></td>');
+        h += '<tr>' + par.join('') + '</tr>'; par = [];
+      };
+      b.items.forEach((it) => {
+        if (it.t === 'sub') { cerrar(); h += '<tr><td colspan="4" class="sub">' + e(it.x) + '</td></tr>'; return; }
+        par.push('<td>' + e(it.q) + '</td><td class="a">' + e(it.a) + '</td>');
+        if (par.length === 2) cerrar();
+      });
+      cerrar();
+      return h + '</table>';
+    }
+    if (b.tipo === 'firma') {
+      let h = '<table class="hp-firmas"><colgroup><col><col><col></colgroup>';
+      for (let i = 0; i < b.items.length; i += 3) {
+        h += '<tr>' + [0, 1, 2].map((k) => {
+          const it = b.items[i + k];
+          if (!it) return '<td></td>';
+          return '<td><div class="rol">' + e(it.rol) + '</div><div class="img">' + (it.firma ? '<img src="' + it.firma + '" alt="firma">' : '') + '</div><div class="nom">' + e(it.nombre) + '</div></td>';
+        }).join('') + '</tr>';
+      }
+      return h + '</table>';
+    }
+    if (b.tipo === 'ejec') {
+      const cab = b.items[0].cab;
+      let h = '<table class="hp-ejec"><thead><tr><th style="width:4%">N°</th>' + cab.map((x) => '<th>' + e(x) + '</th>').join('') + '<th style="width:20%">Firma</th></tr></thead><tbody>';
+      b.items.forEach((it, i) => {
+        h += '<tr><td class="a">' + (i + 1) + '</td>' + it.vals.map((v) => '<td>' + e(v) + '</td>').join('') + '<td class="firma">' + (it.firma ? '<img src="' + it.firma + '" alt="firma">' : '') + '</td></tr>';
+      });
+      return h + '</tbody></table>';
+    }
+    if (b.tipo === 'nota') return '<table><tr><td class="nota">' + b.items.map((it) => (it.fuerte ? '<b>' + e(it.x) + '</b>' : e(it.x))).join('<br>') + '</td></tr></table>';
+    if (b.tipo === 'tabla') return b.items.map((it) => it.html).join('');
+    return '';
+  }
+  function armarHojaImpresion() {
+    const app = $('app');
+    const hdr = app.querySelector('.hdr');
+    const titulo = limpio_((hdr.querySelector('h1') || {}).textContent);
+    const meta = hdr.querySelector('.meta') ? hdr.querySelector('.meta').innerText.split(/\n| · /).map(limpio_).filter(Boolean) : [];
+    const estado = limpio_(($('statusBannerText') || {}).textContent);
+    const qrImg = $('qrPermiso') && $('qrPermiso').querySelector('img');
+    const secciones = [...app.querySelectorAll('.section')].filter(visibleHoja_).map((sec) => {
+      const t = sec.querySelector('.section-title');
+      const items = [];
+      recolectarHoja_(sec, items);
+      return { titulo: t ? textoPropio_(t) : '', items };
+    });
+    let h = '<div class="hp">' +
+      '<table class="hp-cab"><colgroup><col style="width:14%"><col><col style="width:22%">' + (qrImg ? '<col style="width:12%">' : '') + '</colgroup><tr>' +
+      '<td class="hp-logo"><img src="' + (logoHoja_ || 'logo-indimon.png') + '" alt="INDIMON"></td>' +
+      '<td class="hp-tit">' + esc(titulo) + '<div>' + (permitCode ? 'Registro ' + esc(permitCode) + ' · ' : '') + esc(estado) + '</div></td>' +
+      '<td class="hp-meta">' + meta.map(esc).join('<br>') + '<br><span>Respuestas: C = cumple · SÍ / NO · NA = no aplica</span></td>' +
+      (qrImg ? '<td class="hp-qr"><img src="' + qrImg.src + '" alt="QR"><div>Escanea para abrir este permiso</div></td>' : '') +
+      '</tr></table>';
+    secciones.forEach((sec) => {
+      h += '<div class="hp-sec"><table><tr><td class="hp-st">' + esc(sec.titulo) + '</td></tr></table>';
+      if (!sec.items.length) h += '<table><tr><td class="nota">' + (/cierre/i.test(sec.titulo) ? 'Pendiente de cierre.' : '—') + '</td></tr></table>';
+      bloquesHoja_(sec.items).forEach((b) => { h += htmlBloque_(b); });
+      h += '</div>';
+    });
+    h += '<div class="hp-pie">Impreso el ' + esc(new Date().toLocaleString('es-CO')) + ' desde el Portal SSTA · INDIMON</div></div>';
+    let cont = $('hojaPermiso');
+    if (!cont) { cont = document.createElement('div'); cont.id = 'hojaPermiso'; document.body.appendChild(cont); }
+    cont.innerHTML = h;
+    // Carta horizontal, como el ATS. Se inyecta aquí (y no en common.css) para
+    // no cambiar la orientación de las otras páginas que usan common.css.
+    if (!$('paginaHojaPermiso')) {
+      const st = document.createElement('style');
+      st.id = 'paginaHojaPermiso';
+      st.textContent = '@media print{@page{size:letter landscape;margin:8mm;}}';
+      document.head.appendChild(st);
+    }
+    document.body.classList.add('hp-lista');
+  }
+  let hojaArmadaEn_ = 0;
+  function prepararImpresion() {
+    hojaArmadaEn_ = Date.now();
+    try { armarHojaImpresion(); }
+    catch (e) {
+      // Si algo del armado falla, se imprime el formulario como antes: nunca
+      // debe quedar alguien sin poder imprimir el permiso.
+      document.body.classList.remove('hp-lista');
+      console.error('Hoja compacta:', e);
+    }
+  }
+  // Las imágenes recién puestas (logo, firmas, QR) deben alcanzar a cargar
+  // antes de abrir el diálogo de impresión; si no, salen en blanco.
+  function imagenesListas_(cont, maxMs) {
+    const imgs = [...cont.querySelectorAll('img')].filter((i) => !i.complete);
+    if (!imgs.length) return Promise.resolve();
+    return Promise.race([
+      Promise.all(imgs.map((i) => new Promise((r) => { i.addEventListener('load', r, { once: true }); i.addEventListener('error', r, { once: true }); }))),
+      new Promise((r) => setTimeout(r, maxMs || 2000))
+    ]);
+  }
+  async function imprimirHoja() {
+    prepararImpresion();
+    const cont = $('hojaPermiso');
+    if (cont) await imagenesListas_(cont, 2000);
+    window.print();
+  }
+  // El logo se guarda como dataURL: así sale siempre, incluso al imprimir
+  // desde el menú del navegador (no hay tiempo de esperar a que cargue).
+  let logoHoja_ = null;
+  try {
+    fetch('logo-indimon.png').then((r) => (r.ok ? r.blob() : null)).then((b) => {
+      if (!b) return;
+      const fr = new FileReader();
+      fr.onload = () => { logoHoja_ = fr.result; };
+      fr.readAsDataURL(b);
+    }).catch(() => {});
+  } catch (e) { /* sin logo: la hoja sale igual */ }
+  // Imprimir desde el menú del navegador (o compartir → imprimir en el
+  // celular) también usa la hoja compacta. Si el botón acaba de armarla, no se
+  // vuelve a armar: las imágenes nuevas no alcanzarían a cargar.
+  window.addEventListener('beforeprint', () => {
+    if (Date.now() - hojaArmadaEn_ < 5000) return;
+    if ($('app') && $('app').offsetParent !== null) prepararImpresion();
+  });
 
   /* ================= INIT ================= */
   function init(userCfg) {
@@ -1936,6 +2264,7 @@ const PermisoCore = (function () {
     getPermitCode: () => permitCode,
     isLocked: () => locked,
     getState: (key) => states[key],
+    prepararImpresion,
     // Expuestos para los hooks extraOnInitRender/extraCollectOpenData/etc. de
     // tipos con subsistemas propios (ej. gases/EPP en confinados).
     setupPad,

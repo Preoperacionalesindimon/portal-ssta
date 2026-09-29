@@ -742,3 +742,46 @@ canvas.pad-completa{
   .fc-pie{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
   .fc-pie button{min-height:40px;}
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   HOJA COMPACTA DE LOS PERMISOS (impresión / PDF)
+   La arma permiso-core.js al imprimir: tablas como las del ATS, en carta
+   horizontal. En pantalla no se ve; al imprimir se ve SOLO ella.
+   ════════════════════════════════════════════════════════════════════ */
+#hojaPermiso{display:none;}
+@media print{
+  body.hp-lista > *:not(#hojaPermiso){display:none !important;}
+  body.hp-lista{padding:0 !important;margin:0 !important;background:#fff !important;}
+  body.hp-lista #hojaPermiso{display:block !important;}
+}
+.hp{font-family:Arial, Helvetica, sans-serif;font-size:8px;line-height:1.25;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.hp table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:-1px;}
+.hp td,.hp th{border:1px solid #000;padding:2px 4px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;}
+.hp tr{break-inside:avoid;page-break-inside:avoid;}
+.hp th{background:#d9d9d9;font-weight:700;text-align:left;text-transform:uppercase;font-size:7.5px;}
+.hp .l{background:#e8e8e8;font-weight:700;font-size:7.5px;}
+.hp .a{text-align:center;font-weight:700;vertical-align:middle;}
+.hp .sub{background:#f0f0f0;font-weight:700;}
+.hp .nota{font-size:7.5px;color:#222;}
+.hp .hp-sec{margin-top:4px;}
+.hp .hp-st{background:#bfbfbf;font-weight:700;text-transform:uppercase;font-size:8.5px;}
+.hp-cab td{vertical-align:middle;}
+.hp-cab .hp-logo img{max-width:100%;max-height:42px;display:block;margin:0 auto;}
+.hp-cab .hp-tit{font-size:12px;font-weight:700;text-align:center;}
+.hp-cab .hp-tit div{font-size:8.5px;font-weight:400;margin-top:3px;}
+.hp-cab .hp-meta{font-size:8px;}
+.hp-cab .hp-meta span{font-size:7px;color:#444;}
+.hp-cab .hp-qr{text-align:center;padding:3px 2px;}
+.hp-cab .hp-qr img{width:78px;height:78px;max-width:100%;display:block;margin:0 auto;image-rendering:pixelated;}
+.hp-cab .hp-qr div{font-size:6.5px;}
+.hp-firmas td{height:58px;}
+.hp-firmas .rol{font-weight:700;font-size:7.5px;text-transform:uppercase;}
+.hp-firmas .img{height:34px;display:flex;align-items:center;justify-content:center;}
+.hp-firmas .img img,.hp-ejec .firma img{max-height:34px;max-width:100%;}
+.hp-firmas .nom{border-top:1px solid #777;font-size:7.5px;padding-top:1px;}
+.hp-ejec td{height:30px;vertical-align:middle;}
+.hp-ejec .firma{text-align:center;padding:1px;}
+.hp-ejec .firma img{max-height:26px;}
+.hp .hp-tabla th,.hp .hp-tabla td{font-size:7.5px;}
+.hp-pie{margin-top:4px;font-size:6.5px;color:#555;text-align:right;}
