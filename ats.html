@@ -242,8 +242,12 @@
   .hoja .sub{background:#bfbfbf;text-align:center;font-weight:700;text-transform:uppercase;}
   .hoja .firma img{max-height:38px;max-width:100%;display:block;}
   /* ~28 mm impreso: más pequeño, la cámara del celular no lo lee bien en papel. */
-  .hoja .qr-hoja img{width:115px;height:115px;display:block;margin:0 auto;image-rendering:pixelated;}
-  .hoja .qr-hoja div{font-size:7px;line-height:1.2;margin-top:2px;}
+  /* La columna del QR es más ancha que la imagen (antes 12% ≈ 98 px útiles
+     para una imagen de 115 px: se salía por la derecha y quedaba descentrado). */
+  .hoja .qr-hoja{padding:4px 2px;text-align:center;vertical-align:middle;}
+  .hoja .qr-hoja img{width:115px;height:115px;max-width:100%;object-fit:contain;display:block;margin:0 auto;image-rendering:pixelated;}
+  .hoja .qr-hoja div{font-size:7px;line-height:1.2;margin-top:2px;text-align:center;}
+  .otro-libre{margin-top:12px;}
   .hoja .firma-fin img{max-height:55px;}
   .hoja .paso b{text-transform:uppercase;}
   .hoja tbody tr{break-inside:avoid;}
@@ -370,6 +374,7 @@
       <div class="section-body">
         <div class="sino" id="fRequiere"></div>
         <div class="grupo-fichas" id="bloquePermisos" style="margin-top:12px;"><span class="etq">¿Cuál?</span><div class="fichas" id="fPermisos"></div></div>
+        <input type="text" class="inp libre" id="permisoOtro" placeholder="✏️ ¿Cuál otro permiso? Escríbelo aquí…" hidden>
         <div id="alertaPermisos"></div>
       </div>
     </div>
@@ -402,7 +407,8 @@
       <div class="section-body">
         <div id="sugHerr"></div>
         <div id="fHerr"></div>
-        <input type="text" class="inp libre" id="herrOtro" placeholder="Otras herramientas o equipos…">
+        <div class="grupo-fichas otro-libre"><span class="etq">✏️ Otras herramientas o equipos (escríbelas)</span></div>
+        <textarea class="inp area" id="herrOtro" placeholder="Ej: Taladro percutor, tecle de cadena 1 t, andamio certificado…"></textarea>
       </div>
     </div>
 
@@ -514,7 +520,7 @@ function nuevoAts() {
     sucio: false,    // hay cambios que no se han subido
     cab: {
       centro: [], centroOtro: '', desde: hoyISO(), hasta: '', horaDesde: '07:00', horaHasta: '17:00',
-      area: '', trabajo: '', requiere: '', permisos: [],
+      area: '', trabajo: '', requiere: '', permisos: [], permisoOtro: '',
       epp: EPP.filter((e) => e.base).map((e) => e.id), eppDescartados: [], eppOtro: '',
       herr: [], herrOtro: '',
       emergencia: EMERGENCIA.filter((e) => e.base).map((e) => e.id), emergDescartados: [], emergOtro: '',
@@ -658,6 +664,9 @@ function fichas(cont, opciones, seleccion, alCambiar, opts) {
 }
 
 /* ================= ENCABEZADO ================= */
+/* "Otro" va solo en la pantalla y en la hoja: no está en el catálogo
+   porque no tiene peligros asociados (no debe disparar la alerta de permisos). */
+const PERMISOS_UI = PERMISOS.concat([{ id: 'otro', nombre: 'Otro (escribir)' }]);
 function renderCab() {
   const c = ats.cab;
   fichas($('fCentro'), CENTROS_COSTO.map((x) => ({ id: x, nombre: x })), c.centro, () => { renderCab(); guardar(); });
@@ -667,7 +676,11 @@ function renderCab() {
     renderCab(); renderAlertaPermisos(); guardar();
   }, { unica: true });
   $('bloquePermisos').style.display = c.requiere === 'SI' ? 'block' : 'none';
-  fichas($('fPermisos'), PERMISOS, c.permisos, () => { renderCab(); renderAlertaPermisos(); guardar(); });
+  fichas($('fPermisos'), PERMISOS_UI, c.permisos, (id, on) => {
+    renderCab(); renderAlertaPermisos(); guardar();
+    if (id === 'otro' && on) $('permisoOtro').focus();
+  });
+  $('permisoOtro').hidden = !(c.requiere === 'SI' && c.permisos.includes('otro'));
   renderEpp(); renderHerr(); renderEmerg(); renderAmb();
 }
 function enlazarCampo(id, ruta) {
@@ -677,11 +690,11 @@ function enlazarCampo(id, ruta) {
 }
 function cargarCamposCab() {
   [['centroOtro', 'centroOtro'], ['fDesde', 'desde'], ['fHasta', 'hasta'], ['hDesde', 'horaDesde'], ['hHasta', 'horaHasta'],
-   ['fArea', 'area'], ['fTrabajo', 'trabajo'], ['eppOtro', 'eppOtro'], ['herrOtro', 'herrOtro'], ['emergOtro', 'emergOtro'], ['ambOtro', 'ambOtro']]
+   ['fArea', 'area'], ['fTrabajo', 'trabajo'], ['eppOtro', 'eppOtro'], ['herrOtro', 'herrOtro'], ['permisoOtro', 'permisoOtro'], ['emergOtro', 'emergOtro'], ['ambOtro', 'ambOtro']]
     .forEach(([id, r]) => { $(id).value = ats.cab[r] || ''; });
 }
 [['centroOtro', 'centroOtro'], ['fDesde', 'desde'], ['fHasta', 'hasta'], ['hDesde', 'horaDesde'], ['hHasta', 'horaHasta'],
- ['fArea', 'area'], ['fTrabajo', 'trabajo'], ['eppOtro', 'eppOtro'], ['herrOtro', 'herrOtro'], ['emergOtro', 'emergOtro'], ['ambOtro', 'ambOtro']]
+ ['fArea', 'area'], ['fTrabajo', 'trabajo'], ['eppOtro', 'eppOtro'], ['herrOtro', 'herrOtro'], ['permisoOtro', 'permisoOtro'], ['emergOtro', 'emergOtro'], ['ambOtro', 'ambOtro']]
   .forEach(([id, r]) => $(id).addEventListener('input', () => { ats.cab[r] = $(id).value; guardar(); }));
 
 /* Peligros de todas las tareas guardadas (para sugerir EPP, emergencia y permisos). */
@@ -753,7 +766,8 @@ function renderHerr() {
   bloqueSugeridos($('sugHerr'), 'Sugeridas por las tareas', falt,
     (id) => { c.herr.push(id); renderHerr(); guardar(); },
     () => { falt.forEach((x) => c.herr.push(x.id)); renderHerr(); guardar(); });
-  $('cuentaHerr').textContent = c.herr.length ? '(' + c.herr.length + ')' : '';
+  const nHerr = c.herr.length + (c.herrOtro && c.herrOtro.trim() ? 1 : 0);
+  $('cuentaHerr').textContent = nHerr ? '(' + nHerr + ')' : '';
 }
 function renderEmerg() {
   const c = ats.cab;
@@ -1439,7 +1453,8 @@ function armarHoja() {
   const fecha = fechaCO(c.desde) + (c.hasta ? ' al ' + fechaCO(c.hasta) : '');
   const horario = (c.horaDesde || '') + ' HASTA ' + (c.horaHasta || '');
   const permisoTxt = 'SI ' + marca(c.requiere === 'SI') + '    NO ' + marca(c.requiere === 'NO') + '    CUÁL?  ' +
-    PERMISOS.map((p) => marca(c.permisos.includes(p.id)) + ' ' + p.nombre.toUpperCase()).join('   ');
+    PERMISOS.map((p) => marca(c.permisos.includes(p.id)) + ' ' + p.nombre.toUpperCase()).join('   ') +
+    '   ' + marca(c.permisos.includes('otro')) + ' OTRO: ' + (c.permisos.includes('otro') && c.permisoOtro && c.permisoOtro.trim() ? c.permisoOtro.trim().toUpperCase() : '________');
   const img = (src) => (src ? '<img src="' + src + '" alt="firma">' : '');
   const filasPart = ats.participantes.map((p) => '<tr><td>' + esc(p.nombres) +
     (p.tardio ? '\n<span style="font-size:8px;">(ingresó ' + esc(fechaHora(p.ingreso)) + (p.socializado ? ' · ATS socializado' : ' · SIN constancia de socialización') + ')</span>' : '') + '</td><td>' + esc(p.apellidos) + '</td><td>' + esc(p.cedula) + '</td><td>' + esc(p.cargo) + '</td><td class="firma">' + img(p.firma) + '</td></tr>').join('');
@@ -1453,7 +1468,7 @@ function armarHoja() {
     '<td>' + esc(t.responsables.join('.\n') + (t.responsables.length ? '.' : '')) + '</td></tr>').join('');
   const F = ats.firmas;
   $('hoja').innerHTML =
-    '<table class="cod"><colgroup><col style="width:18%"><col style="width:' + (qr ? 45 : 57) + '%"><col style="width:25%">' + (qr ? '<col style="width:12%">' : '') + '</colgroup>' +
+    '<table class="cod"><colgroup><col style="width:18%"><col style="width:' + (qr ? 41 : 57) + '%"><col style="width:25%">' + (qr ? '<col style="width:16%">' : '') + '</colgroup>' +
     '<tr><td rowspan="4" class="logo c"><img src="logo-indimon.png" alt="INDIMON"></td><td rowspan="4" class="titulo">' + esc(ATS_FORMATO.titulo) +
     (ats.code ? '<div style="font-size:9px;font-weight:400;margin-top:4px;">Registro ' + esc(ats.code) + ' · versión ' + (ats.version || 1) + (ats.estado === 'CERRADO' ? ' · CERRADO' : '') + (ats.sucio && ats.estado !== 'CERRADO' ? ' (con cambios sin subir)' : '') + '</div>' : '') + '</td><td>' + esc(ATS_FORMATO.pagina) + '</td>' +
     (qr ? '<td rowspan="4" class="qr-hoja c"><img src="' + qr + '" alt="QR del ATS"><div>' + (ats.estado === 'CERRADO' ? 'Escanea para ver este ATS' : 'Escanea para ver este ATS o agregar personal') + '</div></td>' : '') + '</tr>' +
@@ -1500,6 +1515,7 @@ function pendientes() {
   if (!(c.area || '').trim()) out.push('Área');
   if (!(c.trabajo || '').trim()) out.push('Trabajo a realizar');
   if (!c.requiere) out.push('Si requiere o no permiso de trabajo');
+  if (c.requiere === 'SI' && (c.permisos || []).includes('otro') && !(c.permisoOtro || '').trim()) out.push('Escribir cuál es el otro permiso de trabajo');
   if (!ats.tareas.length) out.push('No hay tareas');
   ats.tareas.forEach((t, i) => {
     const sin = t.peligros.filter((p) => !p.ctrls.some((x) => x.on) && !(p.extra || []).length);
@@ -1540,6 +1556,23 @@ window.addEventListener('beforeprint', () => {
 
 /* ================= SERVIDOR (backends/backend-ats.gs) ================= */
 function urlAts() { const b = PORTAL_CONFIG.BACKENDS.ats; return b && b.url && b.url.indexOf('http') === 0 ? b.url : ''; }
+/* Por qué falló una consulta al servidor, en palabras claras. "Load failed"
+   (iPhone) o "Failed to fetch" (Android) con señal casi nunca es la señal:
+   es el Apps Script respondiendo una página de error en vez de datos (código
+   pegado con texto de más o incompleto, o implementación sin acceso para
+   "Cualquier persona"). Antes se mostraba el mensaje del navegador tal cual. */
+function motivoFallaSrv(e) {
+  if (!navigator.onLine) return 'Sin señal: inténtalo cuando haya conexión.';
+  const m = String((e && e.message) || '');
+  if (e instanceof SyntaxError || /JSON|Unexpected token/i.test(m)) {
+    return 'El servidor del ATS respondió una página de error en vez de datos. Revisa el Apps Script del ATS (Ejecuciones) y vuelve a implementarlo.';
+  }
+  if (e instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(m)) {
+    return 'El servidor del ATS no respondió bien (' + (m || 'sin detalle') + '). Con señal, casi siempre es un error dentro del Apps Script del ATS: ' +
+      'abre la URL del servidor (config.js → ats) en el navegador para ver el error exacto. También puede ser que la implementación no tenga acceso para "Cualquier persona".';
+  }
+  return 'No se pudo consultar: ' + (m || 'error sin detalle');
+}
 function generarCodigo() {
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
   return 'ATS-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + String(Math.floor(Math.random() * 900000) + 100000);
@@ -1661,7 +1694,7 @@ async function cargarDesdeServidor(code, sinPreguntar) {
     irAlEditor();
     toast(code + ' abierto (versión ' + ats.version + ')' + (ats.estado === 'CERRADO' ? ' · cerrado' : '') + '.');
   } catch (e) {
-    alert('Sin señal: no se pudo abrir ' + code + '. Inténtalo de nuevo cuando haya conexión.');
+    alert('No se pudo abrir ' + code + '. ' + motivoFallaSrv(e));
   }
 }
 $('btnGuardarServidor').addEventListener('click', () => guardarEnServidor(false));
@@ -1724,7 +1757,7 @@ async function traerReferencia(code) {
   try {
     const res = await fetchWithRetry(urlAts() + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     r = await res.json();
-  } catch (e) { alert('Sin señal: no se pudo abrir ' + code + '. Inténtalo cuando haya conexión.'); return null; }
+  } catch (e) { alert('No se pudo abrir ' + code + '. ' + motivoFallaSrv(e)); return null; }
   if (!r.ok) { alert('No se pudo abrir ' + code + ': ' + (r.error || '')); return null; }
   const ref = Object.assign(nuevoAts(), r.ats, { code: r.code, version: Number(r.version) || 1, sucio: false, estado: r.estado || 'ABIERTO' });
   ref.cab = Object.assign(nuevoAts().cab, r.ats.cab);
@@ -2111,7 +2144,7 @@ async function pintarLista(cont, filtro, botones, vacio, conBuscador) {
   cont.innerHTML = '<p class="ayuda">Cargando…</p>';
   let rows;
   try { rows = await listaServidor(); } catch (e) {
-    cont.innerHTML = '<p class="ayuda">' + (navigator.onLine ? 'No se pudo consultar: ' + esc(e.message) : 'Sin señal: no se pudo consultar la lista.') + '</p>';
+    cont.innerHTML = '<p class="ayuda">' + esc(motivoFallaSrv(e)) + '</p>';
     return;
   }
   const todos = rows.filter(filtro);
@@ -2213,7 +2246,7 @@ async function pintarListaServidor() {
     cont.querySelectorAll('[data-personal]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoAgregar(b.dataset.personal, 'editor'); }));
     cont.querySelectorAll('[data-cerrarats]').forEach((b) => b.addEventListener('click', () => { cerrarPanel(); entrarModoCerrar(b.dataset.cerrarats, 'editor'); }));
   } catch (e) {
-    if (document.body.contains(cont)) cont.innerHTML = '<p class="ayuda">Sin señal: no se pudo consultar la lista.</p>';
+    if (document.body.contains(cont)) cont.innerHTML = '<p class="ayuda">' + esc(motivoFallaSrv(e)) + '</p>';
   }
 }
 
