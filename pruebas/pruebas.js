@@ -734,6 +734,143 @@ grupo('Permisos: hoja compacta para imprimir / PDF (como el ATS)', () => {
   ok('lo oculto en pantalla no sale en la hoja', /function visibleHoja_[\s\S]{0,80}?getClientRects\(\)\.length > 0/.test(core));
 });
 
+grupo('Clave del portal (los datos del personal ya no quedan abiertos con el token público)', () => {
+  const vm = require('vm');
+  const backs = { 'ATS': 'backends/backend-ats.gs', 'EPP': 'backends/backend-epp.gs', 'Personal': 'backends/backend-personal-autorizado.gs', 'Permisos (core)': 'backends/permisos/core.gs' };
+  Object.entries(backs).forEach(([n, f]) => {
+    const t = leer(f);
+    ok(n + ': en GitHub la clave queda sin escribir (nunca la real)', /const CLAVE_PORTAL = 'ESCRIBE_AQUI_LA_CLAVE_DEL_PORTAL';/.test(t));
+    ok(n + ': el rechazo lleva codigoError CLAVE', (t.match(/codigoError: 'CLAVE'/g) || []).length >= 2);
+    // Se ejecuta la validación real con distintas configuraciones.
+    const probar = (propiedad, constante) => {
+      let src = (f.includes('permisos/') ? leer('backends/permisos/config-caliente.gs') + '\n' : '') + t;
+      if (constante) src = src.replace("'ESCRIBE_AQUI_LA_CLAVE_DEL_PORTAL'", JSON.stringify(constante));
+      const ctx = { PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k === 'CLAVE_PORTAL' ? propiedad : null) }) }, console };
+      vm.createContext(ctx);
+      vm.runInContext(src + ';this.chk=checkToken_;this.tok=API_TOKEN;', ctx);
+      return ctx;
+    };
+    const sin = probar(null, null);
+    ok(n + ': sin clave configurada acepta el token de siempre (nada se cae al actualizar)', sin.chk(sin.tok) === true && sin.chk('otra') === false);
+    const conConst = probar(null, 'Obra-Segura-2026!');
+    ok(n + ': con clave escrita, el token público deja de servir', conConst.chk(conConst.tok) === false && conConst.chk('Obra-Segura-2026!') === true);
+    const conProp = probar('Desde-Propiedades-1', 'Obra-Segura-2026!');
+    ok(n + ': la clave en Propiedades del script tiene prioridad', conProp.chk('Desde-Propiedades-1') === true && conProp.chk('Obra-Segura-2026!') === false);
+  });
+  const c = leer('common.js');
+  ok('cada equipo guarda su clave y la usa en todas las llamadas', /const ClavePortal = \{/.test(c) && /PORTAL_CONFIG\.API_TOKEN = this\.get\(\) \|\| PORTAL_CONFIG\._tokenOriginal/.test(c) && /ClavePortal\.aplicar\(\);/.test(c));
+  ok('si el servidor rechaza la clave, se pide en cualquier página', /res\.clone\(\)\.json\(\)\.then\(\(j\) => \{ if \(ClavePortal\.esErrorDeClave\(j\)\) ClavePortal\.pedir\(\); \}\)/.test(c));
+  ok('la cola reenvía con la clave vigente', /item\.body\.token = PORTAL_CONFIG\.API_TOKEN/.test(c));
+  ok('un rechazo de clave NO saca el pendiente de la cola (antes se perdía a los 5 intentos)', /else if \(ClavePortal\.esErrorDeClave\(json\)\) \{[\s\S]{0,300}?ClavePortal\.pedir\(\);\s*\} else \{/.test(c));
+  ok('en un formulario, guardar la clave no recarga la página (no se pierde lo escrito)', /hayFormulario = document\.querySelector\('#app, #atsApp, form'\)/.test(c));
+  ok('el inicio tiene el botón de la clave', leer('index.html').includes('id="btnClave"'));
+});
+
+grupo('ATS vencidos y ATS en el tablero', () => {
+  const vm = require('vm');
+  const c = leer('common.js');
+  const fn = /function atsVence[\s\S]*?\n\}\nfunction atsVencido[\s\S]*?\n\}/.exec(c)[0];
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(fn + ';this.v=atsVencido;', ctx);
+  ok('un ATS abierto con fecha hasta de ayer está vencido', ctx.v({ estado: 'ABIERTO', fechaHasta: '2020-01-01' }) === true);
+  ok('un ATS cerrado nunca sale vencido', ctx.v({ estado: 'CERRADO', fechaHasta: '2020-01-01' }) === false);
+  ok('vence al final del día (con la fecha en formato de la hoja)', ctx.v({ estado: 'ABIERTO', fechaHasta: '2999-01-01T05:00:00.000Z' }) === false && ctx.v({ estado: 'ABIERTO', fechaDesde: '2020-05-05' }) === true);
+  const d = leer('dashboard.html');
+  ok('el tablero consulta los ATS en paralelo con los permisos', /const pAts = cargarAts\(\);/.test(d) && /rAts\.abiertos\.forEach/.test(d));
+  ok('si el ATS no responde, el tablero lo dice (no afirma "no hay abiertos")', /out\.fallo = \{ nombre:'ATS'/.test(d));
+  ok('tocar un ATS en el tablero lo abre para revisar', /ats\.html\?code=' \+ encodeURIComponent\(it\.code\) \+ '&ver=1'/.test(d) && /qs\.get\('ver'\) === '1'\) revisarAts/.test(leer('ats.html')));
+  ok('el inicio muestra ATS abiertos y vencidos', /function contarAts/.test(leer('index.html')) && /abiertos\.filter\(atsVencido\)/.test(leer('index.html')));
+  ok('las listas del ATS marcan VENCIDO', /atsVencido\(x\) \? '<span class="etiqueta-estado vencido">VENCIDO/.test(leer('ats.html')));
+});
+
+grupo('ATS amarrado con sus permisos', () => {
+  const h = leer('ats.html'), core = leer('permiso-core.js');
+  ok('el ATS abre cada permiso que requiere con datos y personal', /function abrirPermisoDesdeAts/.test(h) && /personas: ats\.participantes\.map/.test(h) && /'\?desdeAts=1'/.test(h));
+  ok('los permisos del ATS se mapean a su backend', /const PERMISO_A_BACKEND = \{ caliente: 'caliente', alturas: 'alturas', confinados: 'confinados', izaje: 'izajes', electrico: 'electrico' \}/.test(h));
+  ok('el permiso toma los datos solo si son recientes y de su tipo', /Date\.now\(\) - \(p\.t \|\| 0\) > 30 \* 60000/.test(core) && /p\.tipo && tipo && p\.tipo !== tipo/.test(core));
+  ok('el permiso llega directo al formulario nuevo, después de cargar la página', /get\('desdeAts'\) === '1'\) \{[\s\S]{0,300}?setTimeout\(\(\) => \{ startNewPermit\(\);/.test(core));
+  ok('el permiso guarda y restaura el ATS relacionado', /if \(atsRelacionado\) base\.atsRelacionado = atsRelacionado;/.test(core) && /atsRelacionado = data\.atsRelacionado \|\| null;/.test(core));
+  ok('el permiso le devuelve su código al ATS', /'ssta-ats-permisos:' \+ atsRelacionado/.test(core) && /'ssta-ats-permisos:' \+ a\.code/.test(h));
+  ok('la hoja impresa del permiso dice su ATS', /ATS relacionado: <b>' \+ esc\(atsRelacionado\)/.test(core));
+  ok('la hoja del ATS lista sus permisos', /Permisos diligenciados: ' \+ permisosAsociadosDe\(ats\)/.test(h));
+  ok('al cerrar el ATS avisa si algún permiso sigue abierto', /const r = await permisosAbiertosDe\(a\);[\s\S]{0,200}?siguen ABIERTOS/.test(h));
+  ok('copiar un ATS no se lleva los permisos del original', /n\.cab\.permisosAsociados = \[\];/.test(h));
+});
+
+grupo('Visual: "Todo cumple", marca común, avisos y barra', () => {
+  const core = leer('permiso-core.js'), css = leer('common.css'), c = leer('common.js');
+  ok('"Todo C / Todo SÍ" por categoría', /class="cat-todo">✓ Todo ' \+ esc\(states_\[0\]\.label\)/.test(core));
+  ok('solo marca las preguntas sin responder', /filter\(\(r\) => !r\.querySelector\('button\[aria-pressed="true"\]'\)\)/.test(core));
+  ok('pide confirmar que se verificó en campo', /¿Confirmas que las verificaste en campo\?/.test(core));
+  ok('avance por categoría (ej. 5/12)', /av\.textContent = hechas \+ '\/' \+ filas\.length/.test(core));
+  ok('"Todo SÍ" por sección en alturas', /function initTodoSiPorSeccion/.test(core) && /initFreeformYN\(\); initTodoSiPorSeccion\(\);/.test(core));
+  ok('la hoja impresa no copia los botones nuevos', /n\.tagName !== 'BUTTON'/.test(core) && /querySelector\('\.cat-nombre'\)/.test(core));
+  ok('el mismo logo en todas las pantallas', /\.marca\{[^}]*logo-indimon\.png/.test(css) && /body \.hdr-logo\{[^}]*logo-indimon\.png/.test(css) &&
+     ['index.html', 'ats.html', 'dashboard.html', 'inspeccion-epp.html', 'personal-autorizado.html'].every((f) => leer(f).includes('class="marca')));
+  ok('ya no quedan el ⛑ ni el "📋 Permisos" como logo', !leer('index.html').includes('<div class="logo">⛑</div>') && !leer('dashboard.html').includes('<h1>📋 Permisos</h1>'));
+  ok('aviso de personal: franja arriba y se puede cerrar', /const AvisoPersonal = \{/.test(c) && /insertBefore\(el, document\.body\.firstChild\)/.test(c) && /class="cerrar"/.test(c) && !/\.aviso-personal\{[^}]*position:fixed/.test(css));
+  ok('el ATS y los permisos usan el mismo aviso', /AvisoPersonal\.mostrar\(personalMotivo, cargarPersonal\)/.test(leer('ats.html')) && /AvisoPersonal\.mostrar\(personalMotivo, cargarPersonalCompartido\)/.test(core));
+  const vm = require('vm');
+  const ob = /const OutboxBadge = \{\s*\/\*[\s\S]*?textoBadge\(items\) \{[\s\S]*?\n  \},/.exec(c)[0] + '\n};';
+  const ctx = { PORTAL_CONFIG: { BACKENDS: { ats: { url: 'u-ats' }, caliente: { url: 'u-cal', nombre: 'Trabajo en Caliente' }, epp: { url: 'u-epp' } } } };
+  vm.createContext(ctx); vm.runInContext(ob + ';this.O=OutboxBadge;', ctx);
+  ok('pendientes: dice "ATS" cuando son ATS', ctx.O.textoBadge([{ url: 'u-ats' }, { url: 'u-ats' }, { url: 'u-ats' }]) === '⏳ 3 ATS pendientes de enviar');
+  ok('pendientes: dice "permiso" cuando es un permiso', ctx.O.textoBadge([{ url: 'u-cal' }]) === '⏳ 1 permiso pendiente de enviar');
+  ok('pendientes: mezclados dice "registros"', ctx.O.textoBadge([{ url: 'u-cal' }, { url: 'u-epp' }]) === '⏳ 2 registros pendientes de enviar');
+  ok('barra de revisión del ATS en dos columnas', /body\.revision \.previa-barra\{display:grid;grid-template-columns:1fr 1fr;/.test(leer('ats.html')));
+});
+
+grupo('Anexo de personal: firma del verificador y permisos abiertos', () => {
+  const h = leer('personal-autorizado.html');
+  ok('la firma del verificador se inicializa al abrir el registro', /setupPad\(padVerif\);/.test(h) && /getElementById\('padVerificador'\)/.test(h));
+  ok('la firma del verificador se limpia en cada registro nuevo', /pads\.padVerificador\.clear\(\)/.test(h));
+  ok('los permisos abiertos se consultan en paralelo', /Promise\.allSettled\(fuentes\.map/.test(h) && !/for\(const backend of PERMIT_BACKENDS\)/.test(h));
+  ok('si un servidor falla se dice cuál (no se esconde)', /No se pudo consultar: /.test(h) && /btnReintentarPicker/.test(h));
+  ok('usa la clave vigente, no el token de cuando abrió la página', /encodeURIComponent\(PORTAL_CONFIG\.API_TOKEN\)/.test(h.split('async function consultarAbiertos')[1] || ''));
+  ok('también se pueden vincular ATS abiertos', /fuentes\.push\(\{ backend:ats, esAts:true \}\)/.test(h));
+  ok('la fecha de hoy es la local (no UTC)', /ahora\.setMinutes\(ahora\.getMinutes\(\) - ahora\.getTimezoneOffset\(\)\)/.test(h) && !/new Date\(\)\.toISOString\(\)\.slice\(0,10\)/.test(h));
+  ok('los encabezados del anexo van en columna', /^\.hdr\{display:block;/m.test(h));
+  // Filtro de abiertos, ejecutado de verdad
+  const vm = require('vm');
+  const src = /function conLimite[\s\S]*?\n\}\nasync function consultarAbiertos[\s\S]*?\n\}\n/.exec(h)[0];
+  const ctx = { PORTAL_CONFIG: { API_TOKEN: 't' }, ClavePortal: { esErrorDeClave: () => false }, setTimeout,
+    fetchWithRetry: async (u) => ({ text: async () => JSON.stringify(u.includes('ats') ? { ok: true, rows: [{ code: 'ATS-1', estado: 'ABIERTO' }, { code: 'ATS-2', estado: 'CERRADO' }] }
+      : { ok: true, rows: [{ permitCode: 'TC-1', status: 'ABIERTO' }, { permitCode: 'TC-2', status: 'CERRADO' }, { permitCode: 5, status: 'ABIERTO ' }] }) }) };
+  vm.createContext(ctx); vm.runInContext(src + ';this.C=consultarAbiertos;', ctx);
+  return Promise.all([ctx.C({ url: 'x', nombre: 'Caliente' }, false), ctx.C({ url: 'ats', nombre: 'ATS' }, true)]).then(([p, a]) => {
+    ok('filtra solo los permisos ABIERTOS (y tolera códigos numéricos)', JSON.stringify(p.map(x => x.code)) === '["TC-1","5"]');
+    ok('filtra solo los ATS abiertos', JSON.stringify(a.map(x => x.code)) === '["ATS-1"]' && a[0].tipo === 'ATS');
+  });
+});
+
+grupo('Anexo: exportar a PDF y fechas en el backend', () => {
+  const h = leer('personal-autorizado.html');
+  ok('la hoja PDF dice a qué permisos y ATS está anexado', /Anexado a: <b>/.test(h) && /Anexado a los siguientes permisos de trabajo y ATS/.test(h));
+  ok('la hoja PDF lleva al verificador con su firma', /Verificado y aprobado por<\/td>/.test(h) && /firma-verif">' \+ img\(ver\.firma\)/.test(h));
+  ok('la hoja PDF lleva la firma de cada persona', /<td class="firma">'\+img\(t\.firma\)/.test(h));
+  ok('se ofrece el PDF al guardar (y sin señal también)', /¿Quieres exportarlo a PDF ahora\?/.test(h) && /btnPdfPendiente/.test(h));
+  ok('PDF por día y de todo el historial', /class="btn-pdf"/.test(h) && /btnPdfTodo/.test(h) && /action=registro&obraId=/.test(h));
+  ok('varios días: una hoja por día', /page-break-before:always/.test(h));
+  const sw = /const CACHE_NAME = 'ssta-portal-(v\d+)'/.exec(leer('sw.js'));
+  ok('la versión visible del anexo coincide con la del Service Worker', !!sw && h.includes('Portal SSTA · versión ' + sw[1]));
+
+  const { crearEntorno } = require('./simulador-apps-script');
+  const E = crearEntorno(path.join(RAIZ, 'backends/backend-personal-autorizado.gs'), { fechasComoSheets: true });
+  const T = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', firma = 'data:image/png;base64,' + 'Q'.repeat(300);
+  const o = E.post({ action: 'crearObra', nombre: 'PTAR', area: 'C', fechaInicio: '2026-09-28', fechaFin: '2026-10-10', token: T });
+  const reg = (n) => ({ fecha: '2026-09-30', trabajadores: [{ nombre: 'Carlos', cedula: '1', cargo: 'S', firma }], verificador: { nombre: 'Ana', cedula: '2', firma: firma.replace('QQQQ', 'VVVV') }, permisos: [{ code: 'TC-1', tipo: 'Trabajo en Caliente' }], n });
+  E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: reg(1), token: T, opId: 'x1' });
+  E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: reg(2), token: T, opId: 'x2' });
+  ok('Sheets guarda la fecha como Date (simulado como Google)', E.hojas['Registros'].filas[1][1] instanceof Date);
+  ok('volver a guardar el mismo día ACTUALIZA, no duplica la fila', E.hojas['Registros'].filas.length - 1 === 1);
+  const hist = E.get({ action: 'historial', obraId: o.obraId, token: T });
+  ok('el historial devuelve la fecha como AAAA-MM-DD', hist.registros.length === 1 && hist.registros[0].fecha === '2026-09-30');
+  const r = E.get({ action: 'registro', obraId: o.obraId, fecha: '2026-09-30', token: T });
+  ok('se puede abrir un día guardado (para el PDF), con la firma del verificador', r.n === 2 && r.verificador.firma === firma.replace('QQQQ', 'VVVV') && r.permisos[0].code === 'TC-1');
+  ok('"copiar último registro" trae el más reciente', E.get({ action: 'ultimoRegistro', obraId: o.obraId, token: T }).n === 2);
+  const ob = E.get({ action: 'listObras', token: T }).obras[0];
+  ok('las fechas de la obra vuelven como AAAA-MM-DD', ob.fechaInicio === '2026-09-28' && ob.fechaFin === '2026-10-10');
+});
+
 grupo('Caché y despliegue', () => {
   const sw = leer('sw.js');
   const v = /const CACHE_NAME = '([^']+)'/.exec(sw);
@@ -834,10 +971,11 @@ grupo('Sintaxis de todos los archivos', () => {
 console.log('\n╔══════════════════════════════════════════════════════╗');
 console.log('║   PRUEBAS DEL PORTAL SSTA — antes de desplegar        ║');
 console.log('╚══════════════════════════════════════════════════════╝');
-grupos.forEach(([nombre, fn]) => {
+(async () => {
+for (const [nombre, fn] of grupos) {
   console.log('\n▸ ' + nombre);
-  try { fn(); } catch (e) { fallos++; console.log('    ✗ error ejecutando el grupo: ' + e.message); }
-});
+  try { await fn(); } catch (e) { fallos++; console.log('    ✗ error ejecutando el grupo: ' + e.message); }
+}
 console.log('\n' + '─'.repeat(58));
 if (fallos === 0) {
   console.log(`✅  ${total} comprobaciones, todas correctas. Se puede desplegar.`);
@@ -845,3 +983,4 @@ if (fallos === 0) {
   console.log(`❌  ${fallos} de ${total} comprobaciones fallaron. Revisar antes de subir nada.`);
 }
 process.exit(fallos === 0 ? 0 : 1);
+})();
