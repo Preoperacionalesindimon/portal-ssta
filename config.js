@@ -74,6 +74,15 @@ const PORTAL_CONFIG = {
       // entrega impreso o en PDF).
       url: 'https://script.google.com/macros/s/AKfycbxLE_qhVS45hlQEuQTTAvOaQ-BtAXoR76ZTefApZcpz3cJJGEKH9FTVAy_G5bH2ksY_/exec'
     },
+    asistencia: {
+      nombre: 'Asistencia a charlas',
+      icono: '🗣️',
+      archivo: 'asistencia.html',
+      // URL /exec del Apps Script backends/backend-asistencia.gs (SSTA-F-005).
+      // Mientras esté vacía, la asistencia funciona en MODO SOLO-EQUIPO: se
+      // guarda en el celular y se imprime o guarda en PDF, pero no se comparte.
+      url: ''
+    },
     personal: {
       nombre: 'Personal Autorizado',
       icono: '👷',

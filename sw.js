@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v79';
+const CACHE_NAME = 'ssta-portal-v80';
 
 const PAGES = [
   './',
@@ -28,6 +28,7 @@ const PAGES = [
   './permiso-izajes-cargas.html',
   './permiso-trabajo-electrico.html',
   './personal-autorizado.html',
+  './asistencia.html',
   './inspeccion-epp.html',
   './ats.html',
   './dashboard.html'

@@ -464,6 +464,10 @@ const Outbox = {
       // figura cerrado; si no, el cierre todavía tiene que salir.
       if (item.body.status === 'CERRADO') return json.status === 'CERRADO';
       if (item.body.action === 'cerrarAts') return json.estado === 'CERRADO';
+      // Una charla solo cuenta como enviada si ESE guardado (su opId) ya está
+      // aplicado en la semana: que la semana exista no basta, las firmas de
+      // ese día se perderían.
+      if (item.body.action === 'guardarDia') return !!(json.semana && (json.semana.opIds || []).indexOf(item.body.opId) !== -1);
       return true;
     } catch (e) { return false; }
   },
@@ -494,6 +498,7 @@ const OutboxBadge = {
     if (k === 'ats') return { uno: 'ATS', varios: 'ATS', articulo: 'Un', detalle: 'ATS' };
     if (k === 'epp') return { uno: 'inspección de EPP', varios: 'inspecciones de EPP', articulo: 'Una', detalle: 'Inspección de EPP' };
     if (k === 'personal') return { uno: 'registro de personal', varios: 'registros de personal', articulo: 'Un', detalle: 'Personal autorizado' };
+    if (k === 'asistencia') return { uno: 'charla', varios: 'charlas', articulo: 'Una', detalle: 'Asistencia a charla' };
     const nombre = k && B[k].nombre ? B[k].nombre : '';
     return { uno: 'permiso', varios: 'permisos', articulo: 'Un', detalle: nombre ? 'Permiso · ' + nombre : 'Permiso' };
   },

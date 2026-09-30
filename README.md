@@ -39,6 +39,8 @@ historial y no hay a qué volver si algo se rompe.
 | `ats-catalogo.js` | **Base de conocimiento del ATS**: peligros, consecuencias, controles, tareas tipo, EPP, herramientas. Se edita sin tocar la pantalla |
 | `logo-indimon.png` | Logo del encabezado de los formatos impresos |
 | `personal-autorizado.html` | Anexo de personal autorizado |
+| `asistencia.html` | Asistencia a charlas, capacitación, eventos y reuniones (SSTA-F-005): tema del día, firmas y hoja semanal en PDF |
+| `backends/backend-asistencia.gs` | Backend de la asistencia (hoja propia; mientras no tenga URL en `config.js`, la asistencia funciona solo en el equipo) |
 | `common.js` | Firmas, modo sin conexión, cola de envíos, banner de actualización |
 | `common.css` | Sistema de diseño: colores, tipografía, componentes compartidos |
 | `config.js` | **Token y URLs de los backends** |
