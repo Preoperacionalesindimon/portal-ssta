@@ -75,6 +75,16 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 .search-box input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:12px;}
 .status-msg{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;min-height:16px;}
 .aviso-fallo{background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.45;text-align:left;margin-bottom:10px;}
+.day-item .btn-pdf{margin-top:9px;width:100%;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:9px;cursor:pointer;}
+.hp-anexo{padding-top:1px;}
+.hp-anexo .hp-permisos td{height:auto;padding:3px 4px;}
+.hp-anexo .hp-personal td{height:34px;}
+.hp-anexo .hp-personal .firma img{max-height:30px;}
+.hp-anexo .firma-verif{text-align:center;vertical-align:middle;height:52px;}
+.hp-anexo .firma-verif img{max-height:46px;max-width:100%;}
+.hp-anexo .sin-firma{font-size:7px;color:#888;font-style:italic;}
+.hp-anexo .hp-cab .hp-tit{font-size:11.5px;}
+.version-portal{font-size:10.5px;color:var(--muted);text-align:center;margin:18px 0 0;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin:6px 0 12px;}
 .screen{display:none;}
 .screen.active{display:block;}
@@ -94,6 +104,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v79</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -684,18 +695,19 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
     btn.disabled = false;
     if(!json.ok){ document.getElementById('registroStatus').textContent = json.error || 'No se pudo guardar.'; return; }
     document.getElementById('registroStatus').textContent = '✓ Registro guardado.';
-    alert('Registro del día guardado correctamente.');
+    const obraGuardada = Object.assign({}, currentObra);
+    if (confirm('Registro del día guardado correctamente.\n\n¿Quieres exportarlo a PDF ahora?')) await imprimirAnexo([data], obraGuardada);
     showScreen('screenObra');
   }catch(err){
     if (typeof Outbox !== 'undefined') {
       try {
         await Outbox.add(FIXED_WEBAPP_URL, { action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, token: API_TOKEN });
-        document.getElementById('registroStatus').textContent = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.';
+        mostrarPdfPendiente(data);
       } catch (e) {
         document.getElementById('registroStatus').textContent = 'No se pudo guardar ni en el servidor ni localmente (memoria llena o modo privado). Anote los datos antes de salir de la página.';
       }
     } else {
-      document.getElementById('registroStatus').textContent = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.';
+      mostrarPdfPendiente(data);
     }
     btn.disabled = false;
   }
@@ -711,18 +723,137 @@ document.getElementById('btnVerHistorial').addEventListener('click', async ()=>{
     const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=historial&obraId=' + encodeURIComponent(currentObra.obraId) + '&token=' + encodeURIComponent(API_TOKEN));
     const data = await res.json();
     if(!data.ok || !data.registros.length){ listEl.innerHTML = '<div class="empty">Aún no hay registros para esta obra.</div>'; return; }
-    listEl.innerHTML = data.registros.map(r=>{
-      const d = new Date(r.fecha+'T00:00:00');
-      const fechaTxt = isNaN(d.getTime()) ? r.fecha : d.toLocaleDateString('es-CO',{weekday:'long', day:'2-digit', month:'short'});
+    const fechas = data.registros.map(r=>fechaCorta(r.fecha));
+    listEl.innerHTML = `<button type="button" class="btn ghost" id="btnPdfTodo" style="margin:0 0 12px;">🖨️ Exportar todo el historial a PDF (${fechas.length} día${fechas.length===1?'':'s'})</button>` +
+      data.registros.map((r,i)=>{
+      const d = new Date(fechas[i]+'T00:00:00');
+      const fechaTxt = isNaN(d.getTime()) ? esc(r.fecha) : d.toLocaleDateString('es-CO',{weekday:'long', day:'2-digit', month:'short'});
       return `<div class="day-item">
         <div class="row1"><span class="fecha">${fechaTxt}</span><span class="count">${r.cantidad} persona${r.cantidad===1?'':'s'}</span></div>
         <div class="meta">${r.verificador ? 'Verificado por: '+esc(r.verificador) : 'Sin verificador registrado'}</div>
+        <button type="button" class="btn-pdf" data-fecha="${esc(fechas[i])}">🖨️ Ver / exportar PDF</button>
       </div>`;
-    }).join('');
+    }).join('') + '<div class="status-msg" id="historialStatus"></div>';
+    listEl.querySelectorAll('.btn-pdf').forEach(b=> b.addEventListener('click', ()=> exportarDias([b.dataset.fecha], b)));
+    document.getElementById('btnPdfTodo').addEventListener('click', e=> exportarDias(fechas.slice().reverse(), e.currentTarget));
   }catch(err){
     listEl.innerHTML = '<div class="empty">No se pudo cargar el historial. Verifique su conexión.</div>';
   }
 });
+
+/* ================= HOJA PARA PDF (SSTA-F-149) =================
+   Mismo formato que los permisos y el ATS (tablas de common.css, clases .hp):
+   datos de la obra, A QUÉ PERMISOS Y ATS ESTÁ ANEXADO, el personal con su
+   firma y quién verificó y aprobó, con su firma. Se imprime con el diálogo
+   del navegador → "Guardar como PDF". Varios días = una hoja por día. */
+function fechaCorta(v){ const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v||'')); return m ? m[1] : String(v||''); }
+function fechaLarga(v){
+  const f = fechaCorta(v), d = new Date(f+'T00:00:00');
+  return isNaN(d.getTime()) ? f : d.toLocaleDateString('es-CO',{weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+}
+function fechaHoja(v){ const f = fechaCorta(v); return /^\d{4}-\d{2}-\d{2}$/.test(f) ? f.slice(8,10)+'-'+f.slice(5,7)+'-'+f.slice(0,4) : (f || '—'); }
+let logoHoja = null;
+try{
+  fetch('logo-indimon.png').then(r=>r.ok ? r.blob() : null).then(b=>{
+    if(!b) return; const fr = new FileReader(); fr.onload = ()=>{ logoHoja = fr.result; }; fr.readAsDataURL(b);
+  }).catch(()=>{});
+}catch(e){ /* sin logo: la hoja sale igual */ }
+
+function htmlHojaAnexo(reg, obra, primera){
+  const e = esc;
+  const permisos = (reg.permisos && reg.permisos.length) ? reg.permisos : (obra.permisos || []);
+  const trab = reg.trabajadores || [];
+  const ver = reg.verificador || {};
+  const img = (src)=> src ? '<img src="'+src+'" alt="firma">' : '<span class="sin-firma">Sin firma</span>';
+  const anexadoA = permisos.length ? permisos.map(p=> p.code).join(', ') : 'sin permisos ni ATS vinculados';
+  let h = '<div class="hp hp-anexo"' + (primera ? '' : ' style="break-before:page;page-break-before:always;"') + '>' +
+    '<table class="hp-cab"><colgroup><col style="width:16%"><col><col style="width:26%"></colgroup><tr>' +
+    '<td class="hp-logo"><img src="' + (logoHoja || 'logo-indimon.png') + '" alt="INDIMON"></td>' +
+    '<td class="hp-tit">PERSONAL AUTORIZADO — REGISTRO DIARIO<div>Anexo del permiso de trabajo · Anexado a: <b>' + e(anexadoA) + '</b></div></td>' +
+    '<td class="hp-meta">Código: <b>SSTA-F-149</b><br>Fecha del registro: <b>' + e(fechaHoja(reg.fecha)) + '</b><br>' + e(fechaLarga(reg.fecha)) + '</td>' +
+    '</tr></table>';
+  h += '<div class="hp-sec"><table><tr><td class="hp-st">Datos de la obra</td></tr></table>' +
+    '<table class="hp-campos"><colgroup><col style="width:13%"><col style="width:37%"><col style="width:13%"><col style="width:37%"></colgroup>' +
+    '<tr><td class="l">Obra</td><td>' + e(obra.nombre || '') + '</td><td class="l">Área</td><td>' + e(obra.area || '') + '</td></tr>' +
+    '<tr><td class="l">Inicio</td><td>' + e(fechaHoja(obra.fechaInicio)) + '</td><td class="l">Fin previsto</td><td>' + e(fechaHoja(obra.fechaFin)) + '</td></tr>' +
+    '</table></div>';
+  h += '<div class="hp-sec"><table><tr><td class="hp-st">Anexado a los siguientes permisos de trabajo y ATS</td></tr></table>';
+  if (permisos.length) {
+    h += '<table class="hp-ejec hp-permisos"><thead><tr><th style="width:5%">N°</th><th style="width:30%">Tipo</th><th style="width:25%">Código</th><th>Área / sitio</th></tr></thead><tbody>' +
+      permisos.map((p,i)=>'<tr><td class="a">'+(i+1)+'</td><td>'+e(p.tipo === 'ATS' ? 'ATS — Análisis de Trabajo Seguro' : 'Permiso de ' + (p.tipo||''))+'</td><td><b>'+e(p.code)+'</b></td><td>'+e(p.area||'')+'</td></tr>').join('') +
+      '</tbody></table>';
+  } else {
+    h += '<table><tr><td class="nota">Este registro no tiene permisos ni ATS vinculados.</td></tr></table>';
+  }
+  h += '</div>';
+  h += '<div class="hp-sec"><table><tr><td class="hp-st">Personal autorizado (' + trab.length + ')</td></tr></table>' +
+    '<table class="hp-ejec hp-personal"><thead><tr><th style="width:5%">N°</th><th style="width:33%">Nombre completo</th><th style="width:16%">Cédula</th><th style="width:20%">Cargo</th><th>Firma</th></tr></thead><tbody>' +
+    (trab.length ? trab.map((t,i)=>'<tr><td class="a">'+(i+1)+'</td><td>'+e(t.nombre)+'</td><td>'+e(t.cedula)+'</td><td>'+e(t.cargo)+'</td><td class="firma">'+img(t.firma)+'</td></tr>').join('')
+                 : '<tr><td colspan="5" class="nota">Sin personal registrado.</td></tr>') +
+    '</tbody></table></div>';
+  h += '<div class="hp-sec"><table><tr><td class="hp-st">Verificado y aprobado por</td></tr></table>' +
+    '<table class="hp-campos hp-verif"><colgroup><col style="width:13%"><col style="width:37%"><col style="width:13%"><col style="width:37%"></colgroup>' +
+    '<tr><td class="l">Nombre</td><td>' + e(ver.nombre || '') + '</td><td class="l" rowspan="2">Firma</td><td rowspan="2" class="firma-verif">' + img(ver.firma) + '</td></tr>' +
+    '<tr><td class="l">Cédula</td><td>' + e(ver.cedula || '') + '</td></tr>' +
+    '</table></div>';
+  h += '<div class="hp-pie">' + (reg.savedAt ? 'Guardado el ' + e(new Date(reg.savedAt).toLocaleString('es-CO')) + ' · ' : '') +
+    'Impreso el ' + e(new Date().toLocaleString('es-CO')) + ' desde el Portal SSTA · INDIMON</div></div>';
+  return h;
+}
+function esperarImagenes(cont, maxMs){
+  const imgs = [...cont.querySelectorAll('img')].filter(i=>!i.complete);
+  if(!imgs.length) return Promise.resolve();
+  return Promise.race([
+    Promise.all(imgs.map(i=>new Promise(r=>{ i.addEventListener('load', r, {once:true}); i.addEventListener('error', r, {once:true}); }))),
+    new Promise(r=>setTimeout(r, maxMs || 2500))
+  ]);
+}
+async function imprimirAnexo(registros, obra){
+  let cont = document.getElementById('hojaPermiso');
+  if(!cont){ cont = document.createElement('div'); cont.id = 'hojaPermiso'; document.body.appendChild(cont); }
+  cont.innerHTML = registros.map((r,i)=>htmlHojaAnexo(r, obra, i===0)).join('');
+  if(!document.getElementById('paginaHojaAnexo')){
+    const st = document.createElement('style'); st.id = 'paginaHojaAnexo';
+    st.textContent = '@media print{@page{size:letter portrait;margin:9mm;}}';
+    document.head.appendChild(st);
+  }
+  document.body.classList.add('hp-lista');
+  await esperarImagenes(cont, 2500);
+  window.print();
+}
+/* Trae del servidor los días pedidos (con sus firmas) y los imprime juntos. */
+async function exportarDias(fechas, btn){
+  const statusEl = document.getElementById('historialStatus');
+  const txt = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Preparando PDF…'; }
+  const regs = [], fallas = [];
+  for(let i=0;i<fechas.length;i+=4){ // de a 4 para no saturar Apps Script
+    const lote = fechas.slice(i,i+4);
+    const res = await Promise.allSettled(lote.map(f=>
+      fetchWithRetry(FIXED_WEBAPP_URL + '?action=registro&obraId=' + encodeURIComponent(currentObra.obraId) + '&fecha=' + encodeURIComponent(f) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN))
+        .then(r=>r.json())));
+    res.forEach((r,k)=>{
+      const d = r.status==='fulfilled' ? r.value : null;
+      if(d && d.ok !== false && Array.isArray(d.trabajadores)) regs.push(Object.assign({ fecha: lote[k] }, d));
+      else fallas.push(fechaHoja(lote[k]) + (d && d.error ? ' ('+d.error+')' : ''));
+    });
+    if(btn && fechas.length > 4) btn.textContent = 'Preparando PDF… ' + Math.min(i+4, fechas.length) + '/' + fechas.length;
+  }
+  if(btn){ btn.disabled = false; btn.textContent = txt; }
+  if(statusEl) statusEl.textContent = fallas.length ? 'No se pudieron traer: ' + fallas.join(', ') + '. Verifique la conexión e intente de nuevo.' : '';
+  if(!regs.length){ if(!statusEl) alert('No se pudo traer el registro. Verifique su conexión.'); return; }
+  regs.sort((a,b)=>fechaCorta(a.fecha) < fechaCorta(b.fecha) ? -1 : 1);
+  await imprimirAnexo(regs, currentObra);
+}
+/* Sin señal: el registro quedó en cola, pero el PDF se puede sacar ya. */
+function mostrarPdfPendiente(data){
+  const st = document.getElementById('registroStatus');
+  st.innerHTML = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.' +
+    '<button type="button" class="btn ghost" id="btnPdfPendiente" style="margin-top:8px;">🖨️ Exportar este registro a PDF</button>';
+  const obra = Object.assign({}, currentObra);
+  document.getElementById('btnPdfPendiente').addEventListener('click', ()=> imprimirAnexo([data], obra));
+}
+window.addEventListener('afterprint', ()=> document.body.classList.remove('hp-lista'));
 
 /* ================= INICIO ================= */
 cargarObras();
