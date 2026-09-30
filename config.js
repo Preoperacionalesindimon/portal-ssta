@@ -81,7 +81,7 @@ const PORTAL_CONFIG = {
       // URL /exec del Apps Script backends/backend-asistencia.gs (SSTA-F-005).
       // Mientras esté vacía, la asistencia funciona en MODO SOLO-EQUIPO: se
       // guarda en el celular y se imprime o guarda en PDF, pero no se comparte.
-      url: ''
+      url: 'https://script.google.com/macros/s/AKfycbyEyUSaFy4btFs3_K7cn01OynWFOf_25dekgiT1kuIAZ6zumz-JYEvmbraWJBxE7ORsSA/exec'
     },
     personal: {
       nombre: 'Personal Autorizado',
