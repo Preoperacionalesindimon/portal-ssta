@@ -11,7 +11,7 @@
   --ok:#1d7a4c; --warn:#c0392b;
 }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:60px;}
+body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
 .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
 
 .hdr{display:block;background:var(--ink);padding:1.4rem 1.2rem 1.1rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
@@ -51,11 +51,14 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .picker-item .pi-meta{font-size:10.5px;color:var(--muted);margin-top:1px;}
 .picker-item .check{margin-left:auto;color:var(--amber-dark);font-weight:700;}
 
-.worker-row{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;position:relative;background:#fcfbf8;}
-.worker-row .num{position:absolute;top:10px;right:12px;font-size:10px;color:#aab3ba;font-weight:700;}
-.worker-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:7px;padding:10px 10px;font-size:14.5px;margin-bottom:7px;background:#fff;min-height:42px;}
-.worker-row .remove-worker{position:absolute;top:8px;right:34px;font-size:11px;color:var(--warn);background:none;border:none;cursor:pointer;}
-canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.worker-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:#fcfbf8;}
+.worker-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:#fff;min-height:44px;font-family:inherit;}
+.worker-row .firma-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:4px 0 6px;display:block;}
+.fila-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px;}
+.fila-cab .fila-n{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid #f0c8c1;background:#fff;color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
+.btn-quitar:active{background:#fdf1ef;}
+canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
 .sig-actions button{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
 .sig-status{font-size:11px;color:var(--muted);}
@@ -104,7 +107,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v80</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v81</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -612,11 +615,11 @@ function agregarTrabajadorRow(prefill){
   div.className = 'worker-row';
   div.dataset.n = n;
   div.innerHTML = `
-    <span class="num">${n}</span>
-    <button type="button" class="remove-worker" data-remove="${n}">Quitar</button>
+    <div class="fila-cab"><span class="fila-n">Persona ${n}</span><button type="button" class="btn-quitar remove-worker" data-remove="${n}">✕ Quitar</button></div>
     <input type="text" placeholder="Nombre completo (escribe para buscar)" id="trNombre${n}" autocomplete="off" value="${prefill?esc(prefill.nombre||''):''}">
     <input type="text" placeholder="Cédula" id="trCedula${n}" inputmode="numeric" value="${prefill?esc(prefill.cedula||''):''}">
     <input type="text" placeholder="Cargo" id="trCargo${n}" value="${prefill?esc(prefill.cargo||''):''}">
+    <label class="firma-lbl">Firma</label>
     <canvas class="mini-pad" id="padTr${n}"></canvas>
     <div class="sig-actions">
       <button type="button" data-clear="padTr${n}">Borrar firma</button>

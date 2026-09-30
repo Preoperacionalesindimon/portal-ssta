@@ -8,7 +8,7 @@
 <style>
 :root{ --amber:#c9a227; --amber-dark:#8a6408; --ink:#151b24; --line:#dde3e8; --muted:#8a97a3; --ok:#1d7a4c; --warn:#c0392b; --azul:#2f6fbf; }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:70px;}
+body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
 .wrap{max-width:680px;margin:0 auto;padding:0 14px;}
 .hdr{display:block;background:var(--ink);padding:1.3rem 1.2rem 1.05rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
 .hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
@@ -48,21 +48,23 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .dia-item .tema.vacio{color:#aab3ba;font-weight:500;}
 .dia-item .meta{font-size:11px;color:var(--muted);margin-top:2px;}
 .dia-item .n{font-size:11px;font-weight:700;background:#eef1f4;color:#5c6570;border-radius:20px;padding:3px 9px;flex-shrink:0;}
-.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;background:#fff;}
+.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff;}
 .guardado.quitado{opacity:.45;text-decoration:line-through;}
 .guardado .gi{flex:1;min-width:0;}
-.guardado .gn{font-weight:700;font-size:13px;}
+.guardado .gn{font-weight:700;font-size:13px;line-height:1.3;overflow-wrap:anywhere;}
 .guardado .gm{font-size:11px;color:var(--muted);}
-.guardado img{height:34px;max-width:90px;object-fit:contain;}
+.guardado img{height:34px;width:72px;object-fit:contain;flex-shrink:0;}
 .guardado .sf{font-size:10.5px;color:var(--ok);font-weight:700;}
 .guardado .sf.no{color:var(--warn);}
-.guardado button{border:none;background:none;color:var(--warn);font-size:12px;font-weight:700;cursor:pointer;padding:4px;}
-.as-row{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;position:relative;background:#fcfbf8;}
-.as-row .num{position:absolute;top:10px;right:12px;font-size:10px;color:#aab3ba;font-weight:700;}
-.as-row .quitar{position:absolute;top:8px;right:34px;font-size:11px;color:var(--warn);background:none;border:none;cursor:pointer;}
-.as-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:7px;padding:10px;font-size:15px;margin-bottom:7px;background:#fff;min-height:42px;font-family:inherit;}
-.as-row .firma-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:2px 0 5px;display:block;}
-canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+
+.as-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:#fcfbf8;}
+.as-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:#fff;min-height:44px;font-family:inherit;}
+.as-row .firma-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:4px 0 6px;display:block;}
+.fila-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px;}
+.fila-cab .fila-n{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid #f0c8c1;background:#fff;color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
+.btn-quitar:active{background:#fdf1ef;}
+canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
 .sig-actions button{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
 .sig-status{font-size:11px;color:var(--muted);}
@@ -73,7 +75,8 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
 .modal-fondo{position:fixed;inset:0;background:rgba(15,25,35,.5);z-index:9000;display:flex;align-items:flex-end;justify-content:center;}
 .modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:80vh;overflow:auto;padding:16px;}
 .modal h3{margin:0 0 10px;font-size:15px;}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#1d7a4c;color:#fff;font-weight:600;font-size:13px;padding:10px 16px;border-radius:9px;z-index:9500;box-shadow:0 3px 12px rgba(0,0,0,.25);max-width:92%;}
+.toast.aviso{background:#8a2a1c;}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1d7a4c;color:#fff;font-weight:600;font-size:13px;padding:10px 16px;border-radius:9px;z-index:9500;box-shadow:0 3px 12px rgba(0,0,0,.25);max-width:92%;}
 
 /* ── Hoja SSTA-F-005 para imprimir / PDF (carta horizontal) ── */
 .f5{padding:1px 2px 0 1px;font-family:Arial, Helvetica, sans-serif;color:#000;font-size:8.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -121,7 +124,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
   </div>
   <div class="sec-t">Semanas recientes <span id="semanasNota"></span></div>
   <div id="semanasList"><div class="status-msg">Cargando…</div></div>
-  <div class="version-portal">Portal SSTA · versión v80</div>
+  <div class="version-portal">Portal SSTA · versión v81</div>
 </div>
 
 <!-- ═══════ SEMANA ═══════ -->
@@ -210,7 +213,19 @@ function normLugar(s){ return String(s||'').trim().toUpperCase().replace(/\s+/g,
 function clavePersona(p){ const c = String((p && p.cedula) || '').replace(/[^0-9A-Za-z]/g,''); return c ? 'C:'+c : 'N:'+String((p && p.nombre) || '').trim().toUpperCase().replace(/\s+/g,' '); }
 function nuevoOpId(){ return 'asi-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8); }
 function codigoLocal(semanaDel){ return 'ASI-' + semanaDel.replace(/-/g,'') + '-' + String(Math.floor(Math.random()*900000)+100000); }
-function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3500); }
+function toast(msg, tipo){ const t = document.createElement('div'); t.className = 'toast' + (tipo ? ' ' + tipo : ''); t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), tipo ? 6000 : 3500); }
+
+/* ---------- respuestas del servidor ----------
+   Si el Apps Script no está publicado para "Cualquier usuario" (o la URL es
+   de otra implementación), Google responde con una PÁGINA (inicio de sesión
+   o error), no con datos. Antes eso se trataba como "sin señal": la charla
+   quedaba en cola para siempre sin que nadie supiera por qué. */
+const MSG_PAGINA = 'El servidor de asistencia respondió con una página en vez de datos. Revisa en Apps Script → Implementar → Administrar implementaciones: debe decir "Ejecutar como: yo" y "Acceso: Cualquier usuario", y la URL de config.js debe ser la de esa implementación (termina en /exec).';
+async function leerJson(res){
+  const texto = await res.text();
+  try { return JSON.parse(texto); }
+  catch(e){ const err = new Error(MSG_PAGINA + ' (HTTP ' + res.status + ')'); err.pagina = true; throw err; }
+}
 
 /* ---------- la misma mezcla que hace el servidor (para mostrar lo pendiente) ---------- */
 function mezclarDia(doc, body){
@@ -344,14 +359,18 @@ async function cargarSemanas(){
   $('semanasNota').textContent = 'actualizando…';
   try {
     const res = await fetchWithRetry(URL_ASIS + '?list=1&token=' + encodeURIComponent(token()));
-    const data = await res.json();
+    const data = await leerJson(res);
+    $('avisoServidor').innerHTML = '';
     if (data.ok && Array.isArray(data.rows)){
       const locales = semanasCache.filter(s=> s.local && !data.rows.some(r=> r.code === s.code || (r.semanaDel === s.semanaDel && normLugar(r.lugar) === normLugar(s.lugar))));
       semanasCache = locales.concat(data.rows);
       lsSet(LS.semanas, semanasCache);
       $('semanasNota').textContent = '';
     } else $('semanasNota').textContent = (data && data.error) ? 'error: ' + data.error : '';
-  } catch(e){ $('semanasNota').textContent = 'sin conexión (lista guardada)'; }
+  } catch(e){
+    $('semanasNota').textContent = e.pagina ? 'el servidor no respondió con datos' : 'sin conexión (lista guardada)';
+    if (e.pagina) $('avisoServidor').innerHTML = '<div class="aviso">⚠️ ' + esc(e.message) + '</div>';
+  }
   renderSemanas();
 }
 function resumenLocal(doc){
@@ -393,7 +412,7 @@ async function obtenerSemana(fecha, lugar){
     try {
       const res = await fetchWithRetry(URL_ASIS, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
         body: JSON.stringify({ action:'abrirSemana', fecha, lugar, opId:nuevoOpId(), token:token() }) });
-      const data = await res.json();
+      const data = await leerJson(res);
       if (data.ok && data.semana){
         const doc = await aplicarPendientes(data.semana);
         guardarCache(data.semana); recordarSemana(data.semana, false);
@@ -414,7 +433,7 @@ async function traerSemana(code){
   if (URL_ASIS && navigator.onLine && !/^local/.test(code)){
     try {
       const res = await fetchWithRetry(URL_ASIS + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token()));
-      const data = await res.json();
+      const data = await leerJson(res);
       if (data.ok && data.semana){ guardarCache(data.semana); recordarSemana(data.semana, false); return aplicarPendientes(data.semana); }
     } catch(e){}
   }
@@ -439,7 +458,7 @@ function mostrarSemana(){
   $('semTitulo').textContent = 'Semana del ' + fechaBonita(s.semanaDel) + ' al ' + fechaBonita(s.semanaAl || sumarDias(s.semanaDel,6), true);
   $('semSub').textContent = 'SSTA-F-005 · Control de asistencia';
   const avisos = [];
-  if (s._pendientes) avisos.push('<div class="aviso info">⏳ ' + s._pendientes + ' guardado(s) de esta semana están en cola sin señal. Ya se ven aquí; se envían solos al volver la conexión.</div>');
+  if (s._pendientes) avisos.push('<div class="aviso info">⏳ ' + s._pendientes + ' guardado(s) de esta semana están en cola en este equipo. Ya se ven aquí y se envían solos en cuanto el servidor los reciba.</div>');
   if (s.sinDetalle) avisos.push('<div class="aviso">Sin conexión: esta semana no se había abierto en este equipo, así que solo se ve lo registrado aquí. Lo de otros celulares aparece al volver la señal.</div>');
   $('semAviso').innerHTML = avisos.join('');
   const hoy = hoyISO();
@@ -523,7 +542,7 @@ function renderGuardados(){
       : (a.firma ? '<span class="sf">✓ firmó</span>' : '<span class="sf no">sin firma</span>');
     return `<div class="guardado${q ? ' quitado' : ''}" data-k="${esc(k)}">
       <div class="gi"><div class="gn">${esc(a.nombre)}</div><div class="gm">${a.cedula ? 'CC ' + esc(a.cedula) : 'Sin cédula'}${a.pendiente ? ' · ⏳ en cola' : ''}</div></div>
-      ${firma}<button type="button">${q ? 'Deshacer' : 'Quitar'}</button></div>`;
+      ${firma}<button type="button" class="btn-quitar">${q ? '↺ Volver' : '✕ Quitar'}</button></div>`;
   }).join('');
   $('guardadosList').querySelectorAll('.guardado button').forEach(b=> b.addEventListener('click', ()=>{
     const k = b.parentElement.dataset.k;
@@ -545,8 +564,7 @@ function agregarFila(pre){
   const div = document.createElement('div');
   div.className = 'as-row'; div.dataset.n = n;
   div.innerHTML = `
-    <span class="num">+${n}</span>
-    <button type="button" class="quitar">Quitar</button>
+    <div class="fila-cab"><span class="fila-n">Asistente nuevo ${n}</span><button type="button" class="btn-quitar quitar">✕ Quitar</button></div>
     <input type="text" id="asNombre${n}" placeholder="Nombre completo (escribe para buscar)" autocomplete="off" value="${pre ? esc(pre.nombre || '') : ''}">
     <input type="text" id="asCedula${n}" placeholder="N° de identificación" inputmode="numeric" value="${pre ? esc(pre.cedula || '') : ''}">
     <label class="firma-lbl">Firma del trabajador</label>
@@ -645,9 +663,30 @@ $('btnGuardarDia').addEventListener('click', async ()=>{
     recordarSemana(semana, true);
     terminarGuardado('✓ Charla guardada en este equipo'); return;
   }
+  let json;
   try {
     const res = await fetchWithRetry(URL_ASIS, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
-    const json = await res.json();
+    json = await leerJson(res);
+  } catch(err){
+    // Sin señal o respuesta que no es de datos: la charla NO se pierde, queda
+    // en el equipo y se reenvía sola. El aviso dice cuál de las dos pasó.
+    try {
+      await Outbox.add(URL_ASIS, body);
+      mezclarDia(semana, Object.assign({}, body, { _pendiente:true }));
+      semana._pendientes = (semana._pendientes || 0) + 1;
+      recordarSemana(semana, !!semana.local);
+      btn.disabled = false;
+      if (err.pagina){
+        terminarGuardado('La charla quedó guardada en el equipo, pero el servidor no la recibió.', 'aviso');
+        $('semAviso').insertAdjacentHTML('afterbegin', '<div class="aviso">⚠️ ' + esc(err.message) + '</div>');
+      } else terminarGuardado('Sin conexión — la charla quedó guardada en el equipo y se envía sola al volver la señal.');
+    } catch(e){
+      btn.disabled = false;
+      st.textContent = 'No se pudo guardar ni en el servidor ni en el equipo (memoria llena o modo privado). No salgas de la página: exporta el PDF o intenta de nuevo con señal.';
+    }
+    return;
+  }
+  {
     btn.disabled = false;
     if (!json.ok){
       if (ClavePortal.esErrorDeClave(json)) { st.textContent = 'El servidor no aceptó la clave del portal de este equipo. Escríbela y vuelve a guardar.'; return; }
@@ -658,25 +697,13 @@ $('btnGuardarDia').addEventListener('click', async ()=>{
     semana.local = false;
     guardarCache(semana); recordarSemana(semana, false);
     terminarGuardado('✓ Charla guardada');
-  } catch(err){
-    try {
-      await Outbox.add(URL_ASIS, body);
-      mezclarDia(semana, Object.assign({}, body, { _pendiente:true }));
-      semana._pendientes = (semana._pendientes || 0) + 1;
-      recordarSemana(semana, !!semana.local);
-      btn.disabled = false;
-      terminarGuardado('Sin conexión — la charla quedó guardada en el equipo y se envía sola al volver la señal.');
-    } catch(e){
-      btn.disabled = false;
-      st.textContent = 'No se pudo guardar ni en el servidor ni en el equipo (memoria llena o modo privado). No salgas de la página: exporta el PDF o intenta de nuevo con señal.';
-    }
   }
 });
-function terminarGuardado(msg){
+function terminarGuardado(msg, tipo){
   lsDel(LS.borrador(semana.code, diaActual));
   quitarSet = new Set();
   mostrarSemana();
-  toast(msg);
+  toast(msg, tipo);
 }
 
 /* ================= HOJA SSTA-F-005 (imprimir / PDF) =================
