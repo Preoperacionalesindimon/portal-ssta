@@ -674,24 +674,16 @@ canvas.pad.locked{cursor:default;}
    la hoja vacía. Ahora aparece esta ficha tocable, que explica el motivo y
    reintenta. No bloquea el formulario: el permiso se puede llenar a mano. */
 .aviso-personal{
-  position:fixed;
-  left:12px;
-  bottom:12px;
-  z-index:9998;
-  max-width:calc(100vw - 24px);
-  min-height:var(--touch,44px);
-  background:var(--offline-bg,#7a1f14);
-  color:#fff;
-  border:none;
-  border-radius:var(--radius-md,10px);
-  box-shadow:var(--shadow-lift,0 4px 14px rgba(15,25,35,.14));
-  font-family:var(--font-family,inherit);
-  font-size:12.5px;
-  font-weight:600;
-  text-align:left;
-  padding:10px 14px;
-  cursor:pointer;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:#fff4e5;color:#7a3e00;border-bottom:1px solid #f0c98d;
+  font-family:var(--font-family,inherit);font-size:12.5px;font-weight:600;line-height:1.35;
+  padding:6px 12px;
 }
+.aviso-personal .txt{flex:1 1 200px;}
+.aviso-personal button{background:none;border:1px solid #e0b270;color:#7a3e00;border-radius:8px;font:inherit;font-size:12px;
+  min-height:32px;padding:0 10px;cursor:pointer;}
+.aviso-personal .cerrar{border:none;font-size:15px;min-width:32px;}
+@media print{ .aviso-personal{display:none !important;} }
 
 
 /* ── Firma a pantalla completa (celulares) — ver FirmaCompleta en common.js ── */
@@ -785,3 +777,52 @@ canvas.pad-completa{
 .hp-ejec .firma img{max-height:26px;}
 .hp .hp-tabla th,.hp .hp-tabla td{font-size:7.5px;}
 .hp-pie{margin-top:4px;font-size:6.5px;color:#555;text-align:right;}
+
+
+/* ── Clave del portal (ver ClavePortal en common.js) ── */
+.clave-fondo{position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.clave-caja{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.3);font-family:inherit;}
+.clave-caja h3{margin:0 0 8px;font-size:18px;color:#151b24;}
+.clave-caja p{margin:0 0 12px;font-size:14px;line-height:1.5;color:#3d4a56;}
+.clave-caja input[type=password],.clave-caja input[type=text]{width:100%;box-sizing:border-box;min-height:46px;border:1.5px solid #c9d1d9;border-radius:10px;padding:10px 12px;font-size:16px;font-family:inherit;}
+.clave-ver{display:flex;align-items:center;gap:6px;font-size:13px;color:#5c6a76;margin:8px 0 14px;}
+.clave-acc{display:flex;gap:8px;flex-wrap:wrap;}
+.clave-acc button{min-height:44px;flex:1;}
+.clave-quitar{margin-top:12px;background:none;border:none;color:#a02d20;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:4px 0;}
+@media print{ .clave-fondo{display:none !important;} }
+.clave-acc #claveGuardar{background:#151b24;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer;}
+.clave-acc #claveCancelar{background:#fff;color:#151b24;border:1.5px solid #c9d1d9;border-radius:10px;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer;}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   MARCA COMÚN — el mismo logo de INDIMON en todas las pantallas.
+   Antes cada una tenía el suyo: ⛑ en el inicio, "IN" en los permisos,
+   nada en el ATS y un emoji en el tablero.
+   ════════════════════════════════════════════════════════════════════ */
+.marca{display:inline-block;flex:0 0 auto;width:64px;height:38px;border-radius:9px;
+  background:#fff url('logo-indimon.png') center/88% auto no-repeat;box-shadow:0 2px 6px rgba(0,0,0,.25);vertical-align:middle;}
+.marca-grande{width:84px;height:48px;border-radius:11px;}
+.marca-titulo{display:flex;align-items:center;gap:12px;min-width:0;}
+/* Los permisos traen <div class="hdr-logo">IN</div>: se convierte en el logo
+   sin tocar el HTML de cada permiso. */
+body .hdr-logo{width:64px !important;min-width:64px !important;height:38px !important;border-radius:9px !important;
+  background:#fff url('logo-indimon.png') center/88% auto no-repeat !important;color:transparent !important;font-size:0 !important;
+  box-shadow:0 2px 6px rgba(0,0,0,.25) !important;}
+.btn-clave{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+.btn-clave.ok{border-color:#7fd3a8;color:#b9f0d2;}
+
+/* ── Checklists de permisos: encabezado de categoría con avance y "Todo C" ── */
+.check-cat h4.cat-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.check-cat h4.cat-cab .cat-nombre{flex:1 1 auto;}
+.cat-avance{font-size:11px;font-weight:800;color:var(--ink-muted,#5c6a76);background:#eef1f4;border-radius:10px;padding:2px 8px;text-transform:none;}
+.cat-avance.completo{background:#e3f4ea;color:#1d7a4c;}
+.cat-todo{min-height:34px;padding:0 12px;border-radius:17px;border:1.5px solid #1d7a4c;background:#fff;color:#1d7a4c;
+  font:inherit;font-size:12px;font-weight:800;text-transform:none;letter-spacing:0;cursor:pointer;}
+.cat-todo[hidden]{display:none;}
+.section-title .cat-todo.en-seccion{margin-left:auto;background:rgba(255,255,255,.95);}
+@media print{ .cat-todo{display:none !important;} }
+
+/* Permiso abierto desde un ATS */
+.ats-relacionado{margin:-6px 0 14px;padding:8px 12px;border-radius:8px;background:#e6f2f2;color:#0f4c4f;font-size:13px;font-weight:600;border:1px solid #b8d9d9;}
+.ats-relacionado a{color:inherit;}

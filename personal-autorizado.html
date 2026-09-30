@@ -14,7 +14,7 @@
 body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:60px;}
 .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
 
-.hdr{background:var(--ink);padding:1.4rem 1.2rem 1.1rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
+.hdr{display:block;background:var(--ink);padding:1.4rem 1.2rem 1.1rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
 .hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
 .hdr h1{font-family:var(--font-display);font-size:18px;color:#fff;margin:0 0 2px;}
 .hdr p{font-size:11.5px;color:#8b97a3;margin:0;}
@@ -74,6 +74,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 
 .search-box input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:12px;}
 .status-msg{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;min-height:16px;}
+.aviso-fallo{background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.45;text-align:left;margin-bottom:10px;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin:6px 0 12px;}
 .screen{display:none;}
 .screen.active{display:block;}
@@ -84,11 +85,11 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
 
 <!-- ═══════ LANDING: lista de obras ═══════ -->
 <div class="screen active" id="screenLanding">
-  <div class="hdr">
+  <div class="hdr" style="display:block;">
     <a class="back" href="index.html">← Volver al portal</a>
-    <div class="eyebrow">Anexo SSTA-F-149</div>
+    <div class="marca-titulo"><span class="marca" role="img" aria-label="INDIMON"></span><div><div class="eyebrow">Anexo SSTA-F-149</div>
     <h1>Personal Autorizado</h1>
-    <p>Registro diario de personal en obra</p>
+    <p>Registro diario de personal en obra</p></div></div>
   </div>
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
@@ -148,7 +149,7 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div class="card">
     <div class="k">Permiso(s) de trabajo vinculados</div>
     <div id="permisosVinculadosList" style="margin-top:6px;"></div>
-    <button class="btn ghost" id="btnVincularPermiso" style="font-size:11.5px;padding:9px;">+ Vincular permiso abierto</button>
+    <button class="btn ghost" id="btnVincularPermiso" style="font-size:11.5px;padding:9px;">+ Vincular permiso o ATS abierto</button>
   </div>
   <button class="btn amber" id="btnRegistrarHoy">✍️ Registrar personal de hoy</button>
   <button class="btn ghost" id="btnVerHistorial">📅 Ver historial por día</button>
@@ -159,12 +160,12 @@ canvas.mini-pad{width:100%;height:220px;border:1.5px dashed #b9b2a2;border-radiu
   <div class="hdr">
     <a class="back" href="#" id="backFromPicker">← Cancelar</a>
     <div class="eyebrow">Anexo SSTA-F-149</div>
-    <h1>Vincular permiso abierto</h1>
-    <p>Selecciona de los permisos activos ahora</p>
+    <h1>Vincular permiso o ATS</h1>
+    <p>Selecciona de los permisos y ATS abiertos ahora</p>
   </div>
   <div class="search-box"><input type="text" id="pickerSearch" placeholder="Buscar por código, tipo o área…"></div>
   <div id="pickerList"></div>
-  <div class="status-msg" id="pickerStatus">Cargando permisos abiertos…</div>
+  <div class="status-msg" id="pickerStatus">Buscando permisos y ATS abiertos…</div>
   <button class="btn amber" id="btnConfirmarPicker">Confirmar selección</button>
 </div>
 
@@ -452,38 +453,80 @@ async function guardarPermisosVinculados(){
 /* ================= PICKER DE PERMISOS ABIERTOS ================= */
 let permisosAbiertosCache = [];
 let seleccionPicker = [];
-document.getElementById('btnVincularPermiso').addEventListener('click', async ()=>{
-  showScreen('screenPicker');
-  seleccionPicker = [];
+/* Busca lo que está ABIERTO en los 5 permisos y en el ATS.
+   ANTES: se consultaba un servidor detrás de otro (con Apps Script "dormido"
+   eran 15-40 s en "Cargando…"), cualquier servidor que fallara se omitía en
+   silencio y al final decía "No hay permisos abiertos" aunque sí los hubiera,
+   y se usaba el token capturado al abrir la página (no la clave vigente).
+   AHORA: todos a la vez, con límite de tiempo, y si alguno no respondió se
+   dice cuál y por qué, con botón para reintentar. */
+function conLimite(promesa, ms){
+  return Promise.race([promesa, new Promise((_,rej)=>setTimeout(()=>rej(new Error('tardó más de '+Math.round(ms/1000)+' s')), ms))]);
+}
+async function consultarAbiertos(backend, esAts){
+  const url = backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN);
+  const res = await conLimite(fetchWithRetry(url), 25000);
+  const texto = await res.text();
+  let data;
+  try{ data = JSON.parse(texto); }
+  catch(e){ throw new Error('respondió con una página en vez de datos (¿despliegue privado o URL cambiada?)'); }
+  if(!data || !data.ok || !Array.isArray(data.rows)){
+    throw new Error(ClavePortal.esErrorDeClave(data) ? 'no aceptó la clave del portal de este equipo' : 'respondió con error: ' + ((data && data.error) || 'sin detalle'));
+  }
+  const abiertos = esAts
+    ? data.rows.filter(r=>String(r.estado||'ABIERTO').toUpperCase() !== 'CERRADO')
+    : data.rows.filter(r=>String(r.status||'').trim().toUpperCase() === 'ABIERTO');
+  return abiertos.map(r=>({
+    code: String(r.code || r.permitCode || r.atsCode || ''),
+    tipo: esAts ? 'ATS' : backend.nombre, icono: backend.icono, archivo: backend.archivo,
+    area: String(r.sitio || r.area || (esAts ? r.trabajo : '') || ''),
+    openedAt: r.openedAt || r.createdAt || r.updatedAt || null
+  })).filter(p=>p.code);
+}
+async function cargarPermisosAbiertos(){
   const statusEl = document.getElementById('pickerStatus');
   const listEl = document.getElementById('pickerList');
-  statusEl.textContent = 'Cargando permisos abiertos…';
+  statusEl.innerHTML = 'Buscando permisos y ATS abiertos…';
   listEl.innerHTML = '';
   permisosAbiertosCache = [];
-  for(const backend of PERMIT_BACKENDS){
-    try{
-      const res = await fetchWithRetry(backend.url + '?' + backend.listQuery + '&token=' + encodeURIComponent(backend.token));
-      const data = await res.json();
-      if(data.ok && Array.isArray(data.rows)){
-        data.rows.filter(r=>r.status==='ABIERTO').forEach(r=>{
-          permisosAbiertosCache.push({
-            code: r.code || r.permitCode, tipo: backend.nombre, icono: backend.icono, archivo: backend.archivo,
-            area: r.sitio || r.area || '', openedAt: r.openedAt || r.updatedAt || null
-          });
-        });
-      }
-    }catch(e){ /* backend no disponible; se omite */ }
+  const fuentes = PERMIT_BACKENDS.map(b=>({ backend:b, esAts:false }));
+  const ats = PORTAL_CONFIG.BACKENDS.ats;
+  if(ats && ats.url) fuentes.push({ backend:ats, esAts:true });
+  const resultados = await Promise.allSettled(fuentes.map(f=>consultarAbiertos(f.backend, f.esAts)));
+  const fallidos = [];
+  resultados.forEach((r,i)=>{
+    if(r.status === 'fulfilled') permisosAbiertosCache.push(...r.value);
+    else fallidos.push({ nombre: fuentes[i].backend.nombre, motivo: (r.reason && r.reason.message) || 'sin conexión' });
+  });
+  permisosAbiertosCache.sort((a,b)=>String(b.openedAt||'').localeCompare(String(a.openedAt||'')));
+  let msg = '';
+  if(fallidos.length){
+    msg = '<div class="aviso-fallo">⚠️ No se pudo consultar: ' +
+      fallidos.map(f=>'<b>'+esc(f.nombre)+'</b> ('+esc(f.motivo)+')').join(', ') +
+      '. Puede haber permisos abiertos que no aparecen aquí.' +
+      '<button type="button" class="btn ghost" id="btnReintentarPicker" style="margin-top:8px;padding:9px;font-size:12px;">↻ Reintentar</button></div>';
+  } else if(!permisosAbiertosCache.length){
+    msg = 'No hay permisos ni ATS abiertos en este momento.';
   }
-  statusEl.textContent = permisosAbiertosCache.length ? '' : 'No hay permisos abiertos en este momento.';
+  statusEl.innerHTML = msg;
+  const btnR = document.getElementById('btnReintentarPicker');
+  if(btnR) btnR.addEventListener('click', cargarPermisosAbiertos);
   renderPicker();
+}
+document.getElementById('btnVincularPermiso').addEventListener('click', ()=>{
+  showScreen('screenPicker');
+  seleccionPicker = [];
+  document.getElementById('pickerSearch').value = '';
+  cargarPermisosAbiertos();
 });
 function renderPicker(){
   const q = document.getElementById('pickerSearch').value.trim().toLowerCase();
   const yaVinculados = (currentObra.permisos||[]).map(p=>p.code);
   let items = permisosAbiertosCache.filter(p=>!yaVinculados.includes(p.code));
-  if(q) items = items.filter(p=> p.code.toLowerCase().includes(q) || p.tipo.toLowerCase().includes(q) || p.area.toLowerCase().includes(q));
+  if(q) items = items.filter(p=> [p.code, p.tipo, p.area].some(v=>String(v||'').toLowerCase().includes(q)));
   const listEl = document.getElementById('pickerList');
-  if(!items.length){ listEl.innerHTML = '<div class="empty">No hay coincidencias.</div>'; return; }
+  if(!permisosAbiertosCache.length){ listEl.innerHTML = ''; return; } // el motivo ya está en pickerStatus
+  if(!items.length){ listEl.innerHTML = '<div class="empty">' + (q ? 'No hay coincidencias.' : 'Todos los abiertos ya están vinculados a esta obra.') + '</div>'; return; }
   listEl.innerHTML = items.map(p=>{
     const sel = seleccionPicker.includes(p.code);
     return `<div class="picker-item ${sel?'selected':''}" data-code="${esc(p.code)}">
@@ -517,13 +560,24 @@ document.getElementById('btnRegistrarHoy').addEventListener('click', async ()=>{
   document.getElementById('registroPermisosChips').innerHTML = (currentObra.permisos||[])
     .map(p=>`<span class="badge-tipo">${p.icono||''} ${esc(p.code)}</span> `).join('') ||
     '<span style="font-size:11.5px;color:var(--muted);">Sin permiso vinculado</span>';
-  const hoy = new Date().toISOString().slice(0,10);
+  // Fecha LOCAL: toISOString() da la fecha en UTC, y en Colombia (UTC-5)
+  // desde las 7 p.m. ponía la fecha de MAÑANA en el registro.
+  const ahora = new Date(); ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
+  const hoy = ahora.toISOString().slice(0,10);
   document.getElementById('registroFecha').value = hoy;
   actualizarEtiquetaFecha();
   document.getElementById('trabajadoresList').innerHTML = '';
   trabajadorCounter = 0;
   agregarTrabajadorRow();
   document.getElementById('verifNombre').value=''; document.getElementById('verifCedula').value='';
+  // El recuadro de firma del verificador NUNCA se inicializaba (solo los de
+  // los trabajadores, que se crean con agregarTrabajadorRow): se veía, pero no
+  // dibujaba, y el guardado quedaba bloqueado en "Falta la firma del
+  // verificador". setup() no duplica listeners si ya estaba listo; clear()
+  // evita que la firma del registro anterior pase al de hoy.
+  const padVerif = document.getElementById('padVerificador');
+  setupPad(padVerif);
+  if (pads.padVerificador) pads.padVerificador.clear();
   attachPersonalAutocomplete(document.getElementById('verifNombre'), persona=>{
     document.getElementById('verifNombre').value = persona.nombre;
     document.getElementById('verifCedula').value = persona.cedula;

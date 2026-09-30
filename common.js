@@ -23,7 +23,13 @@ async function fetchWithRetry(url, options, retries = 2, backoffMs = 800) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await fetch(url, options);
+      const res = await fetch(url, options);
+      // Si un backend rechaza la clave del portal, se pide aquí, en un solo
+      // lugar, para todas las páginas (sin tocar cómo lee cada una la respuesta).
+      if (String(url).indexOf('script.google') !== -1 && res && res.clone) {
+        res.clone().json().then((j) => { if (ClavePortal.esErrorDeClave(j)) ClavePortal.pedir(); }).catch(() => {});
+      }
+      return res;
     } catch (err) {
       lastErr = err;
       if (attempt < retries) {
@@ -33,6 +39,127 @@ async function fetchWithRetry(url, options, retries = 2, backoffMs = 800) {
   }
   throw lastErr;
 }
+
+/* ================= CLAVE DEL PORTAL =================
+   El token de config.js es público (GitHub): cualquiera con él podía leer
+   nombres, cédulas y firmas. Ahora cada backend puede exigir una CLAVE que
+   no está en GitHub: se escribe una vez en cada celular y queda guardada
+   en ese equipo. Mientras un equipo no tenga clave, se sigue usando el
+   token de config.js (los backends que aún no tengan clave lo aceptan). */
+const ClavePortal = {
+  KEY: 'ssta-clave-portal',
+  get() { try { return localStorage.getItem(this.KEY) || ''; } catch (e) { return ''; } },
+  tiene() { return !!this.get(); },
+  guardar(v) {
+    try { if (v) localStorage.setItem(this.KEY, v); else localStorage.removeItem(this.KEY); } catch (e) { /* modo privado */ }
+    this.aplicar();
+  },
+  aplicar() {
+    if (typeof PORTAL_CONFIG === 'undefined') return;
+    if (PORTAL_CONFIG._tokenOriginal === undefined) PORTAL_CONFIG._tokenOriginal = PORTAL_CONFIG.API_TOKEN;
+    PORTAL_CONFIG.API_TOKEN = this.get() || PORTAL_CONFIG._tokenOriginal;
+  },
+  esErrorDeClave(j) {
+    return !!(j && j.ok === false && (j.codigoError === 'CLAVE' || /token inv[aá]lido/i.test(String(j.error || ''))));
+  },
+  _abierto: false,
+  pedir(motivo) {
+    if (this._abierto || typeof document === 'undefined' || !document.body) return;
+    this._abierto = true;
+    const tenia = this.tiene();
+    const fondo = document.createElement('div');
+    fondo.className = 'clave-fondo';
+    fondo.innerHTML =
+      '<div class="clave-caja" role="dialog" aria-modal="true" aria-labelledby="claveTitulo">' +
+      '<h3 id="claveTitulo">🔑 Clave del portal</h3>' +
+      '<p>' + esc(motivo || (tenia
+        ? 'El servidor no aceptó la clave guardada en este equipo. Escribe la clave vigente (la da el área SSTA).'
+        : 'Para ver y guardar datos del personal, este equipo necesita la clave del portal. Se escribe una sola vez: queda guardada en este celular.')) + '</p>' +
+      '<input type="password" id="claveInput" autocomplete="current-password" placeholder="Clave del portal">' +
+      '<label class="clave-ver"><input type="checkbox" id="claveVer"> Mostrar</label>' +
+      '<div class="clave-acc"><button type="button" class="btn-main" id="claveGuardar">Guardar clave</button>' +
+      '<button type="button" class="btn-secondary" id="claveCancelar">Ahora no</button></div>' +
+      (tenia ? '<button type="button" class="clave-quitar" id="claveQuitar">Quitar la clave de este equipo</button>' : '') +
+      '</div>';
+    document.body.appendChild(fondo);
+    const inp = fondo.querySelector('#claveInput');
+    const cerrar = () => { fondo.remove(); this._abierto = false; };
+    fondo.querySelector('#claveVer').addEventListener('change', (e) => { inp.type = e.target.checked ? 'text' : 'password'; });
+    fondo.querySelector('#claveCancelar').addEventListener('click', cerrar);
+    const q = fondo.querySelector('#claveQuitar');
+    if (q) q.addEventListener('click', () => { this.guardar(''); cerrar(); ClavePortal._despues(); });
+    const guardarla = () => {
+      const v = inp.value.trim();
+      if (!v) { inp.focus(); return; }
+      this.guardar(v); cerrar(); ClavePortal._despues();
+    };
+    fondo.querySelector('#claveGuardar').addEventListener('click', guardarla);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') guardarla(); });
+    setTimeout(() => inp.focus(), 50);
+  },
+  /* Después de cambiar la clave: lo pendiente se reintenta con la nueva. Las
+     páginas sin formulario (inicio, tablero) se recargan para volver a
+     consultar; en un formulario NO se recarga, para no perder lo escrito. */
+  _despues() {
+    try { if (typeof Outbox !== 'undefined') Outbox.flush(); } catch (e) {}
+    const hayFormulario = document.querySelector('#app, #atsApp, form');
+    if (!hayFormulario) location.reload();
+    else alert('Clave guardada en este equipo. Vuelve a intentar lo que estabas haciendo (buscar, guardar o abrir).');
+  }
+};
+ClavePortal.aplicar();
+
+/* ================= VIGENCIA DE UN ATS =================
+   Un ATS vale hasta el final del día de su fecha "hasta" (o de su fecha
+   "desde" si no tiene). Después de eso, si sigue abierto, está VENCIDO: es
+   de lo primero que se marca en una auditoría. Lo usan el tablero, el
+   inicio y las listas del ATS. */
+function atsVence(row) {
+  const f = String((row && (row.fechaHasta || row.fechaDesde)) || '').slice(0, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 0, 0);
+}
+function atsVencido(row) {
+  if (!row || row.estado === 'CERRADO') return false;
+  const v = atsVence(row);
+  return !!v && v.getTime() < Date.now();
+}
+
+/* ================= AVISO: SIN BASE DE PERSONAL =================
+   Antes era un recuadro rojo flotante abajo a la izquierda que tapaba
+   botones y el contador de "preguntas sin responder". Ahora es una franja
+   delgada arriba de la página, con "¿Por qué?" y una ✕ para cerrarla (queda
+   cerrada mientras no se cierre la pestaña). Lo usan el ATS y los permisos. */
+const AvisoPersonal = {
+  CLAVE: 'ssta-aviso-personal-cerrado',
+  mostrar(motivo, reintentar) {
+    let cerrado = false;
+    try { cerrado = sessionStorage.getItem(this.CLAVE) === '1'; } catch (e) {}
+    let el = document.getElementById('avisoPersonal');
+    if (cerrado) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'avisoPersonal';
+      el.className = 'aviso-personal';
+      el.setAttribute('role', 'status');
+      el.innerHTML = '<span class="txt"></span><button type="button" class="por-que">¿Por qué?</button><button type="button" class="cerrar" aria-label="Cerrar aviso">✕</button>';
+      document.body.insertBefore(el, document.body.firstChild);
+      el.querySelector('.cerrar').addEventListener('click', () => {
+        try { sessionStorage.setItem(this.CLAVE, '1'); } catch (e) {}
+        el.remove();
+      });
+    }
+    el.querySelector('.txt').textContent = '⚠️ Sin base de personal: escribe nombres y cédulas a mano, no se pierde nada.';
+    const pq = el.querySelector('.por-que');
+    pq.onclick = () => {
+      alert('Búsqueda de personal no disponible\n\n' + (motivo || 'No se pudo cargar la base de personal.') + '\n\nPuedes seguir escribiendo nombres y cédulas a mano; no se pierde nada.\n\nSe va a reintentar ahora.');
+      el.querySelector('.txt').textContent = '⏳ Reintentando…';
+      if (reintentar) reintentar();
+    };
+  },
+  ocultar() { const el = document.getElementById('avisoPersonal'); if (el) el.remove(); }
+};
 
 /**
  * DraftStore: guarda/recupera un borrador del formulario en localStorage
@@ -262,6 +389,9 @@ const Outbox = {
     try {
       const items = await this.list();
       for (const item of items) {
+        // Lo que quedó en cola se envía con la clave VIGENTE, no con la que
+        // había cuando se guardó (si la clave cambió, el envío fallaría).
+        if (item.body && Object.prototype.hasOwnProperty.call(item.body, 'token') && typeof PORTAL_CONFIG !== 'undefined') item.body.token = PORTAL_CONFIG.API_TOKEN;
         try {
           const res = await fetch(item.url, {
             method: 'POST',
@@ -272,6 +402,11 @@ const Outbox = {
           if (json.ok) {
             await this.remove(item.id);
             Outbox._avisarEnviado(item);
+          } else if (ClavePortal.esErrorDeClave(json)) {
+            // Clave faltante o vieja: NO es un error del permiso. Antes, a los 5
+            // intentos se sacaba de la cola y se perdía. Se conserva y se pide
+            // la clave; al guardarla se reenvía.
+            ClavePortal.pedir();
           } else {
             // El servidor respondió pero con error (token inválido, permiso ya
             // cerrado, etc.) — no es un problema de señal, así que reintentar
@@ -312,7 +447,7 @@ const Outbox = {
   async _yaFueGuardado(item) {
     try {
       const code = item.body && (item.body.permitCode || item.body.code);
-      const token = item.body && item.body.token;
+      const token = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.API_TOKEN) || (item.body && item.body.token);
       if (!code || !token) return false;
       const res = await fetch(item.url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
       const json = await res.json();
@@ -351,6 +486,24 @@ window.addEventListener('online', () => Outbox.flush());
  * Se actualiza solo con los eventos que dispara Outbox.
  */
 const OutboxBadge = {
+  /* Qué es cada pendiente, según el servidor al que va. Antes todo decía
+     "permiso", aunque fuera un ATS o una inspección de EPP. */
+  tipoDe(item) {
+    const B = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.BACKENDS) || {};
+    const k = Object.keys(B).find((x) => B[x] && B[x].url && B[x].url === item.url);
+    if (k === 'ats') return { uno: 'ATS', varios: 'ATS', articulo: 'Un', detalle: 'ATS' };
+    if (k === 'epp') return { uno: 'inspección de EPP', varios: 'inspecciones de EPP', articulo: 'Una', detalle: 'Inspección de EPP' };
+    if (k === 'personal') return { uno: 'registro de personal', varios: 'registros de personal', articulo: 'Un', detalle: 'Personal autorizado' };
+    const nombre = k && B[k].nombre ? B[k].nombre : '';
+    return { uno: 'permiso', varios: 'permisos', articulo: 'Un', detalle: nombre ? 'Permiso · ' + nombre : 'Permiso' };
+  },
+  textoBadge(items) {
+    const n = items.length;
+    const tipos = items.map((it) => this.tipoDe(it));
+    const mismo = tipos.every((t) => t.uno === tipos[0].uno);
+    if (mismo) return '⏳ ' + n + ' ' + (n === 1 ? tipos[0].uno + ' pendiente' : tipos[0].varios + ' pendientes') + ' de enviar';
+    return '⏳ ' + n + ' registros pendientes de enviar';
+  },
   init() {
     if (document.getElementById('outboxBadge')) return;
     const el = document.createElement('div');
@@ -358,26 +511,29 @@ const OutboxBadge = {
     el.style.cssText = 'display:none;position:fixed;left:12px;bottom:12px;z-index:9997;background:#c9a227;color:#151b24;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
     document.body.appendChild(el);
     const actualizar = async () => {
-      const n = await Outbox.count();
+      const items = await Outbox.list();
+      const n = items.length;
       if (n > 0) {
-        el.textContent = '⏳ ' + n + (n===1 ? ' permiso pendiente de enviar' : ' permisos pendientes de enviar');
+        el.textContent = OutboxBadge.textoBadge(items);
         el.style.display = 'block';
       } else {
         el.style.display = 'none';
       }
     };
     window.addEventListener('outbox-cambio', actualizar);
-    window.addEventListener('outbox-enviado', () => {
+    window.addEventListener('outbox-enviado', (ev) => {
       actualizar();
+      const t = ev && ev.detail && ev.detail.url ? OutboxBadge.tipoDe(ev.detail) : { uno: 'registro', articulo: 'Un' };
       const aviso = document.createElement('div');
-      aviso.textContent = '✓ Un permiso pendiente se envió correctamente.';
+      aviso.textContent = '✓ ' + t.articulo + ' ' + t.uno + ' pendiente se envió correctamente.';
       aviso.style.cssText = 'position:fixed;left:12px;bottom:52px;z-index:9998;background:#1d7a4c;color:#fff;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
       document.body.appendChild(aviso);
       setTimeout(()=> aviso.remove(), 5000);
     });
     window.addEventListener('outbox-fallido', (e) => {
       actualizar();
-      alert('No se pudo enviar un permiso guardado en cola, incluso con señal (' + (e.detail.error || 'error del servidor') + '). Revisa ese permiso manualmente — puede que haya que volver a intentarlo desde el formulario.');
+      const t = e.detail && e.detail.item ? OutboxBadge.tipoDe(e.detail.item) : { uno: 'registro' };
+      alert('No se pudo enviar ' + (t.uno === 'ATS' ? 'un ATS' : 'un(a) ' + t.uno) + ' guardado en cola, incluso con señal (' + (e.detail.error || 'error del servidor') + '). Revísalo manualmente: puede que haya que volver a intentarlo desde el formulario.');
     });
 
     // El aviso ahora se puede TOCAR para ver qué hay en cola. Antes solo decía
@@ -404,15 +560,18 @@ const OutboxBadge = {
       caja.innerHTML =
         '<h3 style="margin:0 0 4px;font-size:16px;">Pendientes de enviar</h3>' +
         '<p style="margin:0 0 14px;font-size:12.5px;color:#5c6a76;line-height:1.5;">' +
-        'Estos permisos se guardaron en el celular pero no se ha confirmado que llegaran al servidor. ' +
+        'Esto se guardó en el celular pero no se ha confirmado que llegara al servidor. ' +
         'Si ya los ves en el dashboard, es que sí llegaron y la confirmación se perdió: usa «Comprobar» para limpiarlos.</p>' +
         lista.map((it,i)=>{
           const code = (it.body && (it.body.permitCode || it.body.code)) || 'sin código';
-          const cierre = it.body && it.body.status === 'CERRADO';
+          const cierre = it.body && (it.body.status === 'CERRADO' || it.body.action === 'cerrarAts');
+          const agrego = it.body && (it.body.action === 'agregarParticipantes' || it.body.action === 'addWorkers');
+          const tipo = OutboxBadge.tipoDe(it);
           const f = new Date(it.savedAt);
           const cuando = isNaN(f.getTime()) ? '' : f.toLocaleDateString('es-CO') + ' ' + f.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
           return '<div style="border:1px solid #dde3e8;border-radius:9px;padding:11px;margin-bottom:9px;font-size:12.5px;line-height:1.5;">' +
-            '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:#c0392b;">(cierre)</span>' : ' (apertura)') +
+            '<span style="color:#5c6a76;font-size:11.5px;">' + esc(tipo.detalle) + '</span><br>' +
+            '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:#c0392b;">(cierre)</span>' : (agrego ? ' (personal agregado)' : ' (apertura o cambios)')) +
             '<br><span style="color:#5c6a76;">Guardado: ' + esc(cuando) + (it.intentos ? ' · ' + it.intentos + ' intento(s)' : '') + '</span>' +
             '<div style="display:flex;gap:7px;margin-top:9px;">' +
             '<button data-comprobar="' + it.id + '" style="flex:1;padding:9px;border:1px solid #1f6f8b;background:#fff;color:#1f6f8b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Comprobar</button>' +
@@ -437,7 +596,7 @@ const OutboxBadge = {
           b.disabled = true; b.textContent = 'Comprobando…';
           const item = lista.find(x=>String(x.id)===b.dataset.comprobar);
           const ya = await comprobar(item);
-          if (ya) { alert('Ese permiso SÍ está guardado en el servidor. Se quita de la cola.'); }
+          if (ya) { alert('Eso SÍ está guardado en el servidor. Se quita de la cola.'); }
           else { alert('Todavía no aparece en el servidor. Se deja en cola para reintentarlo.'); }
           Outbox._avisar();
           const quedan = await Outbox.list();
@@ -447,7 +606,7 @@ const OutboxBadge = {
 
       caja.querySelectorAll('[data-descartar]').forEach(b=>{
         b.onclick = async () => {
-          if (!confirm('¿Descartar este pendiente? Si el permiso no llegó al servidor, se pierde y habrá que volver a diligenciarlo.')) return;
+          if (!confirm('¿Descartar este pendiente? Si no llegó al servidor, se pierde y habrá que volver a diligenciarlo.')) return;
           await Outbox.remove(b.dataset.descartar);
           Outbox._avisar();
           const quedan = await Outbox.list();

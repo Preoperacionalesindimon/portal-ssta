@@ -75,7 +75,10 @@ const PermisoCore = (function () {
       const catDiv = document.createElement('div');
       catDiv.className = 'check-cat';
       const h4 = document.createElement('h4');
-      h4.textContent = cat.cat;
+      h4.className = 'cat-cab';
+      h4.innerHTML = '<span class="cat-nombre"></span><span class="cat-avance"></span>' +
+        '<button type="button" class="cat-todo">✓ Todo ' + esc(states_[0].label) + '</button>';
+      h4.querySelector('.cat-nombre').textContent = cat.cat;
       catDiv.appendChild(h4);
       cat.items.forEach((text) => {
         const key = keyFromText(statePrefix, text);
@@ -88,6 +91,27 @@ const PermisoCore = (function () {
         row.innerHTML = `<p>${text}</p><div class="toggle" role="group" aria-label="${text.replace(/"/g, '&quot;')}">${btns}</div>`;
         catDiv.appendChild(row);
       });
+      /* "Todo C / Todo SÍ": en listas de 40+ preguntas casi todas cumplen.
+         Marca SOLO las que no tienen respuesta (un NA ya puesto no se toca) y
+         pide confirmar que se verificaron: es una declaración, no un trámite. */
+      h4.querySelector('.cat-todo').addEventListener('click', () => {
+        if (locked) return;
+        const pendientes = [...catDiv.querySelectorAll('.check-item')].filter((r) => !r.querySelector('button[aria-pressed="true"]'));
+        if (!pendientes.length) { alert('Todas las preguntas de «' + cat.cat + '» ya tienen respuesta.'); return; }
+        if (!confirm('Marcar ' + pendientes.length + ' pregunta(s) sin responder de «' + cat.cat + '» como «' + states_[0].label + '».\n\n¿Confirmas que las verificaste en campo? Las que no cumplan, cámbialas después.')) return;
+        pendientes.forEach((r) => { const b = r.querySelector('button[data-val="' + states_[0].val + '"]'); if (b) b.click(); });
+      });
+      const pintarAvance = () => {
+        const filas = catDiv.querySelectorAll('.check-item');
+        const hechas = [...filas].filter((r) => r.querySelector('button[aria-pressed="true"]')).length;
+        const av = h4.querySelector('.cat-avance');
+        av.textContent = hechas + '/' + filas.length;
+        av.classList.toggle('completo', hechas === filas.length);
+        h4.querySelector('.cat-todo').hidden = hechas === filas.length;
+      };
+      catDiv.addEventListener('click', () => setTimeout(pintarAvance, 0));
+      catDiv._pintarAvance = pintarAvance;
+      pintarAvance();
       container.appendChild(catDiv);
     });
     container.addEventListener('click', (e) => {
@@ -115,6 +139,7 @@ const PermisoCore = (function () {
     if (el) el.textContent = `${done}/${total}`;
   }
   function applyToggleState(stateObj, toggleStates) {
+    setTimeout(() => document.querySelectorAll('.check-cat').forEach((c) => c._pintarAvance && c._pintarAvance()), 0);
     const states_ = toggleStates || cfg.toggleStates || TOGGLE_2STATE;
     document.querySelectorAll('button[data-key]').forEach((btn) => {
       const key = btn.dataset.key,
@@ -334,6 +359,26 @@ const PermisoCore = (function () {
       });
     });
   }
+  /* Mismo atajo para las preguntas SÍ/N-A sueltas (alturas): un botón por
+     sección que tenga 3 o más, solo sobre las que no tienen respuesta. */
+  function initTodoSiPorSeccion() {
+    document.querySelectorAll('#app .section').forEach((sec) => {
+      const grupos = [...sec.querySelectorAll('.yn-opts')];
+      const titulo = sec.querySelector('.section-title');
+      if (grupos.length < 3 || !titulo || titulo.querySelector('.cat-todo')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'cat-todo en-seccion'; btn.textContent = '✓ Todo SÍ';
+      titulo.appendChild(btn);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (locked) return;
+        const pend = grupos.filter((g) => g.getClientRects().length && !g.querySelector('.active-si,.active-no,.active-na'));
+        if (!pend.length) { alert('Todas las preguntas de esta sección ya tienen respuesta.'); return; }
+        if (!confirm('Marcar ' + pend.length + ' pregunta(s) sin responder de esta sección como «SÍ».\n\n¿Confirmas que las verificaste en campo? Las que no apliquen, cámbialas después.')) return;
+        pend.forEach((g) => { const b = g.querySelector('button[data-v="SI"]'); if (b) b.click(); });
+      });
+    });
+  }
   function collectFreeformYN(container) {
     const out = {};
     [...container.querySelectorAll('.yn-opts')].forEach((g, i) => {
@@ -408,7 +453,7 @@ const PermisoCore = (function () {
     buildResponsablesUI();
     document.querySelectorAll('canvas.pad').forEach((c) => setupPad(c));
     for (let i = 0; i < 3; i++) addExecRow();
-    if (cfg.freeformYN) initFreeformYN();
+    if (cfg.freeformYN) { initFreeformYN(); initTodoSiPorSeccion(); }
     if (cfg.extraOnInitRender) cfg.extraOnInitRender();
     initPendingNav();
     actualizarPendientes();
@@ -502,6 +547,7 @@ const PermisoCore = (function () {
     base.ejecutantes = collectExecRows();
     if (cfg.freeformYN && $('openPhase')) base.yn = collectFreeformYN($('openPhase'));
     if (cfg.extraCollectOpenData) Object.assign(base, cfg.extraCollectOpenData());
+    if (atsRelacionado) base.atsRelacionado = atsRelacionado;
     return base;
   }
   function collectCloseData() {
@@ -579,6 +625,8 @@ const PermisoCore = (function () {
 
   function loadOpenDataIntoForm(data) {
     permitCode = data.permitCode;
+    atsRelacionado = data.atsRelacionado || null;
+    setTimeout(pintarAtsRelacionado_, 0);
     (cfg.checklistGroups || []).forEach((g) => {
       states[g.stateKey] = states[g.stateKey] || {};
       const guardadoMigrado = migrarClaveEstadoAntigua(data[g.stateKey], g.statePrefix, g.data);
@@ -728,28 +776,8 @@ const PermisoCore = (function () {
 
   /** Muestra (o quita) el aviso de que el autocompletar de personal no está disponible. */
   function avisarPersonal() {
-    let chip = document.getElementById('avisoPersonal');
-    if (personalCache.length) {
-      if (chip) chip.remove();
-      return;
-    }
-    if (!chip) {
-      chip = document.createElement('button');
-      chip.id = 'avisoPersonal';
-      chip.type = 'button';
-      chip.className = 'aviso-personal';
-      chip.addEventListener('click', () => {
-        alert(
-          'Autocompletar de personal no disponible\n\n' +
-            personalMotivo +
-            '\n\nPuedes seguir llenando el permiso escribiendo los nombres y cédulas a mano; no se pierde nada.\n\nSe va a reintentar ahora.'
-        );
-        chip.textContent = '⏳ Reintentando…';
-        cargarPersonalCompartido();
-      });
-      document.body.appendChild(chip);
-    }
-    chip.textContent = '⚠️ Sin base de personal — toca para ver por qué';
+    if (personalCache.length) { AvisoPersonal.ocultar(); return; }
+    AvisoPersonal.mostrar(personalMotivo, cargarPersonalCompartido);
   }
   function attachPersonalAutocomplete(inputEl, onSelect) {
     if (inputEl.dataset.autocompleteInit) return; // evita duplicar listeners si la sección se reconstruye
@@ -1162,7 +1190,10 @@ const PermisoCore = (function () {
     $('mainActionBtn').textContent = 'Guardar apertura en la hoja';
     $('closeLockedMsg').classList.remove('hidden');
     $('closeFields').classList.add('hidden');
+    atsRelacionado = null; codigoAvisadoAlAts = null;
+    pintarAtsRelacionado_();
     checkForOpenDraft();
+    aplicarPrefillDesdeAts_();
   }
   async function openCloseModeWithCode(code) {
     if (!code) return;
@@ -1531,6 +1562,7 @@ const PermisoCore = (function () {
         }
         if (res.ok) {
           firstSaveDone = true;
+          avisarAlAts_(); // por si el código cambió (colisión) antes de guardarse
           $('statusBanner').className = 'status-banner open';
           $('statusBannerText').textContent = 'Permiso guardado en la hoja ✓ — comparte el código con quien hará el cierre';
           $('footerStatus').textContent = 'Código del permiso: ' + permitCode;
@@ -1617,6 +1649,11 @@ const PermisoCore = (function () {
     // Si se llega desde un enlace con ?code=XXX (ej. desde el dashboard de permisos),
     // abre ese permiso directamente en modo consulta/cierre, sin pasar por la pantalla de inicio.
     const codeFromUrl = new URLSearchParams(location.search).get('code');
+    if (!codeFromUrl && new URLSearchParams(location.search).get('desdeAts') === '1') {
+      // Después de que la página termine de definir sus selectores (herramientas,
+      // gases…): init() corre antes de eso y abrir el permiso aquí mismo fallaba.
+      setTimeout(() => { startNewPermit(); history.replaceState(null, '', location.pathname); }, 0);
+    }
     if (codeFromUrl) {
       $('codeInput').value = codeFromUrl;
       openCloseModeWithCode(codeFromUrl);
@@ -1630,6 +1667,86 @@ const PermisoCore = (function () {
 
   let saveOpenDraftDebounced = null;
   let saveCloseDraftDebounced = null;
+
+  /* ================= PERMISO ABIERTO DESDE UN ATS =================
+     Antes el ATS y sus permisos eran registros sueltos: las mismas personas
+     se escribían dos veces y nada decía qué permiso iba con qué ATS. Ahora el
+     ATS abre el permiso con ?desdeAts=1 y deja en este equipo los datos del
+     trabajo y del personal; el permiso los toma, guarda el código del ATS
+     (atsRelacionado, queda en la hoja con el resto del permiso) y le avisa al
+     ATS qué código de permiso se generó. */
+  let atsRelacionado = null;
+  let codigoAvisadoAlAts = null;
+  const CLAVE_PREFILL_ATS = 'ssta-prefill-permiso';
+  function tipoDeEstaPagina_() {
+    const B = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.BACKENDS) || {};
+    const f = location.pathname.split('/').pop();
+    return Object.keys(B).find((k) => B[k].archivo === f) || null;
+  }
+  function avisarAlAts_() {
+    if (!atsRelacionado || !permitCode) return;
+    const k = 'ssta-ats-permisos:' + atsRelacionado;
+    let l = [];
+    try { l = JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { l = []; }
+    const tipo = tipoDeEstaPagina_();
+    l = l.filter((x) => x.code !== permitCode && x.code !== codigoAvisadoAlAts);
+    l.push({ tipo, code: permitCode, nombre: cfg && cfg.nombre ? cfg.nombre : ((PORTAL_CONFIG.BACKENDS[tipo] || {}).nombre || ''), t: Date.now() });
+    try { localStorage.setItem(k, JSON.stringify(l)); } catch (e) { /* memoria llena */ }
+    codigoAvisadoAlAts = permitCode;
+  }
+  function pintarAtsRelacionado_() {
+    let chip = $('atsRelacionadoChip');
+    if (!atsRelacionado) { if (chip) chip.remove(); return; }
+    if (!chip) {
+      chip = document.createElement('div');
+      chip.id = 'atsRelacionadoChip';
+      chip.className = 'ats-relacionado';
+      const sb = $('statusBanner');
+      if (sb && sb.parentNode) sb.parentNode.insertBefore(chip, sb.nextSibling);
+    }
+    chip.innerHTML = '🧭 ATS relacionado: <a href="ats.html?code=' + encodeURIComponent(atsRelacionado) + '&ver=1"><b>' + esc(atsRelacionado) + '</b></a>';
+  }
+  function aplicarPrefillDesdeAts_() {
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem(CLAVE_PREFILL_ATS) || 'null'); } catch (e) { p = null; }
+    if (!p || Date.now() - (p.t || 0) > 30 * 60000) return false;
+    const tipo = tipoDeEstaPagina_();
+    if (p.tipo && tipo && p.tipo !== tipo) return false;
+    try { localStorage.removeItem(CLAVE_PREFILL_ATS); } catch (e) {}
+    atsRelacionado = p.atsCode || null;
+    const poner = (ids, v) => {
+      if (!v) return;
+      for (const id of ids) {
+        const el = $(id);
+        if (el && !String(el.value || '').trim()) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); return; }
+      }
+    };
+    poner(['descripcion', 'descripcionAlt'], p.trabajo);
+    poner(['sitio', 'areaAlt'], p.sitio);
+    poner(['desdeFecha', 'fechaInicioAlt'], p.desde);
+    poner(['desdeHora', 'horaInicioAlt'], p.horaDesde);
+    poner(['hastaFecha', 'fechaCulminacionAlt'], p.hasta || p.desde);
+    poner(['hastaHora', 'horaCulminacionAlt'], p.horaHasta);
+    poner(['responsable'], p.responsable);
+    // Ejecutantes: primero las filas vacías que ya existen, después filas nuevas.
+    (p.personas || []).forEach((per) => {
+      let n = null;
+      for (let i = 1; i <= execCounter; i++) {
+        const el = $('execNombre' + i);
+        if (el && !el.value.trim()) { n = i; break; }
+      }
+      if (n === null) n = addExecRow();
+      if ($('execNombre' + n)) $('execNombre' + n).value = per.nombre || '';
+      if ($('execCC' + n)) $('execCC' + n).value = per.cc || '';
+      if ($('execCargo' + n)) $('execCargo' + n).value = per.cargo || '';
+    });
+    if (execBody) refreshPadsIn(execBody);
+    avisarAlAts_();
+    pintarAtsRelacionado_();
+    alert('🧭 Se trajeron del ATS' + (atsRelacionado ? ' ' + atsRelacionado : '') + ': descripción, sitio, fechas y ' + (p.personas || []).length + ' persona(s).\n\nRevísalos y completa el permiso. Cada ejecutante firma aquí.');
+    if (saveOpenDraftDebounced) saveOpenDraftDebounced();
+    return true;
+  }
 
   /* ================= HOJA COMPACTA PARA IMPRIMIR / PDF =================
      Antes se imprimía el formulario tal como se ve en pantalla: una pregunta
@@ -1646,7 +1763,7 @@ const PermisoCore = (function () {
   const limpio_ = (t) => String(t || '').replace(/\s+/g, ' ').trim();
   function visibleHoja_(el) { return el.type === 'hidden' || el.getClientRects().length > 0; }
   function textoPropio_(el) {
-    return limpio_([...el.childNodes].filter((n) => n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('progress-pill'))).map((n) => n.textContent).join(''));
+    return limpio_([...el.childNodes].filter((n) => n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('progress-pill') && n.tagName !== 'BUTTON')).map((n) => n.textContent).join(''));
   }
   function valorHoja_(el) {
     if (el.tagName === 'SELECT') { const o = el.options[el.selectedIndex]; return el.value && o ? limpio_(o.textContent) : ''; }
@@ -1713,7 +1830,7 @@ const PermisoCore = (function () {
           c.contains('tension-sub') || el.tagName === 'BUTTON' || el.tagName === 'CANVAS' || el.id === 'closeLockedMsg' || /Sel$/.test(el.id)) continue;
       if (c.contains('check-cat') && el.querySelector('.check-item')) {
         const h = el.querySelector('h4');
-        if (h) items.push({ t: 'sub', x: limpio_(h.textContent) });
+        if (h) items.push({ t: 'sub', x: limpio_((h.querySelector('.cat-nombre') || h).textContent) });
         el.querySelectorAll('.check-item').forEach((ci) => items.push({ t: 'qa', q: limpio_((ci.querySelector('p') || ci).textContent), a: respuestaHoja_(ci.querySelector('.toggle')) }));
         continue;
       }
@@ -1889,7 +2006,8 @@ const PermisoCore = (function () {
     let h = '<div class="hp">' +
       '<table class="hp-cab"><colgroup><col style="width:14%"><col><col style="width:22%">' + (qrImg ? '<col style="width:12%">' : '') + '</colgroup><tr>' +
       '<td class="hp-logo"><img src="' + (logoHoja_ || 'logo-indimon.png') + '" alt="INDIMON"></td>' +
-      '<td class="hp-tit">' + esc(titulo) + '<div>' + (permitCode ? 'Registro ' + esc(permitCode) + ' · ' : '') + esc(estado) + '</div></td>' +
+      '<td class="hp-tit">' + esc(titulo) + '<div>' + (permitCode ? 'Registro ' + esc(permitCode) + ' · ' : '') + esc(estado) + '</div>' +
+      (atsRelacionado ? '<div>ATS relacionado: <b>' + esc(atsRelacionado) + '</b></div>' : '') + '</td>' +
       '<td class="hp-meta">' + meta.map(esc).join('<br>') + '<br><span>Respuestas: C = cumple · SÍ / NO · NA = no aplica</span></td>' +
       (qrImg ? '<td class="hp-qr"><img src="' + qrImg.src + '" alt="QR"><div>Escanea para abrir este permiso</div></td>' : '') +
       '</tr></table>';

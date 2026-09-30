@@ -263,6 +263,15 @@
   body.revision.rev-cerrado .rev-acc{display:none;}
   .rev-copiar{display:none;}
   body.revision .rev-copiar{display:inline-block;}
+  .abrir-permisos{margin-top:12px;padding:12px;border-radius:10px;background:var(--brand-ats-soft);}
+  .abrir-permisos .ya-asociados{margin-top:8px;font-size:13px;line-height:1.6;}
+  .abrir-permisos .ya-asociados a{color:var(--brand-ats);font-weight:700;}
+  .etiqueta-estado.vencido{background:#fdecea;color:#a02d20;margin-left:4px;}
+  /* Al revisar: acciones en dos columnas y más bajas (antes eran seis botones
+     uno debajo de otro, media pantalla del celular). */
+  body.revision .previa-barra{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  body.revision .previa-barra .btn{width:100%;min-height:42px;font-size:13px;padding:0 8px;line-height:1.2;}
+  @media (min-width:700px){ body.revision .previa-barra{grid-template-columns:repeat(3, 1fr);} }
   .copia-op{display:block;width:100%;text-align:left;margin-top:8px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);}
   .copia-op small{display:block;font-weight:500;font-size:12.5px;color:var(--ink-muted);margin-top:3px;}
   .copia-op:active{background:var(--brand-ats-soft);}
@@ -309,7 +318,7 @@
 <!-- MENÚ INICIAL: como en los permisos — abrir, cerrar o agregar personal. -->
 <div id="menuAts">
   <div class="hdr">
-    <div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormatoMenu"></span></div>
+    <div class="marca-titulo"><span class="marca" role="img" aria-label="INDIMON"></span><div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormatoMenu"></span></div></div>
     <a href="index.html">← Volver al portal</a>
   </div>
   <div class="menu-in">
@@ -350,7 +359,7 @@
 
 <div id="atsApp">
   <div class="hdr">
-    <div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormato"></span></div>
+    <div class="marca-titulo"><span class="marca" role="img" aria-label="INDIMON"></span><div><h1>Análisis de Trabajo Seguro</h1><span class="cod" id="codFormato"></span></div></div>
     <button type="button" class="menu" id="btnIrMenu">☰ Menú</button>
   </div>
   <div class="wrap">
@@ -418,6 +427,7 @@
         <div class="grupo-fichas" id="bloquePermisos" style="margin-top:12px;"><span class="etq">¿Cuál?</span><div class="fichas" id="fPermisos"></div></div>
         <input type="text" class="inp libre" id="permisoOtro" placeholder="✏️ ¿Cuál otro permiso? Escríbelo aquí…" hidden>
         <div id="alertaPermisos"></div>
+        <div id="abrirPermisos"></div>
       </div>
     </div>
 
@@ -752,6 +762,8 @@ function renderCab() {
     if (id === 'otro' && on) $('permisoOtro').focus();
   });
   $('permisoOtro').hidden = !(c.requiere === 'SI' && c.permisos.includes('otro'));
+  sincronizarPermisosAsociados();
+  renderAbrirPermisos();
   renderEpp(); renderHerr(); renderEmerg(); renderAmb();
 }
 function enlazarCampo(id, ruta) {
@@ -1408,19 +1420,8 @@ async function cargarPersonal() {
   avisarPersonal();
 }
 function avisarPersonal() {
-  let chip = document.getElementById('avisoPersonal');
-  if (personal.length) { if (chip) chip.remove(); return; }
-  if (!chip) {
-    chip = document.createElement('button');
-    chip.id = 'avisoPersonal'; chip.type = 'button'; chip.className = 'aviso-personal';
-    chip.addEventListener('click', () => {
-      alert('Búsqueda de personal no disponible\n\n' + personalMotivo + '\n\nPuedes seguir escribiendo nombres y cédulas a mano; no se pierde nada.\n\nSe va a reintentar ahora.');
-      chip.textContent = '⏳ Reintentando…';
-      cargarPersonal();
-    });
-    document.body.appendChild(chip);
-  }
-  chip.textContent = '⚠️ Sin base de personal — toca para ver por qué';
+  if (personal.length) { AvisoPersonal.ocultar(); return; }
+  AvisoPersonal.mostrar(personalMotivo, cargarPersonal);
 }
 cargarPersonal();
 // Si abrió sin señal, se reintenta sola al volver la conexión.
@@ -1646,7 +1647,8 @@ function armarHoja() {
   const horario = (c.horaDesde || '') + ' HASTA ' + (c.horaHasta || '');
   const permisoTxt = 'SI ' + marca(c.requiere === 'SI') + '    NO ' + marca(c.requiere === 'NO') + '    CUÁL?  ' +
     PERMISOS.map((p) => marca(c.permisos.includes(p.id)) + ' ' + p.nombre.toUpperCase()).join('   ') +
-    '   ' + marca(c.permisos.includes('otro')) + ' OTRO: ' + (c.permisos.includes('otro') && c.permisoOtro && c.permisoOtro.trim() ? c.permisoOtro.trim().toUpperCase() : '________');
+    '   ' + marca(c.permisos.includes('otro')) + ' OTRO: ' + (c.permisos.includes('otro') && c.permisoOtro && c.permisoOtro.trim() ? c.permisoOtro.trim().toUpperCase() : '________') +
+    (permisosAsociadosDe(ats).length ? '\nPermisos diligenciados: ' + permisosAsociadosDe(ats).map((x) => x.code + ((PORTAL_CONFIG.BACKENDS[x.tipo] || {}).nombre ? ' (' + PORTAL_CONFIG.BACKENDS[x.tipo].nombre + ')' : '')).join(', ') : '');
   const img = (src) => (src ? '<img src="' + src + '" alt="firma">' : '');
   const filasPart = ats.participantes.map((p) => '<tr><td>' + esc(p.nombres) +
     (p.tardio ? '\n<span style="font-size:8px;">(ingresó ' + esc(fechaHora(p.ingreso)) + (p.socializado ? ' · ATS socializado' : ' · SIN constancia de socialización') + ')</span>' : '') + '</td><td>' + esc(p.apellidos) + '</td><td>' + esc(p.cedula) + '</td><td>' + esc(p.cargo) + '</td><td class="firma">' + img(p.firma) + '</td></tr>').join('');
@@ -1739,6 +1741,88 @@ $('btnVolverEditar').addEventListener('click', () => {
   document.body.classList.remove('previa'); sigMgr.refreshIn(document.body);
 });
 
+/* ================= ATS ↔ PERMISOS =================
+   Desde el ATS se abre cada permiso que requiere, con la descripción, el
+   área, las fechas y los participantes ya llenos (antes se escribían dos
+   veces). El permiso guarda el código del ATS y le devuelve el suyo por este
+   mismo equipo; el ATS los lista, los imprime y, al cerrarse, avisa si alguno
+   sigue abierto. */
+const PERMISO_A_BACKEND = { caliente: 'caliente', alturas: 'alturas', confinados: 'confinados', izaje: 'izajes', electrico: 'electrico' };
+function permisosAsociadosDe(a) {
+  const out = ((a && a.cab && a.cab.permisosAsociados) || []).slice();
+  if (a && a.code) {
+    let l = [];
+    try { l = JSON.parse(localStorage.getItem('ssta-ats-permisos:' + a.code) || '[]'); } catch (e) { l = []; }
+    l.forEach((x) => { if (x && x.code && !out.some((y) => y.code === x.code)) out.push({ tipo: x.tipo, code: x.code, nombre: x.nombre || '' }); });
+  }
+  return out;
+}
+function sincronizarPermisosAsociados() {
+  if (!ats.code) return;
+  const antes = (ats.cab.permisosAsociados || []).length;
+  const todos = permisosAsociadosDe(ats);
+  if (todos.length !== antes) { ats.cab.permisosAsociados = todos; guardar(); }
+}
+function renderAbrirPermisos() {
+  const cont = $('abrirPermisos');
+  if (!cont) return;
+  const c = ats.cab;
+  const sel = (c.requiere === 'SI' ? c.permisos : []).filter((id) => PERMISO_A_BACKEND[id] && PORTAL_CONFIG.BACKENDS[PERMISO_A_BACKEND[id]]);
+  const asociados = permisosAsociadosDe(ats);
+  if (!sel.length && !asociados.length) { cont.innerHTML = ''; return; }
+  cont.innerHTML = '<div class="abrir-permisos">' +
+    (sel.length ? '<span class="etq">Diligenciar los permisos de este ATS</span>' +
+      '<p class="ayuda" style="margin:0 0 8px;">Se abre el permiso con la descripción, el área, las fechas y los participantes de este ATS ya llenos.</p>' +
+      '<div class="acciones-tareas" style="margin-top:0;">' + sel.map((id) => {
+        const B = PORTAL_CONFIG.BACKENDS[PERMISO_A_BACKEND[id]];
+        return '<button type="button" class="btn sec" data-abrir-permiso="' + id + '">' + esc(B.icono || '📝') + ' Abrir permiso de ' + esc(B.nombre.replace(/^Trabajo (en |)/i, '').toLowerCase()) + '</button>';
+      }).join('') + '</div>' : '') +
+    (asociados.length ? '<div class="ya-asociados"><b>Permisos diligenciados desde este ATS:</b> ' + asociados.map((x) => {
+      const B = PORTAL_CONFIG.BACKENDS[x.tipo] || {};
+      return '<a href="' + esc(B.archivo || 'dashboard.html') + '?code=' + encodeURIComponent(x.code) + '">' + esc((B.icono || '') + ' ' + x.code) + '</a>';
+    }).join(' · ') + '</div>' : '') + '</div>';
+  cont.querySelectorAll('[data-abrir-permiso]').forEach((b) => b.addEventListener('click', () => abrirPermisoDesdeAts(b.dataset.abrirPermiso)));
+}
+function abrirPermisoDesdeAts(id) {
+  const key = PERMISO_A_BACKEND[id];
+  const B = PORTAL_CONFIG.BACKENDS[key];
+  if (!B) return;
+  if (!ats.code && !confirm('Este ATS todavía no tiene código (no se ha guardado en el servidor): el permiso se abre con sus datos, pero no quedará amarrado al ATS.\n\nRecomendado: toca ☁️ Guardar primero.\n\n¿Abrir el permiso de todas formas?')) return;
+  const c = ats.cab;
+  const prefill = {
+    t: Date.now(), tipo: key, atsCode: ats.code || null,
+    trabajo: c.trabajo || '',
+    sitio: [c.area, c.centro.concat((c.centroOtro || '').trim() ? [c.centroOtro.trim()] : []).join(', ')].filter(Boolean).join(' · '),
+    desde: c.desde || '', hasta: c.hasta || c.desde || '', horaDesde: c.horaDesde || '', horaHasta: c.horaHasta || '',
+    responsable: (ats.firmas.lider && ats.firmas.lider.nombre) || '',
+    personas: ats.participantes.map((p) => ({ nombre: ((p.nombres || '') + ' ' + (p.apellidos || '')).trim(), cc: p.cedula || '', cargo: p.cargo || '' })).filter((p) => p.nombre)
+  };
+  try { localStorage.setItem('ssta-prefill-permiso', JSON.stringify(prefill)); } catch (e) { alert('No se pudo preparar el permiso (memoria del equipo llena).'); return; }
+  guardarYa();
+  location.href = B.archivo + '?desdeAts=1';
+}
+// Al volver del permiso (botón atrás del celular), se recoge el código generado.
+window.addEventListener('pageshow', () => { if (ats && ats.code) { sincronizarPermisosAsociados(); renderAbrirPermisos(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ats && ats.code) { sincronizarPermisosAsociados(); renderAbrirPermisos(); } });
+/* Permisos de un ATS que siguen abiertos (se consulta cada backend). */
+async function permisosAbiertosDe(a) {
+  const lista = permisosAsociadosDe(a);
+  const abiertos = [], sinComprobar = [];
+  const tipos = Array.from(new Set(lista.map((x) => x.tipo).filter(Boolean)));
+  await Promise.all(tipos.map(async (tipo) => {
+    const B = PORTAL_CONFIG.BACKENDS[tipo];
+    if (!B || !B.url) return;
+    try {
+      const res = await fetchWithRetry(B.url + '?' + (B.listQuery || 'list=1') + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const d = await res.json();
+      if (!d || !d.ok || !Array.isArray(d.rows)) { sinComprobar.push(B.nombre); return; }
+      const codes = lista.filter((x) => x.tipo === tipo).map((x) => x.code);
+      d.rows.forEach((r) => { const code = r.code || r.permitCode; if (r.status === 'ABIERTO' && codes.includes(code)) abiertos.push(code + ' (' + B.nombre + ')'); });
+    } catch (e) { sinComprobar.push(B.nombre); }
+  }));
+  return { abiertos, sinComprobar };
+}
+
 /* ================= REVISAR UN ATS DE UNA =================
    Al tocar un ATS en cualquier lista se abre directo su formato completo
    (el mismo que se imprime), traído del servidor y sin tocar el borrador de
@@ -1785,6 +1869,7 @@ function copiaSinFirmas(src, conParticipantes) {
   n.cab.desde = hoyISO();
   if (dur != null && dur >= 0) { const d = new Date(n.cab.desde + 'T12:00:00'); d.setDate(d.getDate() + dur); n.cab.hasta = d.toISOString().slice(0, 10); } else n.cab.hasta = '';
   n.tareas = (c.tareas || []).map((t) => { const x = Object.assign({}, t, { uid: uid() }); delete x.agregadaDespues; delete x._pos; return x; });
+  n.cab.permisosAsociados = [];
   n.participantes = conParticipantes ? (c.participantes || []).map((p) => ({ uid: uid(), nombres: p.nombres || '', apellidos: p.apellidos || '', cedula: p.cedula || '', cargo: p.cargo || '', firma: null })) : [];
   const f = nuevoAts().firmas;
   ['lider', 'jefe', 'sst'].forEach((k) => { f[k].nombre = (c.firmas && c.firmas[k] && c.firmas[k].nombre) || ''; });
@@ -2314,6 +2399,12 @@ async function confirmarCierre() {
     panel('<h3>Para cerrar falta:</h3><ul>' + faltas.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Completar</button></div>');
     return;
   }
+  if (permisosAsociadosDe(a).length && navigator.onLine) {
+    toast('Revisando si los permisos de este ATS siguen abiertos…');
+    const r = await permisosAbiertosDe(a);
+    if (r.abiertos.length && !confirm('Estos permisos de ' + a.code + ' siguen ABIERTOS:\n\n• ' + r.abiertos.join('\n• ') + '\n\nLo correcto es cerrarlos primero. ¿Cerrar el ATS de todas formas?')) return;
+    if (!r.abiertos.length && r.sinComprobar.length && !confirm('No se pudo comprobar si siguen abiertos los permisos de: ' + r.sinComprobar.join(', ') + '.\n\n¿Cerrar el ATS de todas formas?')) return;
+  }
   const pend = pendientesDe(a);
   if (!confirm('¿Cerrar ' + a.code + '?\n\nDespués de cerrado ya no se puede modificar ni agregar personal.' +
                (pend.length ? '\n\nQuedan anotados como pendientes al cerrar:\n- ' + pend.join('\n- ') : ''))) return;
@@ -2434,6 +2525,7 @@ const f10 = (x) => (x ? String(x).slice(0, 10) : '');
 function filaLista(x, botones) {
   const cerrado = x.estado === 'CERRADO';
   return '<div class="pl-item" data-revisar="' + esc(x.code) + '"><span><b>' + esc(x.code) + '</b><span class="etiqueta-estado ' + (cerrado ? 'cerrado">CERRADO' : 'abierto">ABIERTO') + '</span>' +
+    (atsVencido(x) ? '<span class="etiqueta-estado vencido">VENCIDO</span>' : '') +
     '<small><br>' + esc(fechaCO(f10(x.fechaDesde))) + (x.fechaHasta ? ' al ' + esc(fechaCO(f10(x.fechaHasta))) : '') + ' · ' + esc([x.centroCostos, x.area].filter(Boolean).join(' · ')) + '<br>' +
     esc(x.trabajo || '') + '<br>' + x.participantes + ' participantes (' + x.firmasParticipantes + ' firmados)' +
     (cerrado ? '<br>Cerrado: ' + esc(x.motivoCierre || '') + (x.cerradoPor ? ' · ' + esc(x.cerradoPor) : '') : '') + '</small><span class="toca">👁 Toca para revisarlo</span></span>' +
@@ -2593,7 +2685,8 @@ function cargarTodo() {
   const qs = new URLSearchParams(location.search);
   const codeUrl = qs.get('code');
   pintarMenu();
-  if (codeUrl && qs.get('agregar') === '1') entrarModoAgregar(codeUrl, 'menu');
+  if (codeUrl && qs.get('ver') === '1') revisarAts(codeUrl, 'menu');
+  else if (codeUrl && qs.get('agregar') === '1') entrarModoAgregar(codeUrl, 'menu');
   else if (codeUrl && qs.get('cerrar') === '1') entrarModoCerrar(codeUrl, 'menu');
   else if (codeUrl && codeUrl !== ats.code) cargarDesdeServidor(codeUrl);
   else if (codeUrl) irAlEditor();

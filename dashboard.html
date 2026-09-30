@@ -70,7 +70,7 @@
 <body>
 <div class="wrapper">
   <div class="header">
-    <h1>📋 Permisos</h1>
+    <div class="marca-titulo"><span class="marca" role="img" aria-label="INDIMON"></span><h1>Tablero SSTA</h1></div>
     <a href="index.html">← Volver al portal</a>
   </div>
 
@@ -167,6 +167,34 @@ let tabActual = 'abiertos';
 let eppPendientes = [];   // [{nombre, cedula, cargo, fecha, inspector, elementos[]}]
 let eppCargado = false;
 
+/* ATS en el tablero: antes solo estaban los 5 permisos, así que un ATS
+   abierto días después de su fecha no se veía en ningún lado. */
+async function cargarAts(){
+  const B = PORTAL_CONFIG.BACKENDS.ats;
+  const out = { abiertos: [], cerrados: [], fallo: null };
+  if(!B || !B.url || B.url.indexOf('http') !== 0) return out;
+  try{
+    const res = await fetchWithRetry(B.url + '?list=1&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+    const data = await res.json();
+    if(!data || !data.ok || !Array.isArray(data.rows)){ out.fallo = { nombre:'ATS', motivo:'respondió con error: ' + ((data && data.error) || 'sin detalle') }; return out; }
+    data.rows.forEach(r=>{
+      const fin = atsVence(r);
+      const item = {
+        tipo: 'ATS', archivo: 'ats.html', icono: '🧭', esAts: true,
+        code: r.code || '—', responsable: r.lider || '',
+        area: [r.centroCostos, r.area].filter(Boolean).join(' · '), trabajo: r.trabajo || '',
+        hastaFecha: fin ? String(r.fechaHasta || r.fechaDesde).slice(0,10) : '', hastaHora: '23:59',
+        fechaApertura: r.fechaDesde || r.updatedAt || null,
+        fechaCierre: r.estado === 'CERRADO' ? (r.cerradoEn || r.updatedAt || null) : null
+      };
+      (r.estado === 'CERRADO' ? out.cerrados : out.abiertos).push(item);
+    });
+  }catch(err){
+    out.fallo = { nombre:'ATS', motivo: (err && err.name === 'SyntaxError') ? 'respondió con una página en vez de datos (revisa el Apps Script del ATS)' : 'no respondió (sin señal o servidor caído)' };
+  }
+  return out;
+}
+
 async function cargar(){
   // Si la pestaña está oculta (en segundo plano) o no hay señal, no tiene sentido
   // consultar los 5 backends — antes esto se disparaba igual cada 2 minutos aunque
@@ -178,6 +206,7 @@ async function cargar(){
   // Se consultan los 5 backends EN PARALELO (no uno detrás de otro): si alguno
   // está caído o lento, ya no retrasa a los demás — antes, con un backend caído,
   // la carga completa del dashboard podía tardar 10-15 segundos.
+  const pAts = cargarAts();
   const resultados = await Promise.allSettled(PERMIT_BACKENDS.map(backend =>
     fetchWithRetry(backend.url + '?' + (backend.listQuery || 'list=1') + '&token=' + encodeURIComponent(backend.token))
       .then(res => res.json())
@@ -217,6 +246,9 @@ async function cargar(){
         else if(row.status === 'CERRADO') nCerrados.push(item);
       });
   });
+  const rAts = await pAts;
+  rAts.abiertos.forEach(x=>nAbiertos.push(x)); rAts.cerrados.forEach(x=>nCerrados.push(x));
+  if(rAts.fallo) nFallidos.push(rAts.fallo);
   abiertos = nAbiertos; cerrados = nCerrados; fallidos = nFallidos;
   ultimaConsulta = new Date();
   // Orden por urgencia real: primero lo vencido, luego lo que está por vencer,
@@ -328,18 +360,19 @@ function render(){
       it.code.toLowerCase().includes(q) ||
       it.tipo.toLowerCase().includes(q) ||
       (it.responsable||'').toLowerCase().includes(q) ||
-      (it.area||'').toLowerCase().includes(q)
+      (it.area||'').toLowerCase().includes(q) ||
+      (it.trabajo||'').toLowerCase().includes(q)
     );
   }
 
   if(items.length===0){
     let msg;
     if(tabActual==='abiertos'){
-      if(q) msg = 'Ningún permiso abierto coincide con la búsqueda.';
+      if(q) msg = 'Ningún permiso ni ATS abierto coincide con la búsqueda.';
       // El chulo verde SOLO cuando los 5 tipos respondieron. Con uno caído no
       // se puede afirmar que no haya permisos abiertos: se dice lo que se sabe.
-      else if(fallidos.length) msg = '⚠️ No se puede confirmar que no haya permisos abiertos: faltan datos de ' + fallidos.map(f=>esc(f.nombre)).join(', ') + '.';
-      else msg = 'No hay permisos abiertos en este momento ✓';
+      else if(fallidos.length) msg = '⚠️ No se puede confirmar que no haya permisos ni ATS abiertos: faltan datos de ' + fallidos.map(f=>esc(f.nombre)).join(', ') + '.';
+      else msg = 'No hay permisos ni ATS abiertos en este momento ✓';
     } else {
       msg = fallidos.length ? '⚠️ Faltan datos de ' + fallidos.map(f=>esc(f.nombre)).join(', ') + '. La lista puede estar incompleta.' : 'No hay permisos cerrados que coincidan con la búsqueda.';
     }
@@ -358,18 +391,19 @@ function render(){
       const etiqueta = v
         ? `<span class="tiempo ${v.nivel==='vencido'?'warn':(v.nivel==='porvencer'?'pronto':'ok')}">${esc(v.texto)}</span>`
         : `<span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>`;
-      return `<a class="item ${clase}" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
+      const enlace = it.esAts ? 'ats.html?code=' + encodeURIComponent(it.code) + '&ver=1' : it.archivo + '?code=' + encodeURIComponent(it.code);
+      return `<a class="item ${clase}" href="${enlace}">
         <div class="row1">
           <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
           ${etiqueta}
         </div>
-        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}${v ? ' · Abierto hace '+formatHoras(h) : ''}</div>
-        <div class="chevron">Toca para abrir el permiso y cerrarlo →</div>
+        <div class="meta">${it.esAts && it.trabajo ? esc(it.trabajo.slice(0,90)) + '<br>' : ''}${it.responsable ? (it.esAts ? 'Líder: ' : 'Responsable: ')+esc(it.responsable) : ''}${it.area ? ' · '+(it.esAts ? '' : 'Área: ')+esc(it.area) : ''}${v && !it.esAts ? ' · Abierto hace '+formatHoras(h) : ''}</div>
+        <div class="chevron">${it.esAts ? 'Toca para revisar el ATS (y cerrarlo desde ahí) →' : 'Toca para abrir el permiso y cerrarlo →'}</div>
       </a>`;
     }).join('');
   } else {
     listEl.innerHTML = items.map(it=>{
-      return `<a class="item closed" href="${it.archivo}?code=${encodeURIComponent(it.code)}">
+      return `<a class="item closed" href="${it.esAts ? 'ats.html?code=' + encodeURIComponent(it.code) + '&ver=1' : it.archivo + '?code=' + encodeURIComponent(it.code)}">
         <div class="row1">
           <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
           <span class="tiempo closed">Cerrado</span>

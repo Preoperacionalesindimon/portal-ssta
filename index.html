@@ -157,6 +157,9 @@
 
   .summary-left{display:flex;align-items:center;gap:10px;}
   .summary-icon{font-size:18px;}
+  .ats-estado{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:800;color:#1d7a4c;background:#e3f4ea;border-radius:10px;padding:3px 9px;}
+  .ats-estado.mal{color:#a02d20;background:#fdecea;}
+  .ats-estado[hidden]{display:none;}
   .open-permits-badge{
     font-size:11px;
     font-weight:700;
@@ -410,11 +413,12 @@
 <div class="wrapper">
 
   <div class="header">
-    <div class="logo">⛑</div>
+    <span class="marca marca-grande" role="img" aria-label="INDIMON"></span>
     <div>
       <h1>Portal SSTA</h1>
       <p>INDIMON S.A.S. &mdash; Sistema de Gestión</p>
     </div>
+    <button type="button" class="btn-clave" id="btnClave" title="Clave del portal de este equipo">🔑 Clave</button>
   </div>
 
   <div class="helper-card">
@@ -755,6 +759,7 @@
               <div class="card-title">ATS – Análisis de Trabajo Seguro</div>
               <div class="card-sub">SSTA-F-007 · Tareas, peligros GTC 45 y controles</div>
               <div class="ext-badge permit">📝 Diligenciar ATS</div>
+              <div class="ats-estado" id="atsEstado" hidden></div>
             </div>
           </a>
 
@@ -1141,6 +1146,7 @@
         // Contar permisos abiertos solo cuando se abre la sección de permisos
         if(item.classList.contains('sec-permisos')){
           contarPermisosAbiertos();
+          contarAts();
         }
         // En móvil, si la sección abierta queda fuera de vista, llevarla al inicio
         // del viewport para que el usuario no tenga que buscarla con el dedo.
@@ -1271,6 +1277,39 @@
     }
   }
   // contarPermisosAbiertos(); // ahora se llama solo al abrir la sección de permisos
+
+  // ── ATS abiertos y vencidos (en la tarjeta del ATS) ──
+  async function contarAts() {
+    const B = PORTAL_CONFIG.BACKENDS.ats;
+    const el = document.getElementById('atsEstado');
+    if (!B || !B.url || B.url.indexOf('http') !== 0 || !el) return;
+    try {
+      const res = await fetchWithRetry(B.url + '?list=1&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const data = await res.json();
+      if (!data || !data.ok || !Array.isArray(data.rows)) { el.textContent = '⚠️ No se pudo consultar los ATS'; el.className = 'ats-estado mal'; el.hidden = false; return; }
+      const abiertos = data.rows.filter(r => r.estado !== 'CERRADO');
+      const vencidos = abiertos.filter(atsVencido);
+      if (!abiertos.length) { el.hidden = true; return; }
+      el.textContent = abiertos.length + (abiertos.length === 1 ? ' abierto' : ' abiertos') + (vencidos.length ? ' · ' + vencidos.length + (vencidos.length === 1 ? ' vencido' : ' vencidos') : '');
+      el.className = 'ats-estado' + (vencidos.length ? ' mal' : '');
+      el.hidden = false;
+    } catch (e) {
+      el.textContent = '⚠️ El servidor del ATS no respondió'; el.className = 'ats-estado mal'; el.hidden = false;
+    }
+  }
+
+  // ── Clave del portal de este equipo ──
+  const btnClave = document.getElementById('btnClave');
+  function pintarBtnClave() {
+    const ok = ClavePortal.tiene();
+    btnClave.textContent = ok ? '🔑 Clave ✓' : '🔑 Clave';
+    btnClave.classList.toggle('ok', ok);
+    btnClave.setAttribute('aria-label', ok ? 'Clave del portal guardada en este equipo. Cambiarla' : 'Escribir la clave del portal');
+  }
+  btnClave.addEventListener('click', () => ClavePortal.pedir(ClavePortal.tiene()
+    ? 'Este equipo ya tiene la clave guardada. Escribe una nueva si cambió.'
+    : undefined));
+  pintarBtnClave();
 
 </script>
 <script>
