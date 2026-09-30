@@ -442,7 +442,7 @@ const Outbox = {
             Outbox._avisarEnviado(item);
           } else {
             await Outbox._anotarError(item.id, navigator.onLine
-              ? 'No hubo respuesta del servidor (' + ((e && e.message) || 'error de red') + '). Si se repite con buena señal, revisa que la URL de config.js sea la de la implementación vigente.'
+              ? 'No hubo respuesta legible del servidor (' + ((e && e.message) || 'error de red') + '). Con buena señal, esto casi siempre es un ERROR DENTRO DEL SCRIPT: Google lo responde de una forma que el navegador no deja leer. En Apps Script → «Ejecuciones» (ícono de reloj) aparece el error exacto.'
               : 'Sin conexión.');
           }
           // Si no se pudo comprobar, se deja en cola y se reintenta luego.
