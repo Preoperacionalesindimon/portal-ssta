@@ -92,7 +92,33 @@ function getRegistrosSheet_() {
   }
   return sheet;
 }
-function checkToken_(token) { return token === API_TOKEN; }
+/* ── CLAVE DEL PORTAL ──────────────────────────────────────────
+   El API_TOKEN de arriba está escrito en config.js, que es PÚBLICO en
+   GitHub: con él cualquiera podía leer nombres, cédulas y firmas. La clave
+   del portal NO va en GitHub: se escribe AQUÍ, en el Apps Script (que solo
+   ve quien lo administra), y cada celular la ingresa una vez.
+
+   Mientras CLAVE_PORTAL diga ESCRIBE_AQUI…, este backend sigue aceptando
+   el token viejo (nada se cae mientras se actualizan los backends uno por
+   uno). En cuanto se escribe la clave, el token público deja de servir.
+   Usa una clave larga (mínimo 10 caracteres, ej. "Obra-Segura-2026!").
+   También se puede poner en Configuración del proyecto → Propiedades de
+   la secuencia de comandos, con el nombre CLAVE_PORTAL (tiene prioridad). */
+const CLAVE_PORTAL = 'ESCRIBE_AQUI_LA_CLAVE_DEL_PORTAL';
+
+function claveConfigurada_() {
+  let c = '';
+  try { c = PropertiesService.getScriptProperties().getProperty('CLAVE_PORTAL') || ''; } catch (e) { c = ''; }
+  if (!c && CLAVE_PORTAL && CLAVE_PORTAL.indexOf('ESCRIBE_AQUI') !== 0) c = CLAVE_PORTAL;
+  return String(c).trim();
+}
+
+function checkToken_(token) {
+  const clave = claveConfigurada_();
+  // Con clave configurada, SOLO la clave sirve: el token de config.js es público.
+  if (clave) return String(token || '') === clave;
+  return token === API_TOKEN; // todavía sin clave: como antes
+}
 
 /* ============================================================
    LECTURA EFICIENTE DE LAS HOJAS
@@ -115,13 +141,33 @@ function buscarFila_(sheet, col, valor) {
   return -1;
 }
 
+/** Fecha como texto "AAAA-MM-DD".
+ *  Google Sheets convierte el texto "2026-09-30" en una FECHA al escribir la
+ *  fila, y al leerla devuelve un objeto Date, no el texto. Antes se comparaba
+ *  ese Date con el texto que manda el portal y NUNCA coincidía: no se
+ *  encontraba el registro del día (cada guardado agregaba otra fila en vez de
+ *  actualizar, el historial mostraba "2026-09-30T05:00:00.000Z" y no se podía
+ *  abrir un día guardado). Se usa la zona horaria de la hoja, que es la misma
+ *  con la que Sheets convirtió el texto. */
+function fechaISO_(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    let tz = 'America/Bogota';
+    try { tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || tz; } catch (e) {}
+    return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
+  }
+  const t = String(v == null ? '' : v).trim();
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(t);
+  return m ? m[1] : t;
+}
+
 /** Busca la fila de un registro diario por obraId + fecha, leyendo solo A:B. */
 function buscarFilaRegistro_(sheet, obraId, fecha) {
   const last = sheet.getLastRow();
   if (last < 2) return -1;
   const vals = sheet.getRange(2, 1, last - 1, 2).getValues();
+  const buscada = fechaISO_(fecha);
   for (let i = 0; i < vals.length; i++) {
-    if (vals[i][0] === obraId && vals[i][1] === fecha) return i + 2;
+    if (vals[i][0] === obraId && fechaISO_(vals[i][1]) === buscada) return i + 2;
   }
   return -1;
 }
@@ -358,7 +404,7 @@ function opIdYaAplicado_(opId) {
 /* ================= LECTURA ================= */
 
 function doGet(e) {
-  if (!checkToken_(e.parameter.token)) return jsonOut_({ ok: false, error: 'Token inválido.' });
+  if (!checkToken_(e.parameter.token)) return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
   const action = e.parameter.action;
 
   if (action === 'listPersonal') {
@@ -385,7 +431,7 @@ function doGet(e) {
       try { permisos = JSON.parse(data[i][5] || '[]'); } catch (err) { /* ignora fila corrupta */ }
       obras.push({
         obraId: data[i][0], nombre: data[i][1], area: data[i][2],
-        fechaInicio: data[i][3], fechaFin: data[i][4], permisos: permisos, createdAt: data[i][6]
+        fechaInicio: fechaISO_(data[i][3]), fechaFin: fechaISO_(data[i][4]), permisos: permisos, createdAt: data[i][6]
       });
     }
     obras.reverse(); // más recientes primero
@@ -416,7 +462,7 @@ function doGet(e) {
             verificador = (parsed.verificador && parsed.verificador.nombre) || '';
           } catch (err) { continue; }
         }
-        registros.push({ fecha: colAB[i][1], cantidad: cantidad, verificador: verificador });
+        registros.push({ fecha: fechaISO_(colAB[i][1]), cantidad: cantidad, verificador: verificador });
       }
     }
     registros.sort((a, b) => a.fecha < b.fecha ? 1 : -1);
@@ -424,7 +470,7 @@ function doGet(e) {
   }
 
   if (action === 'registro') {
-    const obraId = e.parameter.obraId, fecha = e.parameter.fecha;
+    const obraId = e.parameter.obraId, fecha = fechaISO_(e.parameter.fecha);
     if (!obraId || !fecha) return jsonOut_({ ok: false, error: 'obraId y fecha requeridos' });
     const sheet = getRegistrosSheet_();
     const rowIndex = buscarFilaRegistro_(sheet, obraId, fecha);
@@ -449,7 +495,8 @@ function doGet(e) {
     let mejorFila = -1, mejorFecha = null;
     for (let i = 0; i < colAB.length; i++) {
       if (colAB[i][0] !== obraId) continue;
-      if (mejorFecha === null || colAB[i][1] > mejorFecha) { mejorFecha = colAB[i][1]; mejorFila = i + 2; }
+      const f = fechaISO_(colAB[i][1]);
+      if (mejorFecha === null || f > mejorFecha) { mejorFecha = f; mejorFila = i + 2; }
     }
     if (mejorFila === -1) return jsonOut_({ ok: false, error: 'Sin registros previos' });
     const rawUltimo = sheet.getRange(mejorFila, 3).getValue();
@@ -497,7 +544,7 @@ function doPost(e) {
     // Se registra el intento SIN el contenido: si alguien está probando tokens
     // al azar, no tiene sentido llenar la bitácora con su basura.
     registrarEvento_('', '', body.action || 'DESCONOCIDA', 'RECHAZADO', 'Token inválido', '', '');
-    return jsonOut_({ ok: false, error: 'Token inválido.' });
+    return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
   }
 
   const lock = LockService.getScriptLock();
@@ -588,7 +635,7 @@ function doPost(e) {
     }
 
     if (body.action === 'guardarRegistro') {
-      const obraId = body.obraId, fecha = body.fecha;
+      const obraId = body.obraId, fecha = fechaISO_(body.fecha);
       if (!obraId || !fecha) return jsonOut_({ ok: false, error: 'obraId y fecha requeridos' });
       const clave = obraId + '|' + fecha;
       if (opIdYaAplicado_(body.opId)) {
@@ -694,7 +741,7 @@ function verificarIntegridad() {
   const regsVistos = {};
   for (let i = 1; i < regs.length; i++) {
     if (!regs[i][0]) continue;
-    const clave = regs[i][0] + '|' + regs[i][1];
+    const clave = regs[i][0] + '|' + fechaISO_(regs[i][1]);
     regsVistos[clave] = true;
     const esp = esperado.registros[clave];
     if (!esp) { problemas.push('Registro ' + clave + ': está en la hoja pero no tiene eventos.'); continue; }
