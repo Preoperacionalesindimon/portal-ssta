@@ -398,7 +398,17 @@ const Outbox = {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(item.body)
           });
-          const json = await res.json();
+          // Se lee como texto: si el servidor responde con una PÁGINA (error de
+          // Apps Script, inicio de sesión, implementación borrada), antes eso se
+          // confundía con "sin señal" y el pendiente quedaba en cola sin decir
+          // por qué. Ahora se guarda lo que respondió y se ve en la lista.
+          const texto = await res.text();
+          let json;
+          try { json = JSON.parse(texto); }
+          catch (errParse) {
+            await Outbox._anotarError(item.id, Outbox.describirPagina(texto, res.status));
+            continue;
+          }
           if (json.ok) {
             await this.remove(item.id);
             Outbox._avisarEnviado(item);
@@ -406,12 +416,14 @@ const Outbox = {
             // Clave faltante o vieja: NO es un error del permiso. Antes, a los 5
             // intentos se sacaba de la cola y se perdía. Se conserva y se pide
             // la clave; al guardarla se reenvía.
+            await Outbox._anotarError(item.id, 'El servidor no aceptó la clave del portal de este equipo.');
             ClavePortal.pedir();
           } else {
             // El servidor respondió pero con error (token inválido, permiso ya
             // cerrado, etc.) — no es un problema de señal, así que reintentar
             // sin límite nunca lo resolvería solo. Tras 5 intentos fallidos se
             // saca de la cola y se avisa, en vez de reintentar para siempre.
+            await Outbox._anotarError(item.id, 'El servidor respondió: ' + (json.error || 'error sin detalle'));
             const intentos = await this._incrementarIntentos(item.id);
             if (intentos >= 5) {
               await this.remove(item.id);
@@ -428,6 +440,10 @@ const Outbox = {
           if (yaEsta) {
             await this.remove(item.id);
             Outbox._avisarEnviado(item);
+          } else {
+            await Outbox._anotarError(item.id, navigator.onLine
+              ? 'No hubo respuesta del servidor (' + ((e && e.message) || 'error de red') + '). Si se repite con buena señal, revisa que la URL de config.js sea la de la implementación vigente.'
+              : 'Sin conexión.');
           }
           // Si no se pudo comprobar, se deja en cola y se reintenta luego.
         }
@@ -439,6 +455,29 @@ const Outbox = {
   },
   async count() {
     return (await this.list()).length;
+  },
+  /** Texto legible de una respuesta que no es de datos (página de Google). */
+  describirPagina(html, status) {
+    const t = String(html || '').replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+    let causa = '';
+    if (/inicia(r)? sesi|sign in|acceder|cuenta de google|accounts\.google/i.test(t)) causa = ' Parece la pantalla de inicio de sesión de Google: la implementación no está con «Acceso: Cualquier usuario».';
+    else if (/autoriza|authoriz|permis/i.test(t)) causa = ' Parece que falta autorizar el script: en Apps Script ejecuta cualquier función una vez (▶) y acepta los permisos.';
+    else if (/no se ha encontrado|not found|no encontr|404/i.test(t + status)) causa = ' La URL no corresponde a una implementación activa: revisa la URL en config.js.';
+    else if (/error|exception|línea|line \d/i.test(t)) causa = ' Es un error dentro del script.';
+    return 'El servidor respondió con una página en vez de datos (HTTP ' + status + ').' + causa + (t ? ' Texto: «' + t.slice(0, 260) + (t.length > 260 ? '…' : '') + '»' : '');
+  },
+  async _anotarError(id, msg) {
+    try {
+      const db = await this._db();
+      await new Promise((resolve) => {
+        const tx = db.transaction('pending', 'readwrite');
+        const store = tx.objectStore('pending');
+        const g = store.get(id);
+        g.onsuccess = () => { const it = g.result; if (it) { it.ultimoError = msg; it.ultimoIntento = new Date().toISOString(); store.put(it); } };
+        tx.oncomplete = () => resolve(); tx.onerror = () => resolve(); tx.onabort = () => resolve();
+      });
+    } catch (e) { /* no es crítico */ }
   },
   /** ¿El permiso de este pendiente ya está guardado en el servidor? Se usa para
    *  no dejar en cola algo que en realidad ya se envió. Devuelve false ante
@@ -578,17 +617,27 @@ const OutboxBadge = {
             '<span style="color:#5c6a76;font-size:11.5px;">' + esc(tipo.detalle) + '</span><br>' +
             '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:#c0392b;">(cierre)</span>' : (agrego ? ' (personal agregado)' : ' (apertura o cambios)')) +
             '<br><span style="color:#5c6a76;">Guardado: ' + esc(cuando) + (it.intentos ? ' · ' + it.intentos + ' intento(s)' : '') + '</span>' +
+            (it.ultimoError ? '<div style="margin-top:7px;background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.45;overflow-wrap:anywhere;"><b>Último intento:</b> ' + esc(it.ultimoError) + '</div>' : '') +
             '<div style="display:flex;gap:7px;margin-top:9px;">' +
             '<button data-comprobar="' + it.id + '" style="flex:1;padding:9px;border:1px solid #1f6f8b;background:#fff;color:#1f6f8b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Comprobar</button>' +
             '<button data-descartar="' + it.id + '" style="padding:9px 12px;border:1px solid #e08a80;background:#fff;color:#c0392b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Descartar</button>' +
             '</div></div>';
         }).join('') +
+        '<button id="obxReenviar" style="width:100%;padding:12px;border:none;background:#c9a227;color:#151b24;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin:2px 0 8px;">↻ Reenviar ahora</button>' +
         '<div style="display:flex;gap:8px;margin-top:6px;">' +
         '<button id="obxTodos" style="flex:1;padding:12px;border:none;background:#151b24;color:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Comprobar todos</button>' +
         '<button id="obxCerrar" style="padding:12px 16px;border:1px solid #dde3e8;background:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>' +
         '</div>';
 
       caja.querySelector('#obxCerrar').onclick = () => fondo.remove();
+      const btnRe = caja.querySelector('#obxReenviar');
+      btnRe.onclick = async () => {
+        btnRe.disabled = true; btnRe.textContent = 'Reenviando…';
+        await Outbox.flush();
+        const quedan = await Outbox.list();
+        if (!quedan.length) { fondo.remove(); alert('✓ Todo se envió correctamente.'); return; }
+        pinta(quedan);
+      };
 
       const comprobar = async (item) => {
         const ya = await Outbox._yaFueGuardado(item);

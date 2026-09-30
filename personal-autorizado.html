@@ -107,7 +107,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v81</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v82</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -694,7 +694,12 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
       method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({ action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, token: API_TOKEN })
     });
-    const json = await res.json();
+    // Texto primero: si el servidor responde con una página (error del script,
+    // inicio de sesión) no es "sin conexión", y así se dice.
+    const texto = await res.text();
+    let json;
+    try { json = JSON.parse(texto); }
+    catch(e){ const err = new Error(Outbox.describirPagina(texto, res.status)); err.pagina = true; throw err; }
     btn.disabled = false;
     if(!json.ok){ document.getElementById('registroStatus').textContent = json.error || 'No se pudo guardar.'; return; }
     document.getElementById('registroStatus').textContent = '✓ Registro guardado.';
@@ -705,7 +710,7 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
     if (typeof Outbox !== 'undefined') {
       try {
         await Outbox.add(FIXED_WEBAPP_URL, { action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, token: API_TOKEN });
-        mostrarPdfPendiente(data);
+        mostrarPdfPendiente(data, err && err.pagina ? err.message : '');
       } catch (e) {
         document.getElementById('registroStatus').textContent = 'No se pudo guardar ni en el servidor ni localmente (memoria llena o modo privado). Anote los datos antes de salir de la página.';
       }
@@ -849,9 +854,11 @@ async function exportarDias(fechas, btn){
   await imprimirAnexo(regs, currentObra);
 }
 /* Sin señal: el registro quedó en cola, pero el PDF se puede sacar ya. */
-function mostrarPdfPendiente(data){
+function mostrarPdfPendiente(data, causa){
   const st = document.getElementById('registroStatus');
-  st.innerHTML = 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.' +
+  st.innerHTML = (causa
+      ? '<div class="aviso-fallo">⚠️ El registro quedó guardado en el equipo, pero el servidor no lo recibió. ' + esc(causa) + '</div>'
+      : 'Sin conexión — el registro quedó guardado localmente, se reintentará solo.') +
     '<button type="button" class="btn ghost" id="btnPdfPendiente" style="margin-top:8px;">🖨️ Exportar este registro a PDF</button>';
   const obra = Object.assign({}, currentObra);
   document.getElementById('btnPdfPendiente').addEventListener('click', ()=> imprimirAnexo([data], obra));
