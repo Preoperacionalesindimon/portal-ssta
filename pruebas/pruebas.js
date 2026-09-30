@@ -871,6 +871,70 @@ grupo('Anexo: exportar a PDF y fechas en el backend', () => {
   ok('las fechas de la obra vuelven como AAAA-MM-DD', ob.fechaInicio === '2026-09-28' && ob.fechaFin === '2026-10-10');
 });
 
+grupo('Asistencia a charlas (SSTA-F-005)', () => {
+  const h = leer('asistencia.html'), idx = leer('index.html'), cfg = leer('config.js'), sw = leer('sw.js'), c = leer('common.js');
+  ok('la página existe y está en el portal', /href="asistencia\.html"/.test(idx) && /SSTA-F-005/.test(idx));
+  ok('config.js tiene el backend de asistencia', /asistencia: \{[\s\S]{0,300}?archivo: 'asistencia\.html'/.test(cfg));
+  ok('funciona sin conexión (está en la caché del Service Worker)', sw.includes("'./asistencia.html'"));
+  ok('cada día lleva tema, hora, duración y ejecutor', ['inTema', 'inHora', 'inDuracion', 'inEjecutor'].every((id) => h.includes('id="' + id + '"')));
+  ok('el tema es obligatorio al guardar', /if \(!tema\)\{ st\.textContent = 'Escribe el tema de la charla\.'/.test(h));
+  ok('firma por asistente, con la firma a pantalla completa del portal', /SignaturePad\.createManager/.test(h) && /canvas class="mini-pad" id="padAs\$\{n\}"/.test(h));
+  ok('autocompleta con la base de datos de personal del anexo', /action=listPersonal/.test(h) && /autocompletar\(\$\('asNombre' \+ n\), buscarPersona/.test(h));
+  ok('sin señal: queda en cola y se ve en la semana', /Outbox\.add\(URL_ASIS, body\)/.test(h) && /async function aplicarPendientes/.test(h));
+  ok('borrador en el equipo mientras se diligencia', /LS\.borrador\(semana\.code, diaActual\)/.test(h) && /pagehide/.test(h));
+  ok('sin servidor configurado funciona solo en el equipo', /Modo solo en este equipo/.test(h) && /if \(!URL_ASIS\)\{\s*mezclarDia/.test(h));
+  ok('la cola no da por enviada una charla solo porque la semana exista', /item\.body\.action === 'guardarDia'\) return !!\(json\.semana && \(json\.semana\.opIds/.test(c));
+  ok('el aviso de pendientes dice "charla"', /k === 'asistencia'\) return \{ uno: 'charla'/.test(c));
+  ok('PDF: encabezado y códigos del formato V4', /CONTROL DE ASISTENCIA A CAPACITACION, EVENTOS Y REUNIONES\./.test(h) && /Versión: 4/.test(h) && /Código: SSTA-F-005/.test(h) && /Actualización: 26-08-2024/.test(h));
+  ok('PDF: temario de lunes a domingo con hora, duración y ejecutor', /<b>Hora:<\/b>/.test(h) && /<b>Duración:<\/b>/.test(h) && /<b>Ejecutor:<\/b>/.test(h));
+  ok('PDF: firma del trabajador en la columna de cada día, mínimo 16 filas', /DIA DE ASISTENCIA \(Firma del trabajador\)/.test(h) && /Math\.max\(16, personas\.length\)/.test(h));
+  ok('PDF en carta horizontal', /size:letter landscape/.test(h));
+  const swv = /const CACHE_NAME = 'ssta-portal-(v\d+)'/.exec(sw);
+  ok('versión visible = versión del Service Worker', !!swv && h.includes('Portal SSTA · versión ' + swv[1]));
+
+  // La hoja semanal junta a cada persona en UNA fila con sus días
+  const vm = require('vm');
+  const src = ['const DIAS', 'function clavePersona', 'function personasDeSemana', 'function mezclarDia'].map((k) => {
+    const i = h.indexOf(k); const fin = h.indexOf('\n}\n', i); return h.slice(i, k === 'const DIAS' ? h.indexOf('\n', i) : fin + 2);
+  }).join('\n');
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(src + ';this.P=personasDeSemana;this.M=mezclarDia;', ctx);
+  const doc = { dias: {} };
+  ctx.M(doc, { dia: 'lun', tema: 'A', asistentes: [{ nombre: 'Carlos', cedula: '1.010', firma: 'data:image/png;x' }, { nombre: 'Luis', cedula: '2', firma: '' }] });
+  ctx.M(doc, { dia: 'mie', tema: 'B', asistentes: [{ nombre: 'Carlos Ríos', cedula: '1010', firma: 'data:image/png;y' }] });
+  ctx.M(doc, { dia: 'mie', asistentes: [{ nombre: 'Ana', cedula: '3', firma: 'data:image/png;z' }] });
+  ctx.M(doc, { dia: 'lun', quitar: ['C:2'] });
+  const filas = ctx.P(doc);
+  ok('una persona que asistió varios días ocupa una sola fila', filas.length === 2 && Object.keys(filas[0].dias).join() === 'lun,mie');
+  ok('dos guardados del mismo día se suman, no se pisan', doc.dias.mie.asistentes.length === 2 && doc.dias.mie.tema === 'B');
+  ok('quitar a alguien es explícito', doc.dias.lun.asistentes.length === 1);
+
+  // Backend ejecutado en el simulador, con las fechas como las guarda Google
+  const { crearEntorno } = require('./simulador-apps-script');
+  let E;
+  try { E = crearEntorno(path.join(RAIZ, 'backends/backend-asistencia.gs'), { fechasComoSheets: true }); }
+  catch (e) { ok('backend-asistencia.gs se carga en el simulador', false, e.message); return; }
+  const T = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', F = (x) => 'data:image/png;base64,' + x.repeat(300);
+  const a = E.post({ action: 'abrirSemana', fecha: '2026-09-30', lugar: 'Planta Bavaria', token: T });
+  ok('abrir semana: arranca el lunes y termina el domingo', a.ok && a.semana.semanaDel === '2026-09-28' && a.semana.semanaAl === '2026-10-04');
+  ok('mismo lugar y semana (escrito distinto) → la MISMA hoja', E.post({ action: 'abrirSemana', fecha: '2026-10-02', lugar: ' planta  BAVARIA ', token: T }).code === a.code);
+  E.post({ action: 'guardarDia', code: a.code, dia: 'mie', tema: 'Arnés', hora: '07:00', duracion: '15 min', ejecutor: 'Ana', asistentes: [{ nombre: 'Carlos', cedula: '1', firma: F('A') }], opId: 'p1', token: T });
+  E.post({ action: 'guardarDia', code: a.code, dia: 'mie', asistentes: [{ nombre: 'Luis', cedula: '2', firma: F('B') }], opId: 'p2', token: T });
+  const dup = E.post({ action: 'guardarDia', code: a.code, dia: 'mie', asistentes: [{ nombre: 'Luis', cedula: '2', firma: F('B') }], opId: 'p2', token: T });
+  const s1 = E.get({ code: a.code, token: T }).semana;
+  ok('dos celulares el mismo día: quedan los dos', s1.dias.mie.asistentes.length === 2 && s1.dias.mie.tema === 'Arnés');
+  ok('un reintento de la cola no duplica', dup.duplicado === true);
+  ok('las firmas vuelven completas', s1.dias.mie.asistentes.every((x) => x.firma.length > 100));
+  ok('el opId queda en la semana (para saber si un pendiente ya llegó)', s1.opIds.indexOf('p2') !== -1);
+  const off = E.post({ action: 'guardarDia', code: 'ASI-20260928-999999', semanaDel: '2026-10-01', lugar: 'PLANTA BAVARIA', dia: 'jue', tema: 'Aseo', asistentes: [{ nombre: 'Ana', cedula: '9', firma: F('C') }], opId: 'p3', token: T });
+  ok('guardado sin señal con código propio se une a la semana que ya existía', off.code === a.code);
+  const nueva = E.post({ action: 'guardarDia', code: 'ASI-20261005-123456', semanaDel: '2026-10-07', lugar: 'Taller', dia: 'mie', tema: 'X', asistentes: [], opId: 'p4', token: T });
+  ok('guardado sin señal de una semana nueva la crea', nueva.ok && E.get({ code: 'ASI-20261005-123456', token: T }).semana.semanaDel === '2026-10-05');
+  const lista = E.get({ list: 1, token: T }).rows;
+  ok('listado con fechas AAAA-MM-DD, más reciente primero', lista.length === 2 && lista[0].semanaDel === '2026-10-05' && lista[1].semanaDel === '2026-09-28');
+  ok('hoja "Asistencias": una fila por persona por charla', E.hojas['Asistencias'].filas.length - 1 === 3);
+  ok('clave del portal: rechaza sin clave', E.post({ action: 'guardarDia', code: a.code, dia: 'mie', token: 'x' }).codigoError === 'CLAVE');
+});
+
 grupo('Caché y despliegue', () => {
   const sw = leer('sw.js');
   const v = /const CACHE_NAME = '([^']+)'/.exec(sw);
