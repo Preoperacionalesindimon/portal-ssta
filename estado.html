@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estado del sistema · Portal SSTA</title>
+<link rel="stylesheet" href="common.css">
+<style>
+:root{ --ink:#151b24; --line:#dde3e8; --muted:#6b7884; --ok:#1d7a4c; --warn:#b26a00; --mal:#c0392b; --amber:#c9a227; }
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:110px;}
+.wrap{max-width:680px;margin:0 auto;padding:0 14px;}
+.hdr{display:block;background:var(--ink);padding:1.3rem 1.2rem 1.05rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
+.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
+.hdr h1{font-family:var(--font-display);font-size:18px;color:#fff;margin:0 0 2px;}
+.hdr p{font-size:11.5px;color:#8b97a3;margin:0;}
+.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:#c9a227;text-decoration:none;font-weight:600;}
+.resumen{border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;font-weight:700;line-height:1.4;border:1px solid var(--line);background:#fff;}
+.resumen.ok{background:#eef8f2;border-color:#bfe3cd;color:#1d5c3a;}
+.resumen.mal{background:#fdf1ef;border-color:#f0c8c1;color:#8a2a1c;}
+.resumen.prob{background:#fff;color:var(--muted);}
+.resumen small{display:block;font-weight:500;font-size:12px;margin-top:3px;}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
+.card h2{font-family:var(--font-display);font-size:13.5px;margin:0 0 8px;}
+.dato{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #e6eaee;}
+.dato:last-child{border-bottom:none;}
+.dato b{text-align:right;}
+.srv{background:#fff;border:1px solid var(--line);border-left:5px solid #c8d0d6;border-radius:12px;padding:11px 13px;margin-bottom:9px;}
+.srv.ok{border-left-color:var(--ok);}
+.srv.clave{border-left-color:var(--amber);}
+.srv.mal{border-left-color:var(--mal);}
+.srv.gris{border-left-color:#c8d0d6;}
+.srv .fila{display:flex;align-items:center;gap:10px;}
+.srv .nom{flex:1;min-width:0;font-weight:700;font-size:13.5px;}
+.srv .chip{font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;background:#eef1f4;color:#5c6570;}
+.srv.ok .chip{background:#e3f4ea;color:var(--ok);}
+.srv.clave .chip{background:#fbf1d6;color:#7a5800;}
+.srv.mal .chip{background:#fbe4e0;color:var(--mal);}
+.srv .det{font-size:12px;color:#4b5864;margin-top:6px;line-height:1.45;overflow-wrap:anywhere;}
+.srv .acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.srv .acc a,.srv .acc button{font-size:12px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 11px;text-decoration:none;cursor:pointer;font-family:inherit;}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:13px;margin-top:8px;cursor:pointer;font-family:inherit;text-decoration:none;}
+.btn.amber{background:var(--amber);color:#151b24;}
+.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+.btn:disabled{opacity:.55;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.nota{font-size:11.5px;color:var(--muted);line-height:1.45;margin:10px 2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <a class="back" href="index.html">← Volver al portal</a>
+    <div class="marca-titulo"><span class="marca" role="img" aria-label="INDIMON"></span><div><div class="eyebrow">Portal SSTA</div>
+    <h1>Estado del sistema</h1>
+    <p>Prueba cada servidor desde este celular</p></div></div>
+  </div>
+
+  <div class="resumen prob" id="resumen">Probando los servidores…</div>
+  <div id="servidores"></div>
+
+  <button class="btn amber" id="btnProbar">↻ Probar de nuevo</button>
+  <div class="grid2">
+    <button class="btn ghost" id="btnCopiar">📋 Copiar informe</button>
+    <a class="btn ghost" id="btnWhatsapp" href="#" target="_blank" rel="noopener">💬 Enviar por WhatsApp</a>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2>Este equipo</h2>
+    <div id="equipo"></div>
+  </div>
+  <p class="nota">Esta página solo LEE de cada servidor: no guarda ni cambia nada. Si un servidor sale en rojo, toca «Abrir enlace de prueba»: lo que muestre esa página (datos o una pantalla de Google) es exactamente lo que recibe el portal.</p>
+  <div class="nota" style="text-align:center;">Portal SSTA · versión v84</div>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+OfflineBanner.init();
+OutboxBadge.init();
+if (typeof Outbox !== 'undefined') Outbox.flush();
+if (typeof UpdateManager !== 'undefined') UpdateManager.init();
+
+/* ============================================================
+   ESTADO DEL SISTEMA
+   Prueba con una LECTURA cada servidor configurado en config.js y explica
+   en palabras qué pasa cuando algo falla. Nació de un caso real: la
+   asistencia quedaba "pendiente" y solo abriendo el enlace a mano se vio
+   que la implementación no era pública.
+   ============================================================ */
+const VERSION = 'v84';
+const $ = (id)=>document.getElementById(id);
+// Qué se consulta en cada uno (siempre algo de solo lectura).
+const PRUEBAS = [
+  { k:'caliente', q:'list=1', cuenta:'rows', que:'permisos' },
+  { k:'alturas', q:'list=1', cuenta:'rows', que:'permisos' },
+  { k:'confinados', q:'list=1', cuenta:'rows', que:'permisos' },
+  { k:'izajes', q:'list=1', cuenta:'rows', que:'permisos' },
+  { k:'electrico', q:'list=1', cuenta:'rows', que:'permisos' },
+  { k:'ats', q:'list=1', cuenta:'rows', que:'ATS' },
+  { k:'epp', q:'list=1', cuenta:'rows', que:'inspecciones' },
+  { k:'personal', q:'action=listObras', cuenta:'obras', que:'obras' },
+  { k:'asistencia', q:'list=1', cuenta:'rows', que:'semanas' }
+];
+let resultados = [];
+
+function conLimite(p, ms){ return Promise.race([p, new Promise((_, rej)=> setTimeout(()=> rej(Object.assign(new Error('tardó más de ' + Math.round(ms/1000) + ' s'), { lento:true })), ms))]); }
+
+async function probarUno(t){
+  const b = (PORTAL_CONFIG.BACKENDS || {})[t.k];
+  const nombre = b ? b.nombre : t.k;
+  const icono = b && b.icono ? b.icono : '•';
+  if (!b) return { t, nombre, icono, estado:'gris', chip:'No existe', det:'No está en config.js.' };
+  if (!b.url) return { t, nombre, icono, estado:'gris', chip:'Sin configurar',
+    det: t.k === 'asistencia' ? 'Falta la URL en config.js. Mientras tanto la asistencia funciona solo en cada celular.' : 'Falta la URL en config.js.' };
+  const url = b.url + '?' + t.q + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN);
+  const t0 = performance.now();
+  if (!navigator.onLine) return { t, nombre, icono, url, estado:'gris', chip:'Sin conexión', det:'El celular no tiene internet en este momento.' };
+  let res, texto;
+  try {
+    res = await conLimite(fetch(url), 30000);
+    texto = await res.text();
+  } catch (e) {
+    return { t, nombre, icono, url, estado:'mal', chip:'No responde',
+      det: e.lento ? 'El servidor tardó demasiado (más de 30 s). Si se repite, revisa en Apps Script → «Ejecuciones» si el script se está demorando o fallando.'
+        : 'No se pudo leer la respuesta. Con buena señal, casi siempre es una de estas: la implementación no tiene «Acceso: Cualquier usuario», la URL de config.js es de una implementación borrada, o falta autorizar el script. Toca «Abrir enlace de prueba» para ver qué responde Google.' };
+  }
+  const ms = Math.round(performance.now() - t0);
+  let json;
+  try { json = JSON.parse(texto); }
+  catch (e) { return { t, nombre, icono, url, estado:'mal', chip:'Responde una página', det: Outbox.describirPagina(texto, res.status) }; }
+  if (json && json.ok){
+    const lista = json[t.cuenta];
+    const n = Array.isArray(lista) ? lista.length : null;
+    return { t, nombre, icono, url, estado:'ok', chip:'✓ Funciona', ms,
+      det: (n != null ? n + ' ' + (n === 1 ? ({ permisos:'permiso', inspecciones:'inspección', obras:'obra', semanas:'semana' }[t.que] || t.que) : t.que) + ' · ' : '') + 'respondió en ' + (ms/1000).toFixed(1) + ' s' + (ms > 8000 ? ' (lento, pero funciona)' : '') };
+  }
+  if (ClavePortal.esErrorDeClave(json)){
+    return { t, nombre, icono, url, estado:'clave', chip:'Pide la clave', clave:true,
+      det: ClavePortal.tiene() ? 'Este servidor no acepta la clave guardada en este celular. Escribe la clave vigente (la da SSTA).' : 'Este servidor ya exige la clave del portal y este celular no la tiene guardada.' };
+  }
+  return { t, nombre, icono, url, estado:'mal', chip:'Error', det:'El servidor respondió: ' + ((json && json.error) || 'error sin detalle') };
+}
+
+function pintar(){
+  $('servidores').innerHTML = resultados.map((r,i)=> `
+    <div class="srv ${r.estado || 'gris'}">
+      <div class="fila"><span>${r.icono || '•'}</span><span class="nom">${esc(r.nombre)}</span><span class="chip">${esc(r.chip || 'Probando…')}</span></div>
+      ${r.det ? `<div class="det">${esc(r.det)}</div>` : ''}
+      ${r.url && r.estado !== 'ok' && r.estado ? `<div class="acc"><a href="${esc(r.url)}" target="_blank" rel="noopener">Abrir enlace de prueba ↗</a>${r.clave ? '<button type="button" data-clave>🔑 Escribir clave</button>' : ''}</div>` : ''}
+    </div>`).join('');
+  $('servidores').querySelectorAll('[data-clave]').forEach(b=> b.addEventListener('click', ()=> ClavePortal.pedir()));
+  const listos = resultados.filter(r=>r.estado);
+  const mal = listos.filter(r=> r.estado === 'mal' || r.estado === 'clave');
+  const conf = listos.filter(r=> r.estado !== 'gris' || r.chip === 'Sin conexión');
+  const el = $('resumen');
+  if (listos.length < resultados.length){ el.className = 'resumen prob'; el.innerHTML = 'Probando los servidores… ' + listos.length + '/' + resultados.length; return; }
+  if (!navigator.onLine){ el.className = 'resumen mal'; el.innerHTML = 'Sin conexión<small>Conéctate a internet y toca «Probar de nuevo».</small>'; return; }
+  if (!mal.length){ el.className = 'resumen ok'; el.innerHTML = '✓ Todo funciona<small>' + listos.filter(r=>r.estado==='ok').length + ' servidores responden bien desde este celular.</small>'; }
+  else { el.className = 'resumen mal'; el.innerHTML = '⚠️ ' + mal.length + ' servidor' + (mal.length === 1 ? '' : 'es') + ' con problemas<small>' + mal.map(r=>esc(r.nombre)).join(', ') + '. Abajo dice qué pasa con cada uno.</small>'; }
+  actualizarInforme();
+}
+
+async function probarTodo(){
+  const b = $('btnProbar'); b.disabled = true; b.textContent = 'Probando…';
+  resultados = PRUEBAS.map(t=>{ const x = (PORTAL_CONFIG.BACKENDS || {})[t.k]; return { t, nombre: x ? x.nombre : t.k, icono: x && x.icono }; });
+  pintar();
+  await Promise.all(PRUEBAS.map(async (t, i)=>{ resultados[i] = await probarUno(t); pintar(); }));
+  b.disabled = false; b.textContent = '↻ Probar de nuevo';
+  pintarEquipo();
+}
+
+async function pintarEquipo(){
+  let pendientes = 0, swVer = '—';
+  try { pendientes = (await Outbox.list()).length; } catch(e){}
+  try { const ks = await caches.keys(); const v = ks.find(k=>/^ssta-portal-/.test(k)); if (v) swVer = v.replace('ssta-portal-',''); } catch(e){}
+  $('equipo').innerHTML = [
+    ['Versión de esta página', VERSION],
+    ['Versión guardada para usar sin señal', swVer + (swVer !== '—' && swVer !== VERSION ? ' (se actualiza sola al volver a abrir)' : '')],
+    ['Conexión', navigator.onLine ? 'Con internet' : 'Sin internet'],
+    ['Clave del portal en este equipo', ClavePortal.tiene() ? 'Guardada' : 'No tiene'],
+    ['Pendientes de enviar', pendientes ? pendientes + ' — <a href="#" id="verPend">ver cuáles</a>' : 'Ninguno']
+  ].map(([k,v])=>`<div class="dato"><span>${k}</span><b>${v}</b></div>`).join('');
+  const vp = $('verPend'); if (vp) vp.addEventListener('click', e=>{ e.preventDefault(); OutboxBadge.verPendientes(); });
+  actualizarInforme(pendientes, swVer);
+}
+
+let infoEquipo = { pendientes:0, sw:'—' };
+function actualizarInforme(p, sw){
+  if (p !== undefined) infoEquipo = { pendientes:p, sw };
+  const f = new Date();
+  const txt = 'Estado del Portal SSTA — ' + f.toLocaleString('es-CO') + '\n' +
+    'Versión ' + VERSION + ' · ' + (navigator.onLine ? 'con internet' : 'sin internet') + ' · clave: ' + (ClavePortal.tiene() ? 'sí' : 'no') + ' · pendientes: ' + infoEquipo.pendientes + '\n' +
+    resultados.filter(r=>r.estado).map(r=> (r.estado === 'ok' ? '✅ ' : r.estado === 'gris' ? '⚪ ' : r.estado === 'clave' ? '🔑 ' : '❌ ') + r.nombre + ': ' + r.chip + (r.estado !== 'ok' && r.det ? ' — ' + r.det : (r.det ? ' (' + r.det + ')' : ''))).join('\n');
+  $('btnWhatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(txt);
+  $('btnCopiar').dataset.txt = txt;
+}
+$('btnCopiar').addEventListener('click', async ()=>{
+  const t = $('btnCopiar').dataset.txt || '';
+  try { await navigator.clipboard.writeText(t); $('btnCopiar').textContent = '✓ Copiado'; }
+  catch(e){ prompt('Copia este informe:', t); }
+  setTimeout(()=> $('btnCopiar').textContent = '📋 Copiar informe', 2500);
+});
+$('btnProbar').addEventListener('click', probarTodo);
+window.addEventListener('online', probarTodo);
+probarTodo();
+</script>
+</body>
+</html>

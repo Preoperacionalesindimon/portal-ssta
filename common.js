@@ -109,6 +109,73 @@ const ClavePortal = {
 };
 ClavePortal.aplicar();
 
+/* ================= TRAER PERSONAL DE UN ATS =================
+   La gente que firmó el ATS del día es casi siempre la misma que firma la
+   charla y el anexo. Este selector lista los ATS abiertos y devuelve sus
+   participantes (nombre, cédula, cargo) para agregarlos con un toque; cada
+   persona firma de nuevo en el formato donde se agrega.
+   Uso:  const r = await TraerDeAts.elegir();  // null si se cancela
+         r → { code, trabajo, area, personas:[{nombre, cedula, cargo}] } */
+const TraerDeAts = {
+  elegir() {
+    return new Promise((resolve) => {
+      const B = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.BACKENDS && PORTAL_CONFIG.BACKENDS.ats) || {};
+      if (!B.url) { alert('El ATS no tiene servidor configurado en config.js.'); resolve(null); return; }
+      const fondo = document.createElement('div');
+      fondo.className = 'tda-fondo';
+      fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
+      const caja = document.createElement('div');
+      caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:82vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
+      fondo.appendChild(caja);
+      document.body.appendChild(fondo);
+      const cerrar = (r) => { fondo.remove(); resolve(r); };
+      fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(null); });
+      const cab = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;"><h3 style="margin:0;font-size:16px;">🧭 Traer personal de un ATS</h3>' +
+        '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
+        '<p style="margin:0 0 12px;font-size:12px;color:#5c6a76;line-height:1.45;">Se traen nombre, cédula y cargo de quienes están en el ATS. Cada persona debe firmar aquí.</p>';
+      const pinta = (html) => { caja.innerHTML = cab + html; caja.querySelector('[data-cerrar]').onclick = () => cerrar(null); };
+      pinta('<div style="text-align:center;color:#5c6a76;font-size:13px;padding:18px;">Buscando ATS abiertos…</div>');
+      const token = encodeURIComponent(PORTAL_CONFIG.API_TOKEN);
+      fetchWithRetry(B.url + '?list=1&token=' + token).then((r) => r.json()).then((data) => {
+        if (!data || !data.ok || !Array.isArray(data.rows)) throw new Error((data && data.error) || 'el servidor del ATS no respondió con datos');
+        const abiertos = data.rows.filter((r) => String(r.estado || '').toUpperCase() !== 'CERRADO')
+          .sort((a, b) => String(b.fechaDesde || b.updatedAt || '').localeCompare(String(a.fechaDesde || a.updatedAt || ''))).slice(0, 40);
+        if (!abiertos.length) { pinta('<div style="padding:14px;text-align:center;color:#5c6a76;font-size:13px;">No hay ATS abiertos en este momento.</div>'); return; }
+        pinta(abiertos.map((r) => {
+          const venc = (typeof atsVencido === 'function' && atsVencido(r)) ? ' · <b style="color:#c0392b;">vencido</b>' : '';
+          const f = String(r.fechaDesde || '').slice(0, 10);
+          return '<button type="button" data-ats="' + esc(r.code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid #dde3e8;background:#fff;border-radius:11px;padding:11px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
+            '<b style="font-size:13px;">' + esc(r.code) + '</b><span style="float:right;font-size:11px;font-weight:700;background:#eef1f4;border-radius:20px;padding:2px 8px;">' + (Number(r.participantes) || 0) + ' 👤</span><br>' +
+            '<span style="font-size:12px;color:#151b24;">' + esc(String(r.trabajo || '').slice(0, 90)) + '</span><br>' +
+            '<span style="font-size:11px;color:#5c6a76;">' + esc([f, r.area, r.centroCostos].filter(Boolean).join(' · ')) + venc + '</span></button>';
+        }).join(''));
+        caja.querySelectorAll('[data-ats]').forEach((b) => {
+          b.onclick = async () => {
+            const code = b.dataset.ats;
+            b.disabled = true; b.style.opacity = '.6';
+            try {
+              const res = await fetchWithRetry(B.url + '?code=' + encodeURIComponent(code) + '&token=' + token);
+              const j = await res.json();
+              if (!j || !j.ok || !j.ats) throw new Error((j && j.error) || 'no se pudo abrir el ATS');
+              const personas = (j.ats.participantes || []).map((p) => ({
+                nombre: (String(p.nombres || '') + ' ' + String(p.apellidos || '')).trim() || String(p.nombre || '').trim(),
+                cedula: String(p.cedula || '').trim(), cargo: String(p.cargo || '').trim()
+              })).filter((p) => p.nombre);
+              const cabAts = j.ats.cab || {};
+              cerrar({ code, trabajo: cabAts.trabajo || '', area: cabAts.area || '', personas });
+            } catch (e) {
+              b.disabled = false; b.style.opacity = '1';
+              alert('No se pudo traer el personal de ' + code + ': ' + e.message);
+            }
+          };
+        });
+      }).catch((e) => {
+        pinta('<div style="padding:12px;background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;font-size:12.5px;line-height:1.45;">No se pudo consultar los ATS: ' + esc(e.message || 'sin conexión') + '.</div>');
+      });
+    });
+  }
+};
+
 /* ================= VIGENCIA DE UN ATS =================
    Un ATS vale hasta el final del día de su fecha "hasta" (o de su fecha
    "desde" si no tiene). Después de eso, si sigue abierto, está VENCIDO: es
@@ -487,6 +554,14 @@ const Outbox = {
     try {
       const code = item.body && (item.body.permitCode || item.body.code);
       const token = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.API_TOKEN) || (item.body && item.body.token);
+      // Registro diario del anexo: no tiene código; se busca por obra y fecha y
+      // cuenta como enviado solo si ESE guardado (su opId) ya está aplicado.
+      if (item.body && item.body.action === 'guardarRegistro') {
+        if (!item.body.opId || !token) return false;
+        const r = await fetch(item.url + '?action=registro&obraId=' + encodeURIComponent(item.body.obraId) + '&fecha=' + encodeURIComponent(item.body.fecha) + '&token=' + encodeURIComponent(token));
+        const j = await r.json();
+        return !!(j && Array.isArray(j.opIds) && j.opIds.indexOf(item.body.opId) !== -1);
+      }
       if (!code || !token) return false;
       const res = await fetch(item.url + '?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
       const json = await res.json();
