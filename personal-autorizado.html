@@ -24,6 +24,12 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .card .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
 .card .v{font-size:14px;color:var(--ink);font-weight:600;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+/* iPhone (Safari/Brave): los campos de fecha y hora traen un ancho mínimo propio
+   y el texto centrado; se salían de la tarjeta y se montaban sobre el de al lado. */
+.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}
+.field input[type=date],.field input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;width:100%;display:block;text-align:left;}
+.field input::-webkit-date-and-time-value{text-align:left;}
+
 
 .field{margin-bottom:12px;}
 .field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;}
@@ -120,7 +126,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v85</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v87</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->

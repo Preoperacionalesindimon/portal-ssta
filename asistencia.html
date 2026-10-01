@@ -22,6 +22,14 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .field input,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:#fcfbf8;font-family:inherit;}
 .field textarea{min-height:70px;resize:vertical;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+/* iPhone (Safari/Brave): los campos de fecha y hora traen un ancho mínimo propio
+   y el texto centrado; se salían de la tarjeta y se montaban sobre el de al lado. */
+.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}
+.field input[type=date],.field input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;width:100%;display:block;text-align:left;}
+.field input::-webkit-date-and-time-value{text-align:left;}
+.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:#fcfbf8;font-family:inherit;color:var(--ink);-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,#8a97a3 50%),linear-gradient(135deg,#8a97a3 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:32px;}
+.field select + input{margin-top:8px;}
 .btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:14px;margin-top:8px;cursor:pointer;font-family:inherit;}
 .btn.amber{background:var(--amber);color:#151b24;}
 .btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
@@ -136,7 +144,7 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
   </details>
   <div class="sec-t">Semanas recientes <span id="semanasNota"></span></div>
   <div id="semanasList"><div class="status-msg">Cargando…</div></div>
-  <div class="version-portal">Portal SSTA · versión v85</div>
+  <div class="version-portal">Portal SSTA · versión v87</div>
 </div>
 
 <!-- ═══════ SEMANA ═══════ -->
@@ -165,11 +173,20 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
     <div class="field"><label>Tema de la charla</label><textarea id="inTema" placeholder="Ej. Uso correcto del arnés y línea de vida"></textarea></div>
     <div class="grid2">
       <div class="field"><label>Hora</label><input type="time" id="inHora"></div>
-      <div class="field"><label>Duración</label><input type="text" id="inDuracion" placeholder="Ej. 15 min">
-        <div class="chips" id="chipsDuracion"><button type="button">5 min</button><button type="button">10 min</button><button type="button">15 min</button><button type="button">30 min</button><button type="button">1 hora</button></div>
+      <div class="field"><label>Duración</label>
+        <select id="selDuracion">
+          <option value="">Elegir…</option>
+          <option>5 min</option><option>10 min</option><option>15 min</option><option>20 min</option><option>30 min</option><option>45 min</option>
+          <option>1 hora</option><option>1 hora 30 min</option><option>2 horas</option><option>3 horas</option><option>4 horas</option><option>5 horas</option><option>6 horas</option>
+          <option value="otra">Otra…</option>
+        </select>
+        <input type="text" id="inDuracion" placeholder="Escribe la duración" hidden>
       </div>
     </div>
     <div class="field"><label>Ejecutor (quien da la charla)</label><input type="text" id="inEjecutor" autocomplete="off" placeholder="Nombre (escribe para buscar)"></div>
+    <div class="field" id="campoEjecutor2" hidden><label>Segundo ejecutor <button type="button" id="btnQuitarEjecutor2" class="btn-quitar" style="float:right;min-height:26px;padding:2px 10px;font-size:11.5px;margin-top:-4px;">✕ Quitar</button></label>
+      <input type="text" id="inEjecutor2" autocomplete="off" placeholder="Nombre (escribe para buscar)"></div>
+    <button type="button" class="btn ghost" id="btnEjecutor2" style="font-size:12.5px;padding:10px;margin-top:0;">+ Agregar otro ejecutor</button>
   </div>
 
   <div class="sec-t">Asistentes <span id="cuentaAsis">0</span></div>
@@ -510,9 +527,39 @@ let quitarSet = new Set();
 let contador = 0;
 
 autocompletar($('inEjecutor'), buscarPersona, (it)=>{ $('inEjecutor').value = it.p.nombre; $('inEjecutor').dataset.cedula = it.p.cedula || ''; guardarBorradorPronto(); });
-$('chipsDuracion').addEventListener('click', e=>{ const b = e.target.closest('button'); if (!b) return; $('inDuracion').value = b.textContent; marcarChips(); guardarBorradorPronto(); });
-$('inDuracion').addEventListener('input', marcarChips);
-function marcarChips(){ const v = $('inDuracion').value.trim(); $('chipsDuracion').querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.textContent === v)); }
+autocompletar($('inEjecutor2'), buscarPersona, (it)=>{ $('inEjecutor2').value = it.p.nombre; $('inEjecutor2').dataset.cedula = it.p.cedula || ''; guardarBorradorPronto(); });
+/* Hasta DOS ejecutores. Se guardan juntos en el mismo campo ("Ana / Carlos"),
+   así el servidor, la hoja y el PDF no cambian. */
+const SEP_EJEC = ' / ';
+function mostrarEjecutor2(si){ $('campoEjecutor2').hidden = !si; $('btnEjecutor2').style.display = si ? 'none' : ''; /* .btn trae display:block, que le gana a [hidden] */ if (!si){ $('inEjecutor2').value = ''; $('inEjecutor2').dataset.cedula = ''; } }
+$('btnEjecutor2').addEventListener('click', ()=>{ mostrarEjecutor2(true); $('inEjecutor2').focus(); });
+$('btnQuitarEjecutor2').addEventListener('click', ()=>{ mostrarEjecutor2(false); guardarBorradorPronto(); });
+function ponerEjecutores(texto, cedulas){
+  const n = String(texto || '').split(SEP_EJEC), c = String(cedulas || '').split(SEP_EJEC);
+  $('inEjecutor').value = (n[0] || '').trim(); $('inEjecutor').dataset.cedula = (c[0] || '').trim();
+  $('inEjecutor2').value = n.slice(1).join(SEP_EJEC).trim(); $('inEjecutor2').dataset.cedula = c.slice(1).join(SEP_EJEC).trim();
+  mostrarEjecutor2(!!$('inEjecutor2').value);
+}
+function ejecutoresTexto(){ return [$('inEjecutor').value.trim(), $('inEjecutor2').value.trim()].filter(Boolean).join(SEP_EJEC); }
+function ejecutoresCedula(){
+  const c1 = $('inEjecutor').value.trim() ? ($('inEjecutor').dataset.cedula || '') : '';
+  if (!$('inEjecutor2').value.trim()) return c1;
+  return c1 + SEP_EJEC + ($('inEjecutor2').dataset.cedula || '');
+}
+/* Duración: lista de 5 min a 6 horas; "Otra…" deja escribirla. El valor que se
+   guarda siempre es el del campo de texto (oculto si se eligió de la lista). */
+$('selDuracion').addEventListener('change', ()=>{
+  const v = $('selDuracion').value;
+  if (v === 'otra'){ $('inDuracion').hidden = false; $('inDuracion').value = ''; $('inDuracion').focus(); }
+  else { $('inDuracion').hidden = true; $('inDuracion').value = v; }
+  guardarBorradorPronto();
+});
+function marcarChips(){
+  const v = $('inDuracion').value.trim();
+  const hay = [...$('selDuracion').options].some(o=> o.value === v && v !== 'otra');
+  $('selDuracion').value = hay ? v : (v ? 'otra' : '');
+  $('inDuracion').hidden = !(v && !hay);
+}
 
 function abrirDia(dia){
   diaActual = dia;
@@ -523,8 +570,7 @@ function abrirDia(dia){
   $('inTema').value = x.tema || '';
   $('inHora').value = x.hora || (f === hoyISO() && !x.tema ? new Date().toTimeString().slice(0,5) : '');
   $('inDuracion').value = x.duracion || '';
-  $('inEjecutor').value = x.ejecutor || '';
-  $('inEjecutor').dataset.cedula = x.ejecutorCedula || '';
+  ponerEjecutores(x.ejecutor || '', x.ejecutorCedula || '');
   marcarChips();
   quitarSet = new Set();
   $('nuevosList').innerHTML = ''; contador = 0;
@@ -535,7 +581,7 @@ function abrirDia(dia){
     if (b.tema != null) $('inTema').value = b.tema;
     if (b.hora != null) $('inHora').value = b.hora;
     if (b.duracion != null) $('inDuracion').value = b.duracion;
-    if (b.ejecutor != null) $('inEjecutor').value = b.ejecutor;
+    if (b.ejecutor != null) ponerEjecutores(b.ejecutor, '');
     (b.quitar || []).forEach(k=>quitarSet.add(k));
     renderGuardados();
     marcarChips();
@@ -663,7 +709,7 @@ function hayCambiosSinGuardar(){
 }
 function guardarBorrador(){
   if (!semana || !diaActual || !$('screenDia').classList.contains('active')) return;
-  const b = { tema:$('inTema').value, hora:$('inHora').value, duracion:$('inDuracion').value, ejecutor:$('inEjecutor').value,
+  const b = { tema:$('inTema').value, hora:$('inHora').value, duracion:$('inDuracion').value, ejecutor:ejecutoresTexto(),
               nuevos:leerNuevos().filter(a=>a.nombre || a.firma), quitar:[...quitarSet], ts:Date.now() };
   if (!lsSet(LS.borrador(semana.code, diaActual), b)) {
     // Sin espacio: se guarda al menos sin las firmas.
@@ -688,8 +734,8 @@ $('btnGuardarDia').addEventListener('click', async ()=>{
   if (!quedan && !confirm('La charla no tiene asistentes. ¿Guardar solo el tema?')) return;
   if (sinFirma && !confirm(sinFirma + ' persona(s) quedaron sin firmar. ¿Guardar de todas formas?')) return;
   const body = { action:'guardarDia', code:semana.code, semanaDel:semana.semanaDel, lugar:semana.lugar, dia:diaActual,
-    tema, hora:$('inHora').value, duracion:$('inDuracion').value.trim(), ejecutor:$('inEjecutor').value.trim(),
-    ejecutorCedula:$('inEjecutor').dataset.cedula || '', asistentes:nuevos, quitar:[...quitarSet], opId:nuevoOpId(), token:token() };
+    tema, hora:$('inHora').value, duracion:$('inDuracion').value.trim(), ejecutor:ejecutoresTexto(),
+    ejecutorCedula:ejecutoresCedula(), asistentes:nuevos, quitar:[...quitarSet], opId:nuevoOpId(), token:token() };
   const btn = $('btnGuardarDia'); btn.disabled = true; st.textContent = 'Guardando…';
 
   if (!URL_ASIS){
