@@ -109,6 +109,197 @@ const ClavePortal = {
 };
 ClavePortal.aplicar();
 
+/* ================= JORNADA: ATS → PERMISOS → CHARLA → ANEXO =================
+   Antes eran cuatro formatos que se llenaban por separado con los MISMOS
+   datos (trabajo, sitio, fechas, personal). Ahora, al guardar el ATS, se
+   inicia una "jornada": cada paso se abre con lo del ATS ya puesto y, al
+   guardarse, queda marcado. Una barra arriba muestra el avance y lleva al
+   siguiente paso. Vive en este equipo (localStorage) hasta que se termina o
+   pasan 20 horas. */
+const Jornada = {
+  KEY: 'ssta-jornada',
+  FLAG: 'ssta-jornada-en-curso',
+  VIGENCIA_MS: 20 * 3600 * 1000,
+  _leer() { try { return JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) { return null; } },
+  _escribir(j) { try { localStorage.setItem(this.KEY, JSON.stringify(j)); } catch (e) {} window.dispatchEvent(new CustomEvent('jornada-cambio')); },
+  /** datos: { atsCode, trabajo, sitio, desde, hasta, horaDesde, horaHasta, responsable, personas:[{nombre,cc,cargo}], permisosReq:['alturas',…] } */
+  iniciar(datos) {
+    const prev = this._leer();
+    const mismo = prev && prev.atsCode === datos.atsCode;
+    const j = Object.assign({}, datos, { t: Date.now(), hechos: mismo ? (prev.hechos || {}) : {} });
+    this._escribir(j);
+    try { sessionStorage.setItem(this.FLAG, '1'); } catch (e) {}
+    return j;
+  },
+  actual() {
+    const j = this._leer();
+    if (!j || !j.atsCode || Date.now() - (j.t || 0) > this.VIGENCIA_MS) return null;
+    return j;
+  },
+  terminar() { try { localStorage.removeItem(this.KEY); sessionStorage.removeItem(this.FLAG); } catch (e) {} window.dispatchEvent(new CustomEvent('jornada-cambio')); },
+  /** ¿Esta página se abrió como parte de la jornada? (enlace con ?jornada=1 o la misma pestaña). */
+  enJornada() {
+    if (!this.actual()) return false;
+    if (/[?&]jornada=1\b/.test(location.search)) { try { sessionStorage.setItem(this.FLAG, '1'); } catch (e) {} return true; }
+    try { return sessionStorage.getItem(this.FLAG) === '1'; } catch (e) { return false; }
+  },
+  marcar(paso, info) {
+    const j = this.actual();
+    if (!j) return;
+    j.hechos = j.hechos || {};
+    j.hechos[paso] = Object.assign({ t: Date.now() }, info || {});
+    this._escribir(j);
+    if (!(info && info.omitido)) setTimeout(() => this._avisoPaso(paso), 600);
+  },
+  /** Lo llama el permiso al guardarse: solo cuenta si es del ATS de la jornada. */
+  marcarPermiso(tipo, code, atsCode, pendiente) {
+    const j = this.actual();
+    if (!j || !tipo || (atsCode && atsCode !== j.atsCode) || !atsCode) return;
+    this.marcar('permiso:' + tipo, { code, pendiente: !!pendiente });
+  },
+  pasos(j) {
+    j = j || this.actual();
+    if (!j) return [];
+    const B = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.BACKENDS) || {};
+    const h = j.hechos || {};
+    const out = [{ id: 'ats', titulo: 'ATS', icono: '🧭', hecho: { code: j.atsCode } }];
+    (j.permisosReq || []).forEach((k) => {
+      if (!B[k]) return;
+      out.push({ id: 'permiso:' + k, titulo: B[k].nombre.replace(/^Trabajo (en |)/i, ''), icono: B[k].icono || '📝', hecho: h['permiso:' + k] || null });
+    });
+    out.push({ id: 'charla', titulo: 'Charla', icono: '🗣️', hecho: h.charla || null });
+    out.push({ id: 'anexo', titulo: 'Anexo', icono: '👷', hecho: h.anexo || null });
+    return out;
+  },
+  siguiente(j) { return this.pasos(j).find((p) => !p.hecho) || null; },
+  /** Qué paso es esta página (si es uno de la jornada). */
+  pasoDeEstaPagina() {
+    const aqui = (location.pathname.split('/').pop() || '');
+    if (aqui === 'asistencia.html') return 'charla';
+    if (aqui === 'personal-autorizado.html') return 'anexo';
+    if (aqui === 'ats.html') return 'ats';
+    const B = (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.BACKENDS) || {};
+    const k = Object.keys(B).find((x) => B[x].archivo === aqui);
+    return k ? 'permiso:' + k : null;
+  },
+  /** Va al paso. A los permisos se les deja el prellenado del ATS (como el botón del ATS). */
+  abrir(id) {
+    const j = this.actual();
+    if (!j) return;
+    try { sessionStorage.setItem(this.FLAG, '1'); } catch (e) {}
+    const B = PORTAL_CONFIG.BACKENDS;
+    if (id === 'ats') { location.href = 'ats.html?code=' + encodeURIComponent(j.atsCode) + '&jornada=1'; return; }
+    if (id === 'charla') { location.href = 'asistencia.html?jornada=1'; return; }
+    if (id === 'anexo') { location.href = 'personal-autorizado.html?jornada=1'; return; }
+    if (id.indexOf('permiso:') === 0) {
+      const k = id.slice(8);
+      if (!B[k]) return;
+      const prefill = { t: Date.now(), tipo: k, atsCode: j.atsCode, trabajo: j.trabajo || '', sitio: j.sitio || '',
+        desde: j.desde || '', hasta: j.hasta || j.desde || '', horaDesde: j.horaDesde || '', horaHasta: j.horaHasta || '',
+        responsable: j.responsable || '', personas: j.personas || [] };
+      try { localStorage.setItem('ssta-prefill-permiso', JSON.stringify(prefill)); } catch (e) { alert('No se pudo preparar el permiso (memoria del equipo llena).'); return; }
+      location.href = B[k].archivo + '?desdeAts=1&jornada=1';
+    }
+  },
+  omitir(id) { this.marcar(id, { omitido: true }); },
+  /** Ir a un paso. Si el paso es esta misma página (charla o anexo), no se recarga: la página lo abre. */
+  ir(id) {
+    if (id === this.pasoDeEstaPagina() && (id === 'charla' || id === 'anexo')) { window.dispatchEvent(new CustomEvent('jornada-ir', { detail: id })); return; }
+    this.abrir(id);
+  },
+  /** Aviso abajo al terminar un paso, con botón al siguiente (la barra queda arriba, fuera de vista). */
+  _avisoPaso(paso) {
+    if (typeof document === 'undefined' || !this.enJornada()) return;
+    const j = this.actual(); if (!j) return;
+    const sig = this.siguiente(j);
+    const hecho = (this.pasos(j).find((p) => p.id === paso) || {}).titulo || 'Paso';
+    const prev = document.getElementById('jornadaAviso'); if (prev) prev.remove();
+    const el = document.createElement('div');
+    el.id = 'jornadaAviso';
+    el.className = 'jornada-aviso';
+    el.innerHTML = '<span>✓ ' + esc(hecho) + ' listo.' + (sig ? ' Siguiente: <b>' + esc(sig.icono + ' ' + sig.titulo) + '</b>' : ' <b>Jornada completa.</b>') + '</span>' +
+      (sig ? '<button type="button">Ir →</button>' : '') + '<button type="button" class="x" aria-label="Cerrar">✕</button>';
+    document.body.appendChild(el);
+    const b = el.querySelector('button:not(.x)');
+    if (b) b.onclick = () => { el.remove(); this.ir(sig.id); };
+    el.querySelector('.x').onclick = () => el.remove();
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 15000);
+  },
+  /** Barra de avance arriba de la página (solo si la página es parte de la jornada). */
+  barra() {
+    if (typeof document === 'undefined' || !this.enJornada()) return;
+    if (this._pintar) { this._pintar(); return; } // ya está puesta: solo se repinta
+    const pintar = () => {
+      const j = this.actual();
+      let el = document.getElementById('jornadaBarra');
+      if (!j) { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'jornadaBarra';
+        el.className = 'jornada-barra';
+        document.body.insertBefore(el, document.body.firstChild);
+      }
+      const pasos = this.pasos(j), sig = this.siguiente(j);
+      const aquiPaso = this.pasoDeEstaPagina();
+      el.innerHTML = '<div class="jb-fila"><span class="jb-tit">🗂️ Jornada · <b>' + esc(j.atsCode) + '</b></span>' +
+        '<button type="button" class="jb-ver">Ver pasos</button></div>' +
+        '<div class="jb-pasos">' + pasos.map((p) => '<span class="jb-paso' + (p.hecho ? (p.hecho.omitido ? ' omit' : ' ok') : '') + '">' +
+          (p.hecho ? (p.hecho.omitido ? '–' : '✓') : '○') + ' ' + esc(p.titulo) + '</span>').join('') + '</div>' +
+        (!sig ? '<div class="jb-fin">✓ Jornada completa. <button type="button" class="jb-terminar">Terminar</button></div>'
+          : (sig.id === aquiPaso && sig.id.indexOf('permiso:') === 0)
+            ? '<div class="jb-aqui">✍️ Estás en este paso: diligencia y guarda el permiso para seguir.</div>'
+            : '<button type="button" class="jb-sig" data-paso="' + esc(sig.id) + '">Siguiente: ' + esc(sig.icono + ' ' + sig.titulo) + ' →</button>');
+      const bs = el.querySelector('.jb-sig');
+      if (bs) bs.onclick = () => this.ir(sig.id);
+      el.querySelector('.jb-ver').onclick = () => this.mostrarPanel();
+      const bt = el.querySelector('.jb-terminar');
+      if (bt) bt.onclick = () => { this.terminar(); };
+    };
+    this._pintar = pintar;
+    pintar();
+    window.addEventListener('jornada-cambio', pintar);
+    window.addEventListener('storage', (e) => { if (e.key === this.KEY) pintar(); });
+    window.addEventListener('pageshow', pintar);
+  },
+  /** Ventana con todos los pasos: abrir, omitir o terminar la jornada. */
+  mostrarPanel() {
+    const j = this.actual();
+    if (!j) { alert('No hay una jornada en curso en este equipo.'); return; }
+    const fondo = document.createElement('div');
+    fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
+    const caja = document.createElement('div');
+    caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:86vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
+    fondo.appendChild(caja); document.body.appendChild(fondo);
+    const cerrar = () => fondo.remove();
+    fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
+    const pinta = () => {
+      const jj = this.actual();
+      if (!jj) { cerrar(); return; }
+      const pasos = this.pasos(jj);
+      caja.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;font-size:16px;">🗂️ Jornada del ' + esc(jj.atsCode) + '</h3>' +
+        '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cerrar</button></div>' +
+        '<p style="margin:6px 0 12px;font-size:12.5px;color:#5c6a76;line-height:1.45;">' + esc(jj.trabajo || '') + (jj.sitio ? ' · ' + esc(jj.sitio) : '') + '<br>Cada paso se abre con los datos y el personal del ATS (' + (jj.personas || []).length + ' persona(s)) ya puestos. Cada persona firma en cada formato.</p>' +
+        pasos.map((p, i) => {
+          const h = p.hecho;
+          const estado = !h ? '<span style="color:#8a6408;font-weight:700;">Pendiente</span>'
+            : h.omitido ? '<span style="color:#8a97a3;font-weight:700;">Omitido</span>'
+            : '<span style="color:#1d7a4c;font-weight:700;">✓ ' + (h.code ? esc(h.code) : 'Hecho') + (h.pendiente ? ' (en cola)' : '') + '</span>';
+          const acc = p.id === 'ats' ? '' :
+            '<div style="display:flex;gap:7px;margin-top:8px;"><button type="button" data-abrir="' + esc(p.id) + '" style="flex:1;padding:10px;border:none;background:' + (h ? '#fff;border:1.5px solid #dde3e8;color:#151b24' : '#c9a227;color:#151b24') + ';border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">' + (h ? 'Abrir de nuevo' : 'Abrir ' + esc(p.titulo.toLowerCase())) + '</button>' +
+            (h ? '' : '<button type="button" data-omitir="' + esc(p.id) + '" style="padding:10px 12px;border:1.5px solid #dde3e8;background:#fff;border-radius:8px;font-weight:700;font-size:12px;color:#5c6a76;cursor:pointer;">No aplica</button>') + '</div>';
+          return '<div style="border:1px solid #dde3e8;border-radius:11px;padding:11px 12px;margin-bottom:8px;' + (h ? '' : 'border-left:4px solid #c9a227;') + '">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px;"><b>' + (i + 1) + '. ' + esc(p.icono + ' ' + p.titulo) + '</b>' + estado + '</div>' + acc + '</div>';
+        }).join('') +
+        '<button type="button" data-terminar style="width:100%;margin-top:6px;padding:11px;border:1.5px solid #f0c8c1;background:#fff;color:#c0392b;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;">Terminar la jornada en este equipo</button>';
+      caja.querySelector('[data-cerrar]').onclick = cerrar;
+      caja.querySelectorAll('[data-abrir]').forEach((b) => { b.onclick = () => { cerrar(); this.abrir(b.dataset.abrir); }; });
+      caja.querySelectorAll('[data-omitir]').forEach((b) => { b.onclick = () => { this.omitir(b.dataset.omitir); pinta(); }; });
+      caja.querySelector('[data-terminar]').onclick = () => { if (confirm('¿Terminar la jornada? Lo que ya se guardó no se borra; solo se quita la barra de avance de este equipo.')) { this.terminar(); cerrar(); } };
+    };
+    pinta();
+  }
+};
+
 /* ================= TRAER PERSONAL DE UN ATS =================
    La gente que firmó el ATS del día es casi siempre la misma que firma la
    charla y el anexo. Este selector lista los ATS abiertos y devuelve sus

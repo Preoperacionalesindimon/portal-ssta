@@ -1769,8 +1769,9 @@ function renderAbrirPermisos() {
   const c = ats.cab;
   const sel = (c.requiere === 'SI' ? c.permisos : []).filter((id) => PERMISO_A_BACKEND[id] && PORTAL_CONFIG.BACKENDS[PERMISO_A_BACKEND[id]]);
   const asociados = permisosAsociadosDe(ats);
-  if (!sel.length && !asociados.length) { cont.innerHTML = ''; return; }
-  cont.innerHTML = '<div class="abrir-permisos">' +
+  const btnJornada = ats.code ? '<button type="button" class="btn" id="btnJornada" style="width:100%;margin-bottom:10px;">🗂️ Jornada: permisos, charla y anexo con este personal →</button>' : '';
+  if (!sel.length && !asociados.length) { cont.innerHTML = btnJornada ? '<div class="abrir-permisos">' + btnJornada + '</div>' : ''; if ($('btnJornada')) $('btnJornada').addEventListener('click', iniciarJornada); return; }
+  cont.innerHTML = '<div class="abrir-permisos">' + btnJornada +
     (sel.length ? '<span class="etq">Diligenciar los permisos de este ATS</span>' +
       '<p class="ayuda" style="margin:0 0 8px;">Se abre el permiso con la descripción, el área, las fechas y los participantes de este ATS ya llenos.</p>' +
       '<div class="acciones-tareas" style="margin-top:0;">' + sel.map((id) => {
@@ -1782,6 +1783,27 @@ function renderAbrirPermisos() {
       return '<a href="' + esc(B.archivo || 'dashboard.html') + '?code=' + encodeURIComponent(x.code) + '">' + esc((B.icono || '') + ' ' + x.code) + '</a>';
     }).join(' · ') + '</div>' : '') + '</div>';
   cont.querySelectorAll('[data-abrir-permiso]').forEach((b) => b.addEventListener('click', () => abrirPermisoDesdeAts(b.dataset.abrirPermiso)));
+  if ($('btnJornada')) $('btnJornada').addEventListener('click', iniciarJornada);
+}
+/* ---------- Jornada: del ATS a permisos, charla y anexo ---------- */
+function datosJornadaDesdeAts() {
+  const c = ats.cab;
+  return {
+    atsCode: ats.code,
+    trabajo: c.trabajo || '',
+    sitio: [c.area, (c.centro || []).concat((c.centroOtro || '').trim() ? [c.centroOtro.trim()] : []).join(', ')].filter(Boolean).join(' · '),
+    desde: c.desde || hoyISO(), hasta: c.hasta || c.desde || hoyISO(), horaDesde: c.horaDesde || '', horaHasta: c.horaHasta || '',
+    responsable: (ats.firmas.lider && ats.firmas.lider.nombre) || '',
+    personas: ats.participantes.map((p) => ({ nombre: ((p.nombres || '') + ' ' + (p.apellidos || '')).trim(), cc: p.cedula || '', cargo: p.cargo || '' })).filter((p) => p.nombre),
+    permisosReq: (c.requiere === 'SI' ? c.permisos : []).map((id) => PERMISO_A_BACKEND[id]).filter((k) => k && PORTAL_CONFIG.BACKENDS[k])
+  };
+}
+function iniciarJornada() {
+  if (!ats.code) { alert('Primero guarda el ATS (☁️ Guardar): la jornada se amarra a su código.'); return; }
+  Jornada.iniciar(datosJornadaDesdeAts());
+  if (typeof cerrarPanel === 'function') try { cerrarPanel(); } catch (e) {}
+  Jornada.barra();
+  Jornada.mostrarPanel();
 }
 function abrirPermisoDesdeAts(id) {
   const key = PERMISO_A_BACKEND[id];
@@ -2048,8 +2070,14 @@ async function verificarGuardado(local) {
   const igual = ['tareas', 'peligros', 'participantes', 'firmasParticipantes', 'firmasFinales'].every((k) => s[k] === local[k]);
   if (igual) {
     panel('<div class="verif bien"><b>✓ Guardado y verificado en el servidor</b><br>' + esc(ats.code) + ' · versión ' + ats.version + '<br>' + esc(linea(s)) + '.</div>' +
-      '<p class="ayuda">Si después llega gente a la obra, se agrega con «👷 Llegó más gente» (en Participantes) o con el enlace/QR, sin tocar el resto del ATS.</p><div class="acciones-tareas"><button type="button" class="btn sec" id="btnEnlaceTrasGuardar">📲 Enlace para agregar personal</button><button type="button" class="btn" data-cerrar>Listo</button></div>');
+      '<p class="ayuda">Si después llega gente a la obra, se agrega con «👷 Llegó más gente» (en Participantes) o con el enlace/QR, sin tocar el resto del ATS.</p>' +
+      '<button type="button" class="btn" id="btnJornadaTrasGuardar" style="width:100%;margin:4px 0 8px;">🗂️ Siguiente: permisos, charla y anexo →</button>' +
+      '<div class="acciones-tareas"><button type="button" class="btn sec" id="btnEnlaceTrasGuardar">📲 Enlace para agregar personal</button><button type="button" class="btn sec" data-cerrar>Listo</button></div>');
     $('btnEnlaceTrasGuardar').addEventListener('click', () => compartirAgregar(ats.code));
+    $('btnJornadaTrasGuardar').addEventListener('click', iniciarJornada);
+    // Si ya hay una jornada de este ATS, se actualiza su personal (llegó más gente).
+    const jAct = Jornada.actual();
+    if (jAct && jAct.atsCode === ats.code) Jornada.iniciar(datosJornadaDesdeAts());
   } else {
     panel('<div class="verif mal"><b>⚠️ Lo guardado no coincide con lo que hay en este celular.</b><br>En el servidor: ' + esc(linea(s)) + '.<br>Aquí: ' + esc(linea(local)) + '.</div><p class="ayuda">No borres nada de este dispositivo y vuelve a tocar ☁️ Guardar.</p><div class="acciones-tareas"><button type="button" class="btn" data-cerrar>Entendido</button></div>');
     ats.sucio = true; actualizarEstado();
@@ -2691,6 +2719,7 @@ function cargarTodo() {
   else if (codeUrl && codeUrl !== ats.code) cargarDesdeServidor(codeUrl);
   else if (codeUrl) irAlEditor();
   if (urlAts()) { OutboxBadge.init(); Outbox.flush(); }
+  Jornada.barra();
 })();
 window.addEventListener('load', () => { if (typeof UpdateManager !== 'undefined') UpdateManager.init(); });
 </script>

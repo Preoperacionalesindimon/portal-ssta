@@ -136,7 +136,7 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
   </details>
   <div class="sec-t">Semanas recientes <span id="semanasNota"></span></div>
   <div id="semanasList"><div class="status-msg">Cargando…</div></div>
-  <div class="version-portal">Portal SSTA · versión v84</div>
+  <div class="version-portal">Portal SSTA · versión v85</div>
 </div>
 
 <!-- ═══════ SEMANA ═══════ -->
@@ -737,6 +737,7 @@ $('btnGuardarDia').addEventListener('click', async ()=>{
   }
 });
 function terminarGuardado(msg, tipo){
+  if (Jornada.enJornada()) Jornada.marcar('charla', { code: semana.code, pendiente: !!semana._pendientes || tipo === 'aviso' });
   lsDel(LS.borrador(semana.code, diaActual));
   quitarSet = new Set();
   mostrarSemana();
@@ -866,9 +867,44 @@ $('btnPdfRango').addEventListener('click', async ()=>{
   await imprimirSemanas(conCharlas);
 });
 
+/* ================= JORNADA (desde el ATS) =================
+   Abre la charla de HOY en el sitio del ATS, con el tema "Socialización del
+   ATS…", el líder como ejecutor y el personal del ATS listo para firmar. */
+async function abrirCharlaDeJornada(){
+  const j = Jornada.actual();
+  if (!j) return;
+  if (j.sitio) $('inLugar').value = j.sitio;
+  $('inFecha').value = hoyISO();
+  if (!$('inLugar').value.trim()){ $('inicioStatus').textContent = 'Jornada del ' + j.atsCode + ': escribe el lugar de trabajo y toca «Abrir charla».'; $('inLugar').focus(); return; }
+  lsSet(LS.lugar, $('inLugar').value.trim());
+  semana = await obtenerSemana($('inFecha').value, $('inLugar').value.trim());
+  abrirDia(diaDe($('inFecha').value));
+  if (!$('inTema').value.trim()) $('inTema').value = 'Socialización del ATS ' + j.atsCode + (j.trabajo ? ': ' + j.trabajo : '');
+  if (!$('inEjecutor').value.trim() && j.responsable) $('inEjecutor').value = j.responsable;
+  const ya = new Set(((semana.dias[diaActual] || {}).asistentes || []).map(clavePersona));
+  [...$('nuevosList').querySelectorAll('.as-row')].forEach(row=>{
+    const n = row.dataset.n, nom = $('asNombre'+n).value.trim();
+    if (nom) ya.add(clavePersona({ nombre:nom, cedula:$('asCedula'+n).value }));
+    else { delete pads['padAs'+n]; row.remove(); }
+  });
+  let n = 0;
+  (j.personas || []).forEach(p=>{ const per = { nombre:p.nombre, cedula:p.cc || p.cedula || '', cargo:p.cargo || '' }; const k = clavePersona(per); if (ya.has(k)) return; ya.add(k); const d = agregarFila(per); d.dataset.cargo = per.cargo; n++; });
+  if (!$('nuevosList').querySelector('.as-row')) agregarFila();
+  setTimeout(()=> sigMgr.refreshIn($('nuevosList')), 60);
+  actualizarCuenta(); guardarBorradorPronto();
+  toast(n ? '🗂️ Jornada: ' + n + ' persona(s) del ATS listas para firmar' : '🗂️ Jornada: el personal del ATS ya está en esta charla');
+}
+window.addEventListener('jornada-ir', (e)=>{ if (e.detail === 'charla') abrirCharlaDeJornada(); });
+
 /* ================= INICIO ================= */
 cargarPersonal();
 cargarSemanas();
+Jornada.barra();
+if (Jornada.enJornada() && /[?&]jornada=1\b/.test(location.search)){
+  const jj = Jornada.actual();
+  history.replaceState(null, '', location.pathname);
+  if (jj && !(jj.hechos && jj.hechos.charla)) abrirCharlaDeJornada();
+}
 </script>
 </body>
 </html>

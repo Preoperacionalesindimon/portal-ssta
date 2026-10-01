@@ -548,6 +548,7 @@ const PermisoCore = (function () {
     if (cfg.freeformYN && $('openPhase')) base.yn = collectFreeformYN($('openPhase'));
     if (cfg.extraCollectOpenData) Object.assign(base, cfg.extraCollectOpenData());
     if (atsRelacionado) base.atsRelacionado = atsRelacionado;
+    if (copiadoDe) base.copiadoDe = copiadoDe;
     return base;
   }
   function collectCloseData() {
@@ -1190,7 +1191,7 @@ const PermisoCore = (function () {
     $('mainActionBtn').textContent = 'Guardar apertura en la hoja';
     $('closeLockedMsg').classList.remove('hidden');
     $('closeFields').classList.add('hidden');
-    atsRelacionado = null; codigoAvisadoAlAts = null;
+    atsRelacionado = null; codigoAvisadoAlAts = null; copiadoDe = null;
     pintarAtsRelacionado_();
     checkForOpenDraft();
     aplicarPrefillDesdeAts_();
@@ -1396,6 +1397,8 @@ const PermisoCore = (function () {
     });
 
     $('cardNew').addEventListener('click', startNewPermit);
+    ponerOpcionRepetir_();
+    if (typeof Jornada !== 'undefined') Jornada.barra();
     $('loadCodeBtn').addEventListener('click', () => {
       const code = $('codeInput').value.trim();
       if (!code) {
@@ -1563,6 +1566,7 @@ const PermisoCore = (function () {
         if (res.ok) {
           firstSaveDone = true;
           avisarAlAts_(); // por si el código cambió (colisión) antes de guardarse
+          if (typeof Jornada !== 'undefined') Jornada.marcarPermiso(tipoDeEstaPagina_(), permitCode, atsRelacionado);
           $('statusBanner').className = 'status-banner open';
           $('statusBannerText').textContent = 'Permiso guardado en la hoja ✓ — comparte el código con quien hará el cierre';
           $('footerStatus').textContent = 'Código del permiso: ' + permitCode;
@@ -1581,6 +1585,7 @@ const PermisoCore = (function () {
           if (typeof Outbox !== 'undefined') {
             try {
               await Outbox.add(getWebAppUrl(), Object.assign({}, data, { token: PORTAL_CONFIG.API_TOKEN }));
+              if (typeof Jornada !== 'undefined') Jornada.marcarPermiso(tipoDeEstaPagina_(), permitCode, atsRelacionado, true);
               $('footerStatus').textContent = res.error || 'Sin conexión — quedó guardado y se reintentará solo. Verás un aviso abajo mientras esté pendiente.';
             } catch (e) {
               $('footerStatus').textContent = 'No se pudo guardar ni en el servidor ni localmente (memoria llena o modo privado). Copie los datos de este permiso antes de salir de la página.';
@@ -1667,6 +1672,101 @@ const PermisoCore = (function () {
 
   let saveOpenDraftDebounced = null;
   let saveCloseDraftDebounced = null;
+
+  /* ================= REPETIR UN PERMISO ANTERIOR =================
+     En trabajos de varios días se volvía a escribir todo el permiso cada
+     mañana. Ahora se elige uno anterior de este mismo tipo y se copia lo que
+     DESCRIBE el trabajo (descripción, sitio, herramientas, equipos, EPP,
+     cálculos, ejecutantes y responsables), pero NO lo que se debe hacer de
+     nuevo hoy: las verificaciones del checklist (C / SÍ / NO), las mediciones
+     de gases, las observaciones y TODAS las firmas. Las fechas quedan en hoy.
+     El permiso nuevo es otro registro, con su propio código, y guarda de cuál
+     se copió (copiadoDe). */
+  let copiadoDe = null;
+  const NO_COPIAR_ = ['permitCode', 'status', 'createdAt', 'closedAt', 'updatedAt', 'openedAt', 'cierreFecha', 'cierreHora', 'motivoCierre',
+    'q1', 'q2', 'q3', 'q4', 'cierre1', 'cierre2', 'atsRelacionado', 'copiadoDe', 'yn', 'gases', 'observaciones',
+    '_appliedOps', 'firstSave', 'opId', 'ok'];
+  function sinFirmas_(v) {
+    if (Array.isArray(v)) return v.map(sinFirmas_);
+    if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach((k) => { o[k] = sinFirmas_(v[k]); }); return o; }
+    return (typeof v === 'string' && (v.indexOf('data:image') === 0 || v.indexOf('SIGREF:') === 0)) ? null : v;
+  }
+  function copiaParaRepetir_(data) {
+    const c = sinFirmas_(JSON.parse(JSON.stringify(data || {})));
+    NO_COPIAR_.forEach((k) => { delete c[k]; });
+    (cfg.checklistGroups || []).forEach((g) => { delete c[g.stateKey]; });
+    (cfg.closeSigners || []).forEach((x) => { delete c[x.field]; });
+    const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    const hoy = d.toISOString().slice(0, 10);
+    c.desdeFecha = hoy; c.hastaFecha = hoy;
+    return c;
+  }
+  function ponerOpcionRepetir_() {
+    const nueva = $('cardNew');
+    if (!nueva || $('cardRepetir')) return;
+    const card = document.createElement('div');
+    card.className = 'choice-card';
+    card.id = 'cardRepetir';
+    card.innerHTML = '<div class="icon">🔁</div><h3>Repetir un permiso anterior</h3>' +
+      '<p>Para trabajos de varios días: copia la descripción, el sitio, los equipos y el personal de un permiso anterior. Las verificaciones, mediciones y firmas se hacen de nuevo hoy.</p>';
+    nueva.parentNode.insertBefore(card, nueva.nextSibling);
+    card.addEventListener('click', elegirParaRepetir_);
+  }
+  async function elegirParaRepetir_() {
+    const fondo = document.createElement('div');
+    fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
+    const caja = document.createElement('div');
+    caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:84vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);color:#151b24;';
+    fondo.appendChild(caja); document.body.appendChild(fondo);
+    const cerrar = () => fondo.remove();
+    fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
+    const cab = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;font-size:16px;">🔁 ¿Qué permiso repetir?</h3>' +
+      '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
+      '<input type="search" id="repBuscar" placeholder="Buscar por código, sitio o responsable…" style="width:100%;border:1.5px solid #dde3e8;border-radius:9px;padding:11px 12px;font-size:15px;margin:12px 0 10px;">';
+    caja.innerHTML = cab + '<div id="repLista" style="text-align:center;color:#5c6a76;font-size:13px;padding:14px;">Buscando permisos anteriores…</div>';
+    caja.querySelector('[data-cerrar]').onclick = cerrar;
+    let rows = [];
+    try {
+      const res = await fetchWithRetry(getWebAppUrl() + '?' + listQuery() + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
+      const d = await res.json();
+      if (!d || !d.ok || !Array.isArray(d.rows)) throw new Error((d && d.error) || 'el servidor no respondió con datos');
+      rows = d.rows.slice().sort((a, b) => String(b.openedAt || b.updatedAt || '').localeCompare(String(a.openedAt || a.updatedAt || ''))).slice(0, 60);
+    } catch (e) {
+      $('repLista').innerHTML = '<div style="background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px;text-align:left;">No se pudieron traer los permisos: ' + esc(e.message || 'sin conexión') + '.</div>';
+      return;
+    }
+    const pinta = () => {
+      const q = ($('repBuscar').value || '').trim().toLowerCase();
+      const lista = rows.filter((r) => !q || [r.permitCode || r.code, r.sitio, r.responsable].some((v) => String(v || '').toLowerCase().includes(q)));
+      if (!lista.length) { $('repLista').innerHTML = '<div style="padding:14px;color:#5c6a76;">No hay permisos que coincidan.</div>'; return; }
+      $('repLista').innerHTML = lista.slice(0, 25).map((r) => {
+        const code = r.permitCode || r.code;
+        const f = String(r.openedAt || r.updatedAt || '').slice(0, 10);
+        return '<button type="button" data-rep="' + esc(code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid #dde3e8;background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
+          '<b style="font-size:13px;">' + esc(code) + '</b><span style="float:right;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 8px;background:' + (r.status === 'ABIERTO' ? '#e3f4ea;color:#1d7a4c' : '#eef1f4;color:#5c6570') + ';">' + esc(r.status || '') + '</span><br>' +
+          '<span style="font-size:12px;">' + esc(r.sitio || 'Sin sitio') + '</span><br><span style="font-size:11px;color:#5c6a76;">' + esc([f, r.responsable].filter(Boolean).join(' · ')) + '</span></button>';
+      }).join('');
+      $('repLista').style.textAlign = 'left'; $('repLista').style.padding = '0';
+      $('repLista').querySelectorAll('[data-rep]').forEach((b) => { b.onclick = () => { cerrar(); repetirPermiso_(b.dataset.rep); }; });
+    };
+    $('repBuscar').addEventListener('input', pinta);
+    pinta();
+  }
+  async function repetirPermiso_(code) {
+    const data = await fetchFromSheet(code);
+    if (!data) return;
+    startNewPermit();
+    const copia = copiaParaRepetir_(data);
+    copia.permitCode = permitCode;            // el código NUEVO, no el del permiso copiado
+    loadOpenDataIntoForm(copia);
+    atsRelacionado = null; pintarAtsRelacionado_();
+    copiadoDe = code;
+    const ejec = (copia.ejecutantes || []).filter((x) => x && x.nombre).length;
+    $('footerStatus').textContent = 'Datos tomados del permiso ' + code + '. Verifica en campo, completa y firma.';
+    if (saveOpenDraftDebounced) saveOpenDraftDebounced();
+    if (typeof actualizarPendientes === 'function') try { actualizarPendientes(); } catch (e) {}
+    alert('🔁 Se copió el permiso ' + code + ': descripción, sitio, equipos y ' + ejec + ' ejecutante(s).\n\nLas fechas quedaron en HOY. Las verificaciones (C / SÍ / NO), las mediciones y TODAS las firmas se hacen de nuevo: revisa en campo antes de firmar.');
+  }
 
   /* ================= PERMISO ABIERTO DESDE UN ATS =================
      Antes el ATS y sus permisos eran registros sueltos: las mismas personas
@@ -2007,7 +2107,8 @@ const PermisoCore = (function () {
       '<table class="hp-cab"><colgroup><col style="width:14%"><col><col style="width:22%">' + (qrImg ? '<col style="width:12%">' : '') + '</colgroup><tr>' +
       '<td class="hp-logo"><img src="' + (logoHoja_ || 'logo-indimon.png') + '" alt="INDIMON"></td>' +
       '<td class="hp-tit">' + esc(titulo) + '<div>' + (permitCode ? 'Registro ' + esc(permitCode) + ' · ' : '') + esc(estado) + '</div>' +
-      (atsRelacionado ? '<div>ATS relacionado: <b>' + esc(atsRelacionado) + '</b></div>' : '') + '</td>' +
+      (atsRelacionado ? '<div>ATS relacionado: <b>' + esc(atsRelacionado) + '</b></div>' : '') +
+      (copiadoDe ? '<div>Datos tomados del permiso ' + esc(copiadoDe) + ' (verificado y firmado de nuevo)</div>' : '') + '</td>' +
       '<td class="hp-meta">' + meta.map(esc).join('<br>') + '<br><span>Respuestas: C = cumple · SÍ / NO · NA = no aplica</span></td>' +
       (qrImg ? '<td class="hp-qr"><img src="' + qrImg.src + '" alt="QR"><div>Escanea para abrir este permiso</div></td>' : '') +
       '</tr></table>';
