@@ -1,0 +1,12 @@
+PORTAL SSTA v89: PDF de asistencia sin renglones vacíos + arreglo de "copiar listas" (v88)
+
+SUBIR A GITHUB (reemplazar):
+  personal-autorizado.html, asistencia.html, estado.html, sw.js
+  pruebas/pruebas.js, pruebas/simulador-apps-script.js
+
+APPS SCRIPT DEL ANEXO (opcional, se recomienda):
+  Pegar para-pegar-en-apps-script/Personal-autorizado.txt en el proyecto del
+  anexo, conservando la CLAVE_PORTAL que ya tienes escrita.
+  Implementar > Gestionar implementaciones > Editar > Versión: Nueva versión.
+  Sin este paso el copiar FUNCIONA igual: la página lo resuelve con el
+  historial, pero con una consulta más.

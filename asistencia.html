@@ -107,6 +107,9 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
 .f5 .asis td.n{text-align:center;font-size:7px;}
 .f5 .asis td.f{text-align:center;padding:1px;}
 .f5 .asis td.f img{max-height:26px;max-width:100%;}
+.f5 .asis td.f .no{font-size:7.5px;font-weight:700;color:#8a2a1c;}
+.f5 .asis td.f.nd{background:#ececec;color:#777;font-size:8px;}
+.f5 .tem .sin{color:#777;font-style:italic;}
 .f5 .asis td.f .tx{font-size:6.5px;color:#333;}
 .f5 .pie{font-size:6.5px;color:#555;text-align:right;margin-top:3px;}
 </style>
@@ -144,7 +147,7 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
   </details>
   <div class="sec-t">Semanas recientes <span id="semanasNota"></span></div>
   <div id="semanasList"><div class="status-msg">Cargando…</div></div>
-  <div class="version-portal">Portal SSTA · versión v87</div>
+  <div class="version-portal">Portal SSTA · versión v89</div>
 </div>
 
 <!-- ═══════ SEMANA ═══════ -->
@@ -651,25 +654,66 @@ $('btnAgregarAsis').addEventListener('click', ()=>{
   setTimeout(()=>{ sigMgr.refreshIn(d); d.querySelector('input').focus(); }, 50);
 });
 
-$('btnCopiarDia').addEventListener('click', ()=>{
-  const otros = DIAS.filter(d=> d !== diaActual && semana.dias && semana.dias[d] && (semana.dias[d].asistentes || []).length);
-  if (!otros.length){ alert('Todavía no hay asistentes en otros días de esta semana.'); return; }
+/* Lista de otro día: los días de ESTA semana y, si existe, la semana
+   anterior del mismo lugar (el lunes ya hay de dónde copiar). Se traen
+   nombre, cédula y cargo; cada persona vuelve a firmar. */
+async function opcionesParaCopiar(){
+  const ops = [];
+  const idx = DIAS.indexOf(diaActual);
+  // Primero los días anteriores (el más cercano primero), luego los posteriores.
+  const orden = DIAS.map((d,i)=>({ d, i })).filter(x=> x.d !== diaActual)
+    .sort((a,b)=> (a.i < idx) !== (b.i < idx) ? (a.i < idx ? -1 : 1) : (a.i < idx ? b.i - a.i : a.i - b.i));
+  orden.forEach(({ d })=>{
+    const x = semana.dias && semana.dias[d];
+    if (x && (x.asistentes || []).length) ops.push({ etq: NOMBRE_DIA[d] + ' ' + fechaBonita(fechaDelDia(semana, d)), x });
+  });
+  const previa = semanasCache.filter(s=> s.code !== semana.code && s.semanaDel < semana.semanaDel && normLugar(s.lugar) === normLugar(semana.lugar))
+    .sort((a,b)=> a.semanaDel < b.semanaDel ? 1 : -1)[0];
+  if (previa){
+    let doc = null;
+    try { doc = await traerSemana(previa.code); } catch (e) {}
+    if (doc && doc.dias){
+      DIAS.slice().reverse().forEach(d=>{
+        const x = doc.dias[d];
+        if (x && (x.asistentes || []).length && ops.length < 10) ops.push({ etq: NOMBRE_DIA[d] + ' ' + fechaBonita(fechaDelDia(doc, d)) + ' (semana anterior)', x });
+      });
+    }
+  }
+  return ops;
+}
+$('btnCopiarDia').addEventListener('click', async ()=>{
+  const btn = $('btnCopiarDia'), texto = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  let ops = [];
+  try { ops = await opcionesParaCopiar(); } finally { btn.disabled = false; btn.textContent = texto; }
+  if (!ops.length){ alert('No hay asistentes en otros días de esta semana ni en la semana anterior de este lugar.'); return; }
   const fondo = document.createElement('div');
   fondo.className = 'modal-fondo';
-  fondo.innerHTML = '<div class="modal"><h3>¿De qué día traer la lista?</h3><p style="font-size:12px;color:var(--muted);margin-top:0;">Se traen nombres y cédulas. Cada persona debe volver a firmar hoy.</p>' +
-    otros.map(d=>`<button type="button" class="btn ghost" data-d="${d}">${NOMBRE_DIA[d]} · ${semana.dias[d].asistentes.length} personas${semana.dias[d].tema ? ' · ' + esc(semana.dias[d].tema.slice(0,40)) : ''}</button>`).join('') +
-    '<button type="button" class="btn" data-d="">Cancelar</button></div>';
+  fondo.innerHTML = '<div class="modal"><h3>¿De qué día traer la lista?</h3><p style="font-size:12px;color:var(--muted);margin-top:0;">Se traen nombre, cédula y cargo. Cada persona debe volver a firmar hoy.</p>' +
+    ops.map((o,i)=>`<button type="button" class="btn ghost" data-i="${i}">${esc(o.etq)} · ${o.x.asistentes.length} personas${o.x.tema ? ' · ' + esc(String(o.x.tema).slice(0,40)) : ''}</button>`).join('') +
+    '<button type="button" class="btn" data-i="">Cancelar</button></div>';
   document.body.appendChild(fondo);
   fondo.addEventListener('click', e=>{
     const b = e.target.closest('button'); if (!b && e.target !== fondo) return;
     fondo.remove();
-    if (!b || !b.dataset.d) return;
+    if (!b || b.dataset.i === '' || b.dataset.i === undefined) return;
+    const elegido = ops[Number(b.dataset.i)];
     const ya = new Set(((semana.dias[diaActual] || {}).asistentes || []).map(clavePersona));
-    [...$('nuevosList').querySelectorAll('.as-row')].forEach(r=> ya.add(clavePersona({ nombre:$('asNombre'+r.dataset.n).value, cedula:$('asCedula'+r.dataset.n).value })));
-    // Filas vacías: se reemplazan por la lista
-    [...$('nuevosList').querySelectorAll('.as-row')].forEach(r=>{ if (!$('asNombre'+r.dataset.n).value.trim()){ delete pads['padAs'+r.dataset.n]; r.remove(); } });
+    [...$('nuevosList').querySelectorAll('.as-row')].forEach(r=>{
+      const nom = $('asNombre'+r.dataset.n).value.trim();
+      if (nom) ya.add(clavePersona({ nombre:nom, cedula:$('asCedula'+r.dataset.n).value }));
+      else { delete pads['padAs'+r.dataset.n]; r.remove(); }   // las filas vacías se reemplazan por la lista
+    });
+    renumerarFilas();
     let n = 0;
-    semana.dias[b.dataset.d].asistentes.forEach(a=>{ if (ya.has(clavePersona(a))) return; agregarFila({ nombre:a.nombre, cedula:a.cedula }); n++; });
+    elegido.x.asistentes.forEach(a=>{
+      if (!a || !String(a.nombre || '').trim()) return;
+      const k = clavePersona(a); if (ya.has(k)) return; ya.add(k);
+      const fila = agregarFila({ nombre:a.nombre, cedula:a.cedula || '' });
+      if (fila && a.cargo) fila.dataset.cargo = a.cargo;
+      n++;
+    });
+    if (!$('nuevosList').querySelector('.as-row')) agregarFila();
     setTimeout(()=> sigMgr.refreshIn($('nuevosList')), 50);
     actualizarCuenta(); guardarBorradorPronto();
     toast(n ? '✓ Se agregaron ' + n + ' personas. Cada una debe firmar.' : 'Todas esas personas ya están en este día.');
@@ -820,7 +864,12 @@ function recortarSemana(doc, desde, hasta){
 function htmlHojaF005(doc, nueva){
   const e = esc;
   const personas = personasDeSemana(doc);
-  const total = Math.max(16, personas.length);
+  // Solo filas con asistentes (sin renglones en blanco). En un día con charla,
+  // quien no está dice "No asistió"; un día sin charla queda sombreado con "—".
+  const huboCharla = {};
+  DIAS.forEach(d=>{ const x = doc.dias && doc.dias[d]; huboCharla[d] = !!(x && (String(x.tema || '').trim() || (x.asistentes || []).length)); });
+  const celdaDia = (p, d)=> p.dias[d] ? '<td class="f">' + celdaFirma(p.dias[d]) + '</td>'
+    : (huboCharla[d] ? '<td class="f"><span class="no">No asistió</span></td>' : '<td class="f nd">—</td>');
   const celdaFirma = (v)=> !v ? '' : (v.indexOf && v.indexOf('data:image') === 0 ? '<img src="' + v + '" alt="firma">'
     : (v === 'SIN' ? '<span class="tx">Asistió (sin firma)</span>' : '<span class="tx">✓ Firmó</span>'));
   let h = '<div class="f5"' + (nueva ? ' style="break-before:page;page-break-before:always;"' : '') + '>' +
@@ -833,16 +882,16 @@ function htmlHojaF005(doc, nueva){
     '<table class="tem"><colgroup><col style="width:37%"><col style="width:11.5%"><col style="width:13%"><col></colgroup>' +
     '<tr><td class="azul">Temario</td><td><b>Semana del:</b> ' + e(fechaCorta(doc.semanaDel)) + '</td><td><b>Al:</b> ' + e(fechaCorta(doc.semanaAl || sumarDias(doc.semanaDel,6))) + '</td><td><b>Lugar de trabajo:</b> ' + e(doc.lugar) + '</td></tr>' +
     DIAS.map(d=>{ const x = (doc.dias && doc.dias[d]) || {};
-      return '<tr><td><b>' + NOMBRE_DIA[d] + ':</b> ' + e(x.tema || '') + '</td><td><b>Hora:</b> ' + e(x.hora || '') + '</td><td><b>Duración:</b> ' + e(x.duracion || '') + '</td><td><b>Ejecutor:</b> ' + e(x.ejecutor || '') + '</td></tr>'; }).join('') +
+      if (!huboCharla[d]) return '<tr><td><b>' + NOMBRE_DIA[d] + ':</b> <span class="sin">No hubo charla</span></td><td><b>Hora:</b> —</td><td><b>Duración:</b> —</td><td><b>Ejecutor:</b> —</td></tr>';
+      return '<tr><td><b>' + NOMBRE_DIA[d] + ':</b> ' + e(x.tema || '') + '</td><td><b>Hora:</b> ' + e(x.hora || '—') + '</td><td><b>Duración:</b> ' + e(x.duracion || '—') + '</td><td><b>Ejecutor:</b> ' + e(x.ejecutor || '—') + '</td></tr>'; }).join('') +
     '</table>' +
     '<table class="asis"><colgroup><col style="width:2.6%"><col style="width:15%"><col style="width:10.8%">' + DIAS.map(()=>'<col>').join('') + '</colgroup>' +
     '<thead><tr><th class="azul" rowspan="2">N°</th><th class="azul" rowspan="2">NOMBRE DEL EMPLEADO</th><th class="azul" rowspan="2">N° IDENTIFICACIÓN</th><th class="azul" colspan="7">DIA DE ASISTENCIA (Firma del trabajador)</th></tr>' +
     '<tr class="dias">' + ['Lunes','Martes','Miercoles','Jueves','Viernes','Sábado','Domingo'].map(x=>'<th>' + x + '</th>').join('') + '</tr></thead><tbody>';
-  for (let i = 0; i < total; i++){
-    const p = personas[i];
-    h += '<tr><td class="n">' + (i + 1) + '</td><td>' + (p ? e(p.nombre) : '') + '</td><td>' + (p ? e(p.cedula || '') : '') + '</td>' +
-      DIAS.map(d=>'<td class="f">' + (p ? celdaFirma(p.dias[d]) : '') + '</td>').join('') + '</tr>';
-  }
+  personas.forEach((p, i)=>{
+    h += '<tr><td class="n">' + (i + 1) + '</td><td>' + e(p.nombre) + '</td><td>' + e(p.cedula || '—') + '</td>' + DIAS.map(d=> celdaDia(p, d)).join('') + '</tr>';
+  });
+  if (!personas.length) h += '<tr><td colspan="10" style="text-align:center;color:#777;">Sin asistentes registrados esta semana.</td></tr>';
   h += '</tbody></table><div class="pie">Semana ' + e(doc.code) + ' · Impreso el ' + e(new Date().toLocaleString('es-CO')) + ' desde el Portal SSTA · INDIMON</div></div>';
   return h;
 }

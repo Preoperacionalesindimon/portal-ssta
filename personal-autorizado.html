@@ -126,7 +126,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v87</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v89</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -295,7 +295,7 @@ async function cargarPersonal(){
   const listEl = document.getElementById('personalList');
   listEl.innerHTML = '<div class="status-msg">Cargando…</div>';
   try{
-    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=listPersonal&token=' + encodeURIComponent(API_TOKEN));
+    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=listPersonal&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     const data = await res.json();
     personalCache = (data.ok && data.personal) ? data.personal : [];
     renderPersonalList();
@@ -317,7 +317,7 @@ function renderPersonalList(){
       try{
         await fetchWithRetry(FIXED_WEBAPP_URL, {
           method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify({ action:'eliminarPersona', cedula: btn.dataset.cedula, token: API_TOKEN })
+          body: JSON.stringify({ action:'eliminarPersona', cedula: btn.dataset.cedula, token: PORTAL_CONFIG.API_TOKEN })
         });
       }catch(err){}
       cargarPersonal();
@@ -334,7 +334,7 @@ document.getElementById('btnGuardarPersona').addEventListener('click', async ()=
   try{
     const res = await fetchWithRetry(FIXED_WEBAPP_URL, {
       method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'guardarPersona', nombre, cedula, cargo, token: API_TOKEN })
+      body: JSON.stringify({ action:'guardarPersona', nombre, cedula, cargo, token: PORTAL_CONFIG.API_TOKEN })
     });
     const json = await res.json();
     if(!json.ok){ statusEl.textContent = json.error || 'No se pudo guardar.'; return; }
@@ -403,7 +403,7 @@ async function cargarObras(){
   const listEl = document.getElementById('obrasList');
   listEl.innerHTML = '<div class="status-msg">Cargando obras…</div>';
   try{
-    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=listObras&token=' + encodeURIComponent(API_TOKEN));
+    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=listObras&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     const data = await res.json();
     obrasCache = (data.ok && Array.isArray(data.obras)) ? data.obras : [];
     if(!data.ok || !data.obras.length){
@@ -489,7 +489,7 @@ async function guardarPermisosVinculados(){
   try{
     await fetchWithRetry(FIXED_WEBAPP_URL, {
       method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'vincularPermisos', obraId: currentObra.obraId, permisos: currentObra.permisos, token: API_TOKEN })
+      body: JSON.stringify({ action:'vincularPermisos', obraId: currentObra.obraId, permisos: currentObra.permisos, token: PORTAL_CONFIG.API_TOKEN })
     });
   }catch(err){ /* si falla, queda igual en el siguiente intento; no es crítico bloquear la UI aquí */ }
 }
@@ -763,21 +763,54 @@ function agregarTrabajadorRow(prefill){
 }
 document.getElementById('btnAgregarTrabajador').addEventListener('click', ()=> agregarTrabajadorRow());
 
+/* Copia la lista del último registro ANTERIOR a la fecha elegida (no el de
+   ese mismo día). El servidor devuelve el registro tal cual (sin campo "ok"):
+   se acepta cualquier respuesta con lista de trabajadores. Funciona con el
+   backend nuevo (ultimoRegistro&antesDe=) y con el que ya está desplegado
+   (si este devuelve el mismo día, se busca en el historial). */
+function fechaCorta_(v){ return String(v || '').slice(0, 10); }
+async function leerJsonAnexo_(res){
+  const txt = await res.text();
+  try { return JSON.parse(txt); } catch (e) { throw new Error((typeof Outbox !== 'undefined' && Outbox.describirPagina) ? Outbox.describirPagina(txt) : 'Respuesta no válida del servidor'); }
+}
+function esRegistro_(d){ return !!d && d.ok !== false && Array.isArray(d.trabajadores) && d.trabajadores.some(t=>t && String(t.nombre || '').trim()); }
+async function buscarRegistroAnterior(obraId, fecha){
+  const base = FIXED_WEBAPP_URL + '?obraId=' + encodeURIComponent(obraId) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN);
+  // 1) Una sola consulta.
+  const d = await leerJsonAnexo_(await fetchWithRetry(base + '&action=ultimoRegistro&antesDe=' + encodeURIComponent(fecha || '')));
+  if (d && d.ok === false && d.antesDe) return null;            // backend nuevo: no hay días anteriores
+  if (d && d.ok === false && /token|clave/i.test(d.error || '')) throw new Error(d.error);
+  if (esRegistro_(d) && d.fecha && (!fecha || fechaCorta_(d.fecha) < fecha)) return d;
+  if (d && d.ok === false && !/previos/i.test(d.error || '')) throw new Error(d.error || 'Error del servidor');
+  if (d && d.ok === false) return null;                         // la obra no tiene ningún registro
+  // 2) Devolvió el mismo día (o uno vacío): se busca en el historial.
+  const h = await leerJsonAnexo_(await fetchWithRetry(base + '&action=historial'));
+  const previas = ((h && h.registros) || []).map(r=>fechaCorta_(r.fecha)).filter(f=>f && (!fecha || f < fecha))
+    .sort().reverse();
+  for (const f of previas.slice(0, 5)){
+    const r = await leerJsonAnexo_(await fetchWithRetry(base + '&action=registro&fecha=' + encodeURIComponent(f)));
+    if (esRegistro_(r)) return Object.assign({}, r, { fecha: f });
+  }
+  return null;
+}
 document.getElementById('btnCopiarAyer').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnCopiarAyer');
+  const texto = btn.textContent;
+  const fecha = document.getElementById('registroFecha').value;
   btn.disabled = true; btn.textContent = 'Cargando…';
   try{
-    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=ultimoRegistro&obraId=' + encodeURIComponent(currentObra.obraId) + '&token=' + encodeURIComponent(API_TOKEN));
-    const data = await res.json();
-    btn.disabled = false; btn.textContent = '📋 Copiar lista del último registro';
-    if(!data.ok || !data.trabajadores){ alert('No hay un registro anterior de esta obra para copiar.'); return; }
+    const reg = await buscarRegistroAnterior(currentObra.obraId, fecha);
+    if (!reg){ alert('No hay un registro anterior a esta fecha en esta obra para copiar.'); return; }
+    const d = new Date(fechaCorta_(reg.fecha) + 'T00:00:00');
+    const cuando = isNaN(d.getTime()) ? 'último registro' : 'registro del ' + d.toLocaleDateString('es-CO', { weekday:'long', day:'2-digit', month:'long' });
     // Se copian los datos, pero NO las firmas — cada persona debe volver a firmar hoy.
-    // Ya no se borra lo que estaba escrito: solo se agrega a quien falta.
-    const n = agregarPersonas(data.trabajadores.map(t=>({ nombre:t.nombre, cedula:t.cedula, cargo:t.cargo })));
-    alert(n ? `Se agregaron ${n} persona(s) del último registro. Cada una debe volver a firmar hoy.` : 'Todas las personas del último registro ya están aquí.');
+    // No se borra lo que estaba escrito: solo se agrega a quien falta.
+    const n = agregarPersonas(reg.trabajadores.filter(t=>t && String(t.nombre || '').trim()).map(t=>({ nombre:t.nombre, cedula:t.cedula || '', cargo:t.cargo || '' })));
+    alert(n ? `Se agregaron ${n} persona(s) del ${cuando}. Cada una debe volver a firmar hoy.` : `Todas las personas del ${cuando} ya están en este registro.`);
   }catch(err){
-    btn.disabled = false; btn.textContent = '📋 Copiar lista del último registro';
-    alert('No se pudo cargar el último registro. Verifique su conexión.');
+    alert(navigator.onLine ? 'No se pudo cargar el último registro: ' + (err && err.message || err) : 'Sin conexión: no se puede traer el último registro. Intenta cuando tengas señal.');
+  }finally{
+    btn.disabled = false; btn.textContent = texto;
   }
 });
 
@@ -875,7 +908,7 @@ document.getElementById('btnVerHistorial').addEventListener('click', async ()=>{
   listEl.innerHTML = '<div class="status-msg">Cargando historial…</div>';
   showScreen('screenHistorial');
   try{
-    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=historial&obraId=' + encodeURIComponent(currentObra.obraId) + '&token=' + encodeURIComponent(API_TOKEN));
+    const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=historial&obraId=' + encodeURIComponent(currentObra.obraId) + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     const data = await res.json();
     if(!data.ok || !data.registros.length){ listEl.innerHTML = '<div class="empty">Aún no hay registros para esta obra.</div>'; return; }
     const fechas = data.registros.map(r=>fechaCorta(r.fecha));
