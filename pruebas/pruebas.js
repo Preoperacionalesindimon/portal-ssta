@@ -761,7 +761,7 @@ grupo('Clave del portal (los datos del personal ya no quedan abiertos con el tok
   ok('cada equipo guarda su clave y la usa en todas las llamadas', /const ClavePortal = \{/.test(c) && /PORTAL_CONFIG\.API_TOKEN = this\.get\(\) \|\| PORTAL_CONFIG\._tokenOriginal/.test(c) && /ClavePortal\.aplicar\(\);/.test(c));
   ok('si el servidor rechaza la clave, se pide en cualquier página', /res\.clone\(\)\.json\(\)\.then\(\(j\) => \{ if \(ClavePortal\.esErrorDeClave\(j\)\) ClavePortal\.pedir\(\); \}\)/.test(c));
   ok('la cola reenvía con la clave vigente', /item\.body\.token = PORTAL_CONFIG\.API_TOKEN/.test(c));
-  ok('un rechazo de clave NO saca el pendiente de la cola (antes se perdía a los 5 intentos)', /else if \(ClavePortal\.esErrorDeClave\(json\)\) \{[\s\S]{0,300}?ClavePortal\.pedir\(\);\s*\} else \{/.test(c));
+  ok('un rechazo de clave NO saca el pendiente de la cola (antes se perdía a los 5 intentos)', /else if \(ClavePortal\.esErrorDeClave\(json\)\) \{[\s\S]{0,450}?ClavePortal\.pedir\(\);\s*\} else \{/.test(c));
   ok('en un formulario, guardar la clave no recarga la página (no se pierde lo escrito)', /hayFormulario = document\.querySelector\('#app, #atsApp, form'\)/.test(c));
   ok('el inicio tiene el botón de la clave', leer('index.html').includes('id="btnClave"'));
 });
@@ -857,7 +857,7 @@ grupo('Anexo: exportar a PDF y fechas en el backend', () => {
   const E = crearEntorno(path.join(RAIZ, 'backends/backend-personal-autorizado.gs'), { fechasComoSheets: true });
   const T = 'xSiVfEUE1t0l5RI3lD7PJp2RPIa7H9M5XenSm8P1', firma = 'data:image/png;base64,' + 'Q'.repeat(300);
   const o = E.post({ action: 'crearObra', nombre: 'PTAR', area: 'C', fechaInicio: '2026-09-28', fechaFin: '2026-10-10', token: T });
-  const reg = (n) => ({ fecha: '2026-09-30', trabajadores: [{ nombre: 'Carlos', cedula: '1', cargo: 'S', firma }], verificador: { nombre: 'Ana', cedula: '2', firma: firma.replace('QQQQ', 'VVVV') }, permisos: [{ code: 'TC-1', tipo: 'Trabajo en Caliente' }], n });
+  const reg = (n) => ({ fecha: '2026-09-30', trabajadores: [{ nombre: n === 1 ? 'Carlos' : 'Luis', cedula: String(n), cargo: 'S', firma }], verificador: { nombre: 'Ana', cedula: '2', firma: firma.replace('QQQQ', 'VVVV') }, permisos: [{ code: 'TC-1', tipo: 'Trabajo en Caliente' }] });
   E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: reg(1), token: T, opId: 'x1' });
   E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: reg(2), token: T, opId: 'x2' });
   ok('Sheets guarda la fecha como Date (simulado como Google)', E.hojas['Registros'].filas[1][1] instanceof Date);
@@ -865,10 +865,28 @@ grupo('Anexo: exportar a PDF y fechas en el backend', () => {
   const hist = E.get({ action: 'historial', obraId: o.obraId, token: T });
   ok('el historial devuelve la fecha como AAAA-MM-DD', hist.registros.length === 1 && hist.registros[0].fecha === '2026-09-30');
   const r = E.get({ action: 'registro', obraId: o.obraId, fecha: '2026-09-30', token: T });
-  ok('se puede abrir un día guardado (para el PDF), con la firma del verificador', r.n === 2 && r.verificador.firma === firma.replace('QQQQ', 'VVVV') && r.permisos[0].code === 'TC-1');
-  ok('"copiar último registro" trae el más reciente', E.get({ action: 'ultimoRegistro', obraId: o.obraId, token: T }).n === 2);
+  ok('se puede abrir un día guardado (para el PDF), con la firma del verificador', r.trabajadores.length === 2 && r.verificador.firma === firma.replace('QQQQ', 'VVVV') && r.permisos[0].code === 'TC-1');
+  ok('dos guardados del mismo día se SUMAN (no se pisan entre celulares)', r.trabajadores.map((t) => t.nombre).join() === 'Carlos,Luis' && r.opIds.join() === 'x1,x2');
+  ok('"copiar último registro" trae el más reciente (con todos)', E.get({ action: 'ultimoRegistro', obraId: o.obraId, token: T }).trabajadores.length === 2);
+  const dupA = E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: reg(2), token: T, opId: 'x2' });
+  ok('un reintento de la cola no duplica', dupA.duplicado === true);
+  E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-09-30', data: { trabajadores: [], verificador: null }, quitar: ['C:1'], token: T, opId: 'x3' });
+  const r2 = E.get({ action: 'registro', obraId: o.obraId, fecha: '2026-09-30', token: T });
+  ok('quitar a alguien es explícito y conserva al verificador', r2.trabajadores.map((t) => t.nombre).join() === 'Luis' && r2.verificador.nombre === 'Ana');
   const ob = E.get({ action: 'listObras', token: T }).obras[0];
   ok('las fechas de la obra vuelven como AAAA-MM-DD', ob.fechaInicio === '2026-09-28' && ob.fechaFin === '2026-10-10');
+  // Firmas reales de celular (~30.000 caracteres cada una). El anexo las llama
+  // `firma`; antes solo se sacaban del JSON los campos con "sig" en el nombre y
+  // el registro pasaba el límite de 50.000 caracteres por celda.
+  const grande = (x) => 'data:image/png;base64,' + x.repeat(30000);
+  let rg;
+  try { rg = E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: '2026-10-01', token: T,
+    data: { fecha: '2026-10-01', trabajadores: [{ nombre: 'Carlos', cedula: '1', firma: grande('A') }, { nombre: 'Luis', cedula: '2', firma: grande('B') }], verificador: { nombre: 'Ana', cedula: '3', firma: grande('C') }, permisos: [] } }); }
+  catch (e) { rg = { ok: false, error: e.message }; }
+  ok('registro con 3 firmas grandes de celular se guarda (no pasa el límite de celda)', rg.ok === true, rg.error);
+  const leido = E.get({ action: 'registro', obraId: o.obraId, fecha: '2026-10-01', token: T });
+  ok('las firmas van a la hoja Firmas y vuelven completas', leido.trabajadores && leido.trabajadores[1].firma === grande('B') && leido.verificador.firma === grande('C'));
+  ok('un error del script vuelve como datos, no como "Load failed"', /return doPostInterno_\(e\);\s*\} catch \(err\) \{/.test(leer('backends/backend-personal-autorizado.gs')));
 });
 
 grupo('Asistencia a charlas (SSTA-F-005)', () => {
@@ -887,8 +905,14 @@ grupo('Asistencia a charlas (SSTA-F-005)', () => {
   ok('el aviso de pendientes dice "charla"', /k === 'asistencia'\) return \{ uno: 'charla'/.test(c));
   ok('PDF: encabezado y códigos del formato V4', /CONTROL DE ASISTENCIA A CAPACITACION, EVENTOS Y REUNIONES\./.test(h) && /Versión: 4/.test(h) && /Código: SSTA-F-005/.test(h) && /Actualización: 26-08-2024/.test(h));
   ok('PDF: temario de lunes a domingo con hora, duración y ejecutor', /<b>Hora:<\/b>/.test(h) && /<b>Duración:<\/b>/.test(h) && /<b>Ejecutor:<\/b>/.test(h));
-  ok('PDF: firma del trabajador en la columna de cada día, mínimo 16 filas', /DIA DE ASISTENCIA \(Firma del trabajador\)/.test(h) && /Math\.max\(16, personas\.length\)/.test(h));
+  ok('PDF: firma del trabajador en la columna de cada día', /DIA DE ASISTENCIA \(Firma del trabajador\)/.test(h));
+  ok('PDF: solo filas de asistentes (sin renglones en blanco)', !/Math\.max\(16, personas\.length\)/.test(h) && /personas\.forEach\(\(p, i\)=>\{/.test(h));
+  ok('PDF: en un día con charla, quien no fue dice "No asistió"', /huboCharla\[d\] \? '<td class="f"><span class="no">No asistió<\/span><\/td>'/.test(h));
+  ok('PDF: un día sin charla queda sombreado y el temario dice "No hubo charla"', /<td class="f nd">—<\/td>/.test(h) && /No hubo charla/.test(h));
   ok('PDF en carta horizontal', /size:letter landscape/.test(h));
+  ok('hasta dos ejecutores por charla (se guardan juntos: "Ana / Carlos")', /id="inEjecutor2"/.test(h) && /function ejecutoresTexto\(\)/.test(h) && /ejecutor:ejecutoresTexto\(\)/.test(h));
+  ok('duración en lista de 5 min a 6 horas, con "Otra…"', /<option>6 horas<\/option>/.test(h) && /<option value="otra">Otra…<\/option>/.test(h));
+  ok('fechas y horas no se salen de la tarjeta en iPhone', /input\[type=date\],\.field input\[type=time\]\{-webkit-appearance:none;appearance:none;min-width:0/.test(h));
   const swv = /const CACHE_NAME = 'ssta-portal-(v\d+)'/.exec(sw);
   ok('versión visible = versión del Service Worker', !!swv && h.includes('Portal SSTA · versión ' + swv[1]));
 
@@ -933,6 +957,162 @@ grupo('Asistencia a charlas (SSTA-F-005)', () => {
   ok('listado con fechas AAAA-MM-DD, más reciente primero', lista.length === 2 && lista[0].semanaDel === '2026-10-05' && lista[1].semanaDel === '2026-09-28');
   ok('hoja "Asistencias": una fila por persona por charla', E.hojas['Asistencias'].filas.length - 1 === 3);
   ok('clave del portal: rechaza sin clave', E.post({ action: 'guardarDia', code: a.code, dia: 'mie', token: 'x' }).codigoError === 'CLAVE');
+});
+
+grupo('Pendientes: se ve por qué no se envían', () => {
+  const c = leer('common.js'), pa = leer('personal-autorizado.html');
+  ok('la cola lee la respuesta como texto (una página no es "sin señal")', /const texto = await res\.text\(\);\s*let json;\s*try \{ json = JSON\.parse\(texto\); \}/.test(c));
+  ok('cada pendiente guarda su último error', /async _anotarError\(id, msg\)/.test(c) && /it\.ultimoError = msg/.test(c));
+  ok('la lista de pendientes muestra el último error', /<b>Último intento:<\/b> ' \+ esc\(it\.ultimoError\)/.test(c));
+  ok('botón "Reenviar ahora" que sí reintenta el envío', /id="obxReenviar"/.test(c) && /btnRe\.onclick = async \(\) => \{[\s\S]{0,120}?await Outbox\.flush\(\)/.test(c));
+  ok('el anexo dice la causa real al guardar', /mostrarPdfPendiente\(mezclado, err && err\.pagina \? err\.message : ''\)/.test(pa));
+  const vm = require('vm');
+  const src = /  describirPagina\(html, status\) \{[\s\S]*?\n  \},/.exec(c)[0];
+  const ctx = {}; vm.createContext(ctx); vm.runInContext('this.O={' + src + '}', ctx);
+  ok('reconoce la pantalla de inicio de sesión de Google', /Acceso: Cualquier usuario/.test(ctx.O.describirPagina('<div>Iniciar sesión</div><div>Correo electrónico</div>', 200)));
+  ok('reconoce un error del script y copia su texto', /error dentro del script[\s\S]*línea 97/.test(ctx.O.describirPagina('<html><style>x{}</style><div>TypeError: algo (línea 97, archivo "Código")</div></html>', 200)));
+  ok('reconoce una URL sin implementación', /no corresponde a una implementación activa/.test(ctx.O.describirPagina('<p>Lo sentimos, no se ha encontrado el archivo.</p>', 404)));
+});
+
+grupo('Estado del sistema, anexo que suma, traer del ATS y PDF por rango', () => {
+  const est = leer('estado.html'), idx = leer('index.html'), sw = leer('sw.js'), c = leer('common.js');
+  const pa = leer('personal-autorizado.html'), as = leer('asistencia.html');
+  ok('página de estado en el portal y en la caché sin señal', /href="estado\.html"/.test(idx) && sw.includes("'./estado.html'"));
+  ok('el estado prueba los 9 servidores', ['caliente','alturas','confinados','izajes','electrico','ats','epp','personal','asistencia'].every((k) => new RegExp("k:'" + k + "'").test(est)));
+  ok('el estado solo LEE (no envía POST a ningún servidor)', !/method:\s*'POST'/.test(est));
+  ok('el estado distingue clave, página de Google, sin respuesta y sin configurar', /Pide la clave/.test(est) && /Responde una página/.test(est) && /No responde/.test(est) && /Sin configurar/.test(est));
+  ok('el estado da el enlace de prueba e informe para WhatsApp', /Abrir enlace de prueba/.test(est) && /wa\.me\/\?text=/.test(est));
+  ok('el informe no incluye la clave ni el token', !/txt[\s\S]{0,400}API_TOKEN/.test(est.slice(est.indexOf('function actualizarInforme'), est.indexOf("$('btnCopiar')"))));
+  ok('anexo: muestra quién ya está registrado ese día', /async function cargarRegistroDelDia/.test(pa) && /Ya registrados este día/.test(pa));
+  ok('anexo: el verificador no es obligatorio si el día ya está verificado', /yaVerificado/.test(pa) && /Ya verificado por/.test(pa));
+  ok('anexo: guarda con opId y lista de quitar', /quitar, opId, token: PORTAL_CONFIG\.API_TOKEN/.test(pa));
+  ok('anexo: "Copiar último registro" ya no borra lo escrito', /const n = agregarPersonas\(reg\.trabajadores/.test(pa) && !/document\.getElementById\('trabajadoresList'\)\.innerHTML = '';\s*trabajadorCounter = 0;\s*\/\/ Se copian/.test(pa));
+  ok('la cola reconoce un registro del anexo ya enviado (por opId)', /item\.body\.action === 'guardarRegistro'\) \{[\s\S]{0,400}?j\.opIds\.indexOf\(item\.body\.opId\)/.test(c));
+  ok('selector "Traer personal de un ATS" compartido', /const TraerDeAts = \{/.test(c) && /TraerDeAts\.elegir\(\)/.test(pa) && /TraerDeAts\.elegir\(\)/.test(as));
+  ok('trae nombres + apellidos, cédula y cargo del ATS', /String\(p\.nombres \|\| ''\) \+ ' ' \+ String\(p\.apellidos \|\| ''\)/.test(c));
+  ok('anexo: PDF por rango de fechas (desde/hasta)', /id="rangoDesde"/.test(pa) && /id="rangoHasta"/.test(pa) && /exportarDias\(enRango\(\)/.test(pa));
+  ok('asistencia: PDF por rango y lugar opcional', /id="rgDesde"/.test(as) && /id="rgLugar"/.test(as) && /imprimirSemanas\(conCharlas\)/.test(as));
+  // recortarSemana deja solo los días del rango
+  const vm = require('vm');
+  const tomar = (k) => { const i = as.indexOf(k), fin = as.indexOf('\n', i), linea = as.slice(i, fin); return /\}\s*$/.test(linea) ? linea + '\n' : as.slice(i, as.indexOf('\n}\n', i) + 2); };
+  const src = "const DIAS = ['lun','mar','mie','jue','vie','sab','dom'];\n" + tomar('function sumarDias') + tomar('function fechaDelDia') + tomar('function recortarSemana');
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(src + ';this.R=recortarSemana;', ctx);
+  const doc = { semanaDel: '2026-09-21', dias: { mie: { tema: 'A' }, vie: { tema: 'B' }, dom: { tema: 'C' } } };
+  ok('rango: solo quedan los días dentro (24/9 al 26/9 → viernes)', Object.keys(ctx.R(doc, '2026-09-24', '2026-09-26').dias).join() === 'vie');
+});
+
+grupo('Jornada (ATS → permisos → charla → anexo) y repetir permiso', () => {
+  const c = leer('common.js'), core = leer('permiso-core.js'), at = leer('ats.html'), as = leer('asistencia.html'), pa = leer('personal-autorizado.html');
+  const vm = require('vm');
+  // Jornada ejecutada de verdad, con localStorage simulado
+  const mem = {};
+  const ls = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: (k) => { delete mem[k]; } };
+  const src = /const Jornada = \{[\s\S]*?\n\};/.exec(c)[0];
+  const ctx = { localStorage: ls, sessionStorage: ls, window: { dispatchEvent() {}, addEventListener() {} }, CustomEvent: function () {}, location: { search: '?jornada=1', pathname: '/asistencia.html' }, setTimeout: () => 0, Date, JSON, Object,
+    PORTAL_CONFIG: { BACKENDS: { alturas: { nombre: 'Trabajo en Alturas', icono: 'A', archivo: 'permiso-trabajo-alturas.html' }, caliente: { nombre: 'Trabajo en Caliente', icono: 'C', archivo: 'permiso-trabajo-caliente.html' } } } };
+  vm.createContext(ctx); vm.runInContext(src + ';this.J=Jornada;', ctx);
+  const J = ctx.J;
+  J.iniciar({ atsCode: 'ATS-1', trabajo: 'X', personas: [{ nombre: 'Ana', cc: '1' }], permisosReq: ['alturas', 'caliente'] });
+  ok('la jornada arma los pasos: ATS, cada permiso requerido, charla y anexo', J.pasos().map((x) => x.id).join() === 'ats,permiso:alturas,permiso:caliente,charla,anexo');
+  ok('el siguiente paso es el primer permiso', J.siguiente().id === 'permiso:alturas');
+  J.marcarPermiso('alturas', 'TA-9', 'ATS-OTRO');
+  ok('un permiso de OTRO ATS no marca el paso', !J.pasos()[1].hecho);
+  J.marcarPermiso('alturas', 'TA-9', 'ATS-1'); J.omitir('permiso:caliente');
+  ok('al guardar el permiso de este ATS se marca; "No aplica" lo salta', J.pasos()[1].hecho.code === 'TA-9' && J.siguiente().id === 'charla');
+  ok('en la página de la charla, "Siguiente" no recarga la página', J.pasoDeEstaPagina() === 'charla');
+  J.iniciar({ atsCode: 'ATS-1', trabajo: 'X', personas: [{ nombre: 'Ana', cc: '1' }, { nombre: 'Luis', cc: '2' }], permisosReq: ['alturas', 'caliente'] });
+  ok('reiniciar con el mismo ATS (llegó más gente) conserva lo hecho', J.pasos()[1].hecho && J.actual().personas.length === 2);
+  J.marcar('charla', { code: 'ASI-1' }); J.marcar('anexo', { code: 'Obra' });
+  ok('con todo hecho, la jornada queda completa', J.siguiente() === null);
+  ok('el ATS inicia la jornada al guardar y desde el bloque de permisos', /id="btnJornadaTrasGuardar"/.test(at) && /id="btnJornada"/.test(at) && /Jornada\.iniciar\(datosJornadaDesdeAts\(\)\)/.test(at));
+  ok('el permiso marca el paso al guardar (y en cola sin señal)', (core.match(/Jornada\.marcarPermiso\(tipoDeEstaPagina_\(\), permitCode, atsRelacionado/g) || []).length === 2);
+  ok('la charla de la jornada trae tema, ejecutor y personal del ATS', /'Socialización del ATS ' \+ j\.atsCode/.test(as) && /j\.responsable/.test(as) && /Jornada\.marcar\('charla'/.test(as));
+  ok('el anexo de la jornada elige/crea obra, anexa ATS y permisos y marca el paso', /async function iniciarAnexoDeJornada/.test(pa) && /Crear obra con los datos del ATS/.test(pa) && /Jornada\.marcar\('anexo'/.test(pa));
+  ok('la barra de la jornada no sale al imprimir', /@media print\{ \.jornada-barra,\.jornada-aviso\{display:none !important;\} \}/.test(leer('common.css')));
+
+  // Repetir permiso: qué se copia y qué no
+  const tomar = (k) => { const i = core.indexOf(k); return core.slice(i, core.indexOf('\n  }\n', i) + 4); };
+  const srcR = /const NO_COPIAR_ = \[[\s\S]*?\];/.exec(core)[0] + '\n' + tomar('function sinFirmas_') + tomar('function copiaParaRepetir_');
+  const ctxR = { cfg: { checklistGroups: [{ stateKey: 'checklist' }, { stateKey: 'equipos' }] }, Date, JSON, Object };
+  vm.createContext(ctxR); vm.runInContext(srcR + ';this.C=copiaParaRepetir_;', ctxR);
+  const img = 'data:image/png;base64,AAAA';
+  const orig = { permitCode: 'TC-1', status: 'CERRADO', descripcion: 'Soldar', sitio: 'Caldera', herramientas: 'Pulidora', desdeFecha: '2026-09-30', hastaFecha: '2026-09-30', desdeHora: '07:00',
+    checklist: { a: 'C' }, equipos: { b: 'SI' }, yn: { x: 'SI' }, gases: [{ o2: 20.9 }], observaciones: 'lluvia', atsRelacionado: 'ATS-9', motivoCierre: 'ok', cierre1: { nombre: 'Z', sig: img },
+    ejecutantes: [{ nombre: 'Jorge', cc: '8', sig: img }], responsablesSigs: [{ nombre: 'Ana', cc: '1', sig: 'SIGREF:abc' }], epp: { casco: true } };
+  const cp = ctxR.C(orig);
+  ok('repetir copia descripción, sitio, herramientas, horas, EPP y personal', cp.descripcion === 'Soldar' && cp.sitio === 'Caldera' && cp.herramientas === 'Pulidora' && cp.desdeHora === '07:00' && cp.epp.casco && cp.ejecutantes[0].nombre === 'Jorge' && cp.responsablesSigs[0].nombre === 'Ana');
+  ok('repetir NO copia verificaciones, mediciones, observaciones ni cierre', !cp.checklist && !cp.equipos && !cp.yn && !cp.gases && !cp.observaciones && !cp.motivoCierre && !cp.cierre1 && !cp.status && !cp.permitCode && !cp.atsRelacionado);
+  ok('repetir NO copia ninguna firma', cp.ejecutantes[0].sig === null && cp.responsablesSigs[0].sig === null && !JSON.stringify(cp).includes('data:image') && !JSON.stringify(cp).includes('SIGREF'));
+  ok('repetir deja las fechas en hoy', cp.desdeFecha === cp.hastaFecha && cp.desdeFecha !== '2026-09-30');
+  ok('el permiso copiado guarda de cuál viene y lo dice en la hoja impresa', /if \(copiadoDe\) base\.copiadoDe = copiadoDe;/.test(core) && /Datos tomados del permiso/.test(core));
+});
+
+grupo('Copiar listas con las respuestas REALES de los servidores', async () => {
+  const { crearEntorno } = require('./simulador-apps-script');
+  const vm = require('vm');
+  const T = /API_TOKEN: '([^']+)'/.exec(leer('config.js'))[1];
+  const firma = 'data:image/png;base64,' + 'Q'.repeat(300);
+  const h = leer('personal-autorizado.html');
+
+  // ── Anexo: "Copiar último registro" ──
+  ok('el anexo ya no exige "ok" en el registro (el servidor no lo manda)', !/if\(!data\.ok \|\| !data\.trabajadores\)/.test(h) && /function esRegistro_\(d\)\{ return !!d && d\.ok !== false && Array\.isArray\(d\.trabajadores\)/.test(h));
+  ok('el botón vuelve a su texto original después de copiar', /btn\.textContent = texto;/.test(h) && !/Copiar lista del último registro/.test(h));
+  ok('el anexo usa la clave vigente del portal en todas las consultas', !/encodeURIComponent\(API_TOKEN\)|token: API_TOKEN/.test(h));
+  const E = crearEntorno(path.join(RAIZ, 'backends/backend-personal-autorizado.gs'), { fechasComoSheets: true });
+  const o = E.post({ action: 'crearObra', nombre: 'PTAR', area: 'C', fechaInicio: '2026-09-28', fechaFin: '2026-10-10', token: T });
+  const guardar = (f, nombres) => E.post({ action: 'guardarRegistro', obraId: o.obraId, fecha: f, token: T, opId: 'op' + f,
+    data: { fecha: f, trabajadores: nombres.map((n, i) => ({ nombre: n, cedula: f.replace(/-/g, '') + i, cargo: 'Ayudante', firma })), verificador: { nombre: 'Ana', cedula: '2', firma }, permisos: [] } });
+  guardar('2026-09-28', ['Pedro Gómez']); guardar('2026-09-30', ['Luis Pérez', 'Jorge Díaz']); guardar('2026-10-01', ['Marta Ruiz']);
+  const u1 = E.get({ action: 'ultimoRegistro', obraId: o.obraId, antesDe: '2026-10-01', token: T });
+  ok('ultimoRegistro&antesDe trae el día ANTERIOR (no el mismo día) y dice su fecha', u1.fecha === '2026-09-30' && u1.trabajadores.length === 2 && u1.ok === undefined);
+  ok('ultimoRegistro&antesDe sin días anteriores responde ok:false con antesDe', (r => r.ok === false && r.antesDe === '2026-09-28')(E.get({ action: 'ultimoRegistro', obraId: o.obraId, antesDe: '2026-09-28', token: T })));
+  ok('ultimoRegistro sin antesDe sigue igual que antes (compatibilidad)', E.get({ action: 'ultimoRegistro', obraId: o.obraId, token: T }).fecha === '2026-10-01');
+  // Se ejecuta la función REAL de la página contra el servidor simulado: el
+  // nuevo y el que ya está desplegado (que ignora antesDe y no manda fecha).
+  const fuente = h.slice(h.indexOf('function fechaCorta_('), h.indexOf("document.getElementById('btnCopiarAyer')"));
+  const probar = async (viejo, fecha) => {
+    const ctx = { PORTAL_CONFIG: { API_TOKEN: T }, FIXED_WEBAPP_URL: 'https://x/exec', URL, encodeURIComponent, JSON, Object, Array, String, Number, Error, navigator: { onLine: true },
+      fetchWithRetry: async (url) => { const prm = {}; new URL(url).searchParams.forEach((v, k) => { prm[k] = v; });
+        if (viejo) delete prm.antesDe;
+        let txt = E.ctx.doGet({ parameter: prm })._t;
+        if (viejo && prm.action === 'ultimoRegistro') { const j = JSON.parse(txt); delete j.antesDe; if (j.trabajadores) j.fecha = undefined; txt = JSON.stringify(j); }
+        return { text: async () => txt, json: async () => JSON.parse(txt) }; } };
+    vm.createContext(ctx); vm.runInContext(fuente + ';this.buscar = buscarRegistroAnterior;', ctx);
+    return ctx.buscar(o.obraId, fecha);
+  };
+  for (const viejo of [false, true]) {
+    const etq = viejo ? ' (backend ya desplegado)' : ' (backend nuevo)';
+    const a = await probar(viejo, '2026-10-01');
+    ok('si hoy ya tiene registro, copia el de AYER' + etq, a && a.fecha === '2026-09-30' && a.trabajadores.map((t) => t.nombre).join() === 'Luis Pérez,Jorge Díaz');
+    const b = await probar(viejo, '2026-09-29');
+    ok('con fecha atrasada copia el anterior a ESA fecha' + etq, b && b.fecha === '2026-09-28');
+    ok('el primer día de la obra no hay nada que copiar' + etq, (await probar(viejo, '2026-09-28')) === null);
+  }
+
+  // ── Charla: "Lista de otro día" ──
+  const a = leer('asistencia.html');
+  ok('la charla también ofrece la semana anterior del mismo lugar (el lunes ya hay de dónde copiar)', /async function opcionesParaCopiar\(\)/.test(a) && /\(semana anterior\)/.test(a) && /normLugar\(s\.lugar\) === normLugar\(semana\.lugar\)/.test(a));
+  ok('la charla copia también el cargo', /fila\.dataset\.cargo = a\.cargo/.test(a));
+  const A = crearEntorno(path.join(RAIZ, 'backends/backend-asistencia.gs'), { fechasComoSheets: true });
+  const s1 = A.post({ action: 'abrirSemana', fecha: '2026-09-25', lugar: 'PTAR', opId: 's1', token: T }).semana;
+  A.post({ action: 'guardarDia', code: s1.code, semanaDel: s1.semanaDel, lugar: s1.lugar, dia: 'vie', tema: 'Orden y aseo', asistentes: [{ nombre: 'Luis Pérez', cedula: '1010', cargo: 'Soldador', firma }], opId: 'g1', token: T });
+  const lista = A.get({ list: '1', token: T });
+  ok('el listado de semanas trae código, lunes y lugar (para hallar la semana anterior)', lista.ok && lista.rows.some((r) => r.code === s1.code && r.semanaDel === '2026-09-21' && r.lugar === 'PTAR'));
+  const doc = A.get({ code: s1.code, token: T });
+  ok('la semana anterior se abre con asistentes, cédula y cargo', doc.ok && doc.semana.dias.vie.asistentes[0].cedula === '1010' && doc.semana.dias.vie.asistentes[0].cargo === 'Soldador');
+
+  // ── Traer del ATS: lo que lee TraerDeAts existe en la respuesta real ──
+  const S = crearEntorno(path.join(RAIZ, 'backends/backend-ats.gs'));
+  S.post({ token: T, opId: 'x', code: 'ATS-20261001-123456', versionBase: 0, ats: { v: 1, cab: { centro: [], desde: '2026-10-01', area: 'PTAR', trabajo: 'Cambio de bomba' },
+    participantes: [{ nombres: 'Luis', apellidos: 'Pérez', cedula: '1010', cargo: 'Soldador', firma }], tareas: [], firmas: { lider: { nombre: 'L', firma: null } } } });
+  const la = S.get({ list: '1', token: T });
+  ok('Traer del ATS: el listado trae ok, código y estado ABIERTO', la.ok && la.rows.some((r) => r.code === 'ATS-20261001-123456' && r.estado === 'ABIERTO'));
+  const ca = S.get({ code: 'ATS-20261001-123456', token: T });
+  ok('Traer del ATS: el ATS trae ok y participantes con nombres, apellidos, cédula y cargo', ca.ok && ca.ats.cab.trabajo === 'Cambio de bomba' && ca.ats.participantes[0].nombres === 'Luis' && ca.ats.participantes[0].cedula === '1010');
+
+  // ── Repetir permiso: el servidor devuelve el permiso sin "ok" y la página lo acepta ──
+  const pc = leer('permiso-core.js');
+  ok('Repetir permiso: solo rechaza ok:false (el permiso llega sin "ok")', /if \(data\.ok === false\) \{/.test(pc) && /async function repetirPermiso_\(code\) \{\s*const data = await fetchFromSheet\(code\);/.test(pc));
 });
 
 grupo('Caché y despliegue', () => {

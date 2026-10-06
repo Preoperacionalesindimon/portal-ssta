@@ -34,6 +34,7 @@ function crearEntorno(archivoGs, opciones) {
       return {
         getValues() { const out = []; for (let i = 0; i < nf; i++) { const r = h.filas[fila - 1 + i] || []; const o = []; for (let j = 0; j < nc; j++) o.push(r[col - 1 + j] === undefined ? '' : r[col - 1 + j]); out.push(o); } return out; },
         getValue() { return this.getValues()[0][0]; },
+        setValue(v) { return this.setValues([[v]]); },
         setValues(v) { v.forEach((r, i) => { r.forEach((x) => h._chk(x)); const idx = fila - 1 + i; while (h.filas.length <= idx) h.filas.push([]); r.forEach((x, j) => { h.filas[idx][col - 1 + j] = comoSheets(x); }); }); return this; },
         createTextFinder(t) { let entire = false; const f = { matchEntireCell(b) { entire = b; return f; }, matchCase() { return f; },
           findAll() { const out = []; for (let i = 0; i < nf; i++) { const r = h.filas[fila - 1 + i] || []; const v = String(r[col - 1] === undefined ? '' : r[col - 1]); if (entire ? v === t : v.includes(t)) out.push({ getRow: () => fila + i }); } return out; } }; return f; }
@@ -42,7 +43,7 @@ function crearEntorno(archivoGs, opciones) {
   }
   const ss = { getSheetByName: (n) => hojas[n] || null, insertSheet: (n) => (hojas[n] = new Hoja(n)), getSpreadsheetTimeZone: () => 'America/Bogota' };
   const ctx = {
-    console: { log: (...a) => ctx._log.push(a.join(' ')) }, _log: [],
+    console: { log: (...a) => ctx._log.push(a.join(' ')), error: (...a) => ctx._log.push('ERROR ' + a.join(' ')), warn: (...a) => ctx._log.push(a.join(' ')) }, _log: [],
     SpreadsheetApp: { getActiveSpreadsheet: () => ss, flush() {} },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ setMimeType() { return this; }, _t: t, getContent() { return t; } }) },
