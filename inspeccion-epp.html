@@ -80,7 +80,7 @@
   .epp-grupo:first-child{margin-top:0;}
   .epp-opts{display:flex;gap:5px;flex:0 0 auto;}
   .epp-opts button{
-    /* 44px: son 17 filas x 4 botones y se tocan con guantes de vaqueta.
+    /* 44px: son 18 filas x 4 botones y se tocan con guantes de vaqueta.
        A 38px la probabilidad de darle al de al lado no era teórica. */
     min-width:var(--touch);height:var(--touch);border:1.5px solid var(--line);background:#fff;
     border-radius:var(--radius-sm);font-size:var(--fs-menor);font-weight:700;color:var(--ink-muted);
@@ -536,7 +536,7 @@ const FORMATOS = {
       'GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER','PROTECTOR AUDITIVO',
       'PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO',
       'PETO MANGAS / CHAQUETA SOLDADOR','GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA',
-      'GUANTES DE PRECISIÓN','BOTAS DE SEGURIDAD','CARNÉT'
+      'GUANTES DE PRECISIÓN','GUANTES DE IMPACTO / ANTICORTE','BOTAS DE SEGURIDAD','CARNÉT'
     ].map(n => ({ nombre: n, cantidad: null }))
   },
   brigadista: {
@@ -611,7 +611,7 @@ const GRUPOS_EPP = [
   ['Oídos',             ['PROTECTOR AUDITIVO']],
   ['Vías respiratorias',['PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO']],
   ['Cuerpo',            ['PETO MANGAS / CHAQUETA SOLDADOR']],
-  ['Manos',             ['GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA','GUANTES DE PRECISIÓN']],
+  ['Manos',             ['GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA','GUANTES DE PRECISIÓN','GUANTES DE IMPACTO / ANTICORTE']],
   ['Pies',              ['BOTAS DE SEGURIDAD']],
   ['Documentación',     ['CARNÉT']]
 ];
