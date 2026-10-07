@@ -241,6 +241,7 @@
   .accordion-item:nth-child(6){animation-delay:.25s}.accordion-item:nth-child(7){animation-delay:.3s}
   .accordion-item[open] .card{animation:entrar .3s both;}
   @media (prefers-reduced-motion: reduce){ .accordion-item,.accordion-item[open] .card{animation:none;} }
+  .accordion-item:not([open]) > summary{justify-content:flex-end;}
 </style>
 <link rel="stylesheet" href="ui-extra.css">
 <script src="ui-extra.js"></script>
@@ -1179,14 +1180,6 @@ window.addEventListener('load', ()=>{
 
 
 <script>
-  // Conteo de formularios en cada sección (solo visual)
-  document.querySelectorAll('.accordion-item').forEach(function(sec){
-    var n = sec.querySelectorAll('.searchable-card').length;
-    var s = document.createElement('span');
-    s.className = 'sec-count';
-    s.innerHTML = '<b>' + n + '</b>' + (n === 1 ? 'formulario' : 'formularios');
-    sec.querySelector('summary').insertBefore(s, null);
-  });
   var hr = new Date().getHours();
   document.getElementById('saludo').textContent = hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches';
   // Botón de tema
