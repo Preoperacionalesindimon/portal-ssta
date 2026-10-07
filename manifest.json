@@ -6,8 +6,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#eef1f4",
-  "theme_color": "#F2C200",
+  "background_color": "#ffffff",
+  "theme_color": "#0f1318",
   "lang": "es-CO",
   "dir": "ltr",
   "icons": [
@@ -31,6 +31,12 @@
     }
   ],
   "shortcuts": [
+    {
+      "name": "ATS",
+      "short_name": "ATS",
+      "description": "Análisis de Trabajo Seguro",
+      "url": "./ats.html"
+    },
     {
       "name": "Permisos abiertos",
       "short_name": "Permisos",

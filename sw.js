@@ -17,7 +17,7 @@
      la versión más nueva del formulario cuando hay señal).
    ============================================================ */
 
-const CACHE_NAME = 'ssta-portal-v90';
+const CACHE_NAME = 'ssta-portal-v91';
 
 const PAGES = [
   './',
@@ -39,9 +39,17 @@ const STATIC_ASSETS = [
   './common.css',
   './common.js',
   './permiso-core.js',
+  './permiso-ui.css',
+  './permiso-ui.js',
+  './portal-ui.css',
+  './portal-ui.js',
+  './resumen-permisos.js',
+  './ui-extra.css',
+  './ui-extra.js',
   './qr.js',
   './ats-catalogo.js',
   './logo-indimon.png',
+  './logo-indimon-compacto.png',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

@@ -6,31 +6,34 @@
 <title>Sin conexión · Portal SSTA</title>
 <link rel="stylesheet" href="common.css">
 <style>
-  body{
-    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:#eef2f5;font-family:var(--font-family, -apple-system, sans-serif);
-    padding:24px;box-sizing:border-box;text-align:center;color:#1c2530;
-  }
-  .card{
-    max-width:420px;background:#fff;border-radius:var(--radius-lg,14px);
-    box-shadow:var(--shadow-card,0 3px 10px rgba(0,0,0,.07));padding:32px 26px;
-  }
-  .icon{font-size:44px;margin-bottom:6px;}
-  h1{font-size:18px;margin:6px 0 8px;color:#123a63;font-family:var(--font-display,inherit);}
-  p{font-size:13.5px;color:#5c6a76;line-height:1.5;margin:0 0 18px;}
-  .list{text-align:left;font-size:12.5px;color:#5c6a76;background:#f4f8fb;border-radius:8px;padding:12px 16px;margin-bottom:20px;}
+  :root{--pg:#eceae4;--card:#fff;--tx:#151b24;--mu:#5c6a76;--box:#f6f5f2;--ln:#e7e4dd;}
+  html.oscuro{--pg:#0b0e12;--card:#151a21;--tx:#e8ebee;--mu:#9aa4ae;--box:#1d232b;--ln:#2a313a;color-scheme:dark;}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--pg);
+    font-family:var(--font-family,-apple-system,sans-serif);padding:24px;box-sizing:border-box;color:var(--tx);-webkit-font-smoothing:antialiased;}
+  .card{max-width:440px;width:100%;background:var(--card);border:1px solid var(--ln);border-radius:24px;padding:30px 24px;
+    box-shadow:0 12px 30px rgba(15,25,35,.08);position:relative;overflow:hidden;}
+  .card::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:repeating-linear-gradient(-45deg,#F2C200 0 12px,#1f2630 12px 24px);}
+  .icon{width:56px;height:56px;border-radius:16px;background:rgba(242,194,0,.18);color:#b98f00;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  html.oscuro .icon{color:#F2C200;}
+  .icon svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  h1{font-size:26px;line-height:1.1;letter-spacing:-.02em;margin:0 0 10px;font-family:var(--font-display,inherit);}
+  p{font-size:14px;color:var(--mu);line-height:1.5;margin:0 0 18px;}
+  .list{font-size:13.5px;color:var(--tx);background:var(--box);border-radius:14px;padding:14px 16px 14px 34px;margin:0 0 20px;line-height:1.5;}
   .list li{margin-bottom:6px;}
-  button{
-    width:100%;padding:11px;border:none;border-radius:var(--radius-sm,7px);
-    background:#123a63;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;
-  }
-  button:hover{background:#0a2842;}
-  .sub{margin-top:14px;font-size:11.5px;color:#8a97a3;}
+  button{width:100%;min-height:50px;border:none;border-radius:14px;background:#F2C200;color:#16130a;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .sub{margin-top:14px;font-size:12.5px;color:var(--mu);text-align:center;}
 </style>
+<script>
+  (function(){var t=null;try{t=localStorage.getItem('ssta-tema')}catch(e){}
+  var o=t?t==='dark':(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('oscuro',o);})();
+</script>
+<link rel="stylesheet" href="ui-extra.css">
+<script src="ui-extra.js"></script>
 </head>
 <body>
   <div class="card">
-    <div class="icon">📡</div>
+    <div class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 12.86a10 10 0 0 1 5.17-2.69M2 2l20 20"/></svg></div>
     <h1>No hay conexión a internet</h1>
     <p>Esta página aún no estaba guardada en tu dispositivo, así que no se puede mostrar sin señal.</p>
     <ul class="list">

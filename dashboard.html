@@ -65,7 +65,77 @@
   .item.epp ul{margin:4px 0 0;padding-left:18px;}
   .desde{font-size:11.5px;color:var(--ink-soft,#5c6a76);margin-top:5px;}
   .desde b{color:var(--warn,#c0392b);}
+
+  /* ══ Tablero rediseñado ══ */
+  .wrapper{max-width:880px;}
+  .resumen-tablero{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .rt{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;border-radius:16px;border:1px solid var(--pui-line,#e7e4dd);
+    background:var(--pui-panel,#fff);color:var(--pui-text,#151b24);font:inherit;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
+  .rt b{font-family:var(--font-display);font-size:32px;line-height:1;font-weight:700;letter-spacing:-.02em;}
+  .rt small{font-size:12.5px;color:var(--pui-muted,#5c6a76);}
+  .rt.sel{border-color:var(--pui-text,#151b24);box-shadow:inset 0 0 0 1px var(--pui-text,#151b24);}
+  .rt-vencido.hay{background:rgba(192,57,43,.1);border-color:rgba(192,57,43,.4);}
+  .rt-vencido.hay b{color:#c0392b;}
+  .rt-pronto.hay{background:rgba(224,168,0,.14);border-color:rgba(224,168,0,.5);}
+  .rt-pronto.hay b{color:#8a6800;}
+  html.oscuro .rt-vencido.hay b{color:#ff8a7a;} html.oscuro .rt-pronto.hay b{color:#f1c84b;}
+  .tabs .tab{border-radius:12px;}
+  .searchbar input{border-radius:12px;min-height:48px;}
+  .filtros{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-2px 0 12px;padding-bottom:2px;}
+  .filtros::-webkit-scrollbar{display:none;}
+  .filtro{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px 0 10px;border-radius:999px;
+    border:1px solid var(--pui-line,#e7e4dd);background:var(--pui-panel,#fff);color:var(--pui-text,#151b24);font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .filtro i{width:10px;height:10px;border-radius:50%;background:var(--c);}
+  .filtro .n{font-weight:500;color:var(--pui-muted,#5c6a76);}
+  .filtro.sel{background:var(--pui-text,#151b24);color:var(--pui-panel,#fff);border-color:transparent;}
+  .filtro.sel .n{color:inherit;opacity:.7;}
+
+  .list{gap:10px;}
+  .item{display:grid;grid-template-columns:48px 1fr;column-gap:14px;align-items:start;padding:14px 16px;border-radius:18px;
+    border:1px solid var(--pui-line,#e7e4dd) !important;border-left:1px solid var(--pui-line,#e7e4dd) !important;background:var(--pui-panel,#fff) !important;
+    position:relative;overflow:hidden;transition:border-color .15s,box-shadow .15s,transform .15s;}
+  .item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--estado,transparent);}
+  .item:hover{box-shadow:0 8px 22px rgba(15,25,35,.08);border-color:var(--c) !important;}
+  .item.v-vencido{--estado:#c0392b;} .item.v-porvencer{--estado:#e0a800;} .item.warn{--estado:#c0392b;}
+  .t-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);grid-row:1 / span 4;}
+  html.oscuro .t-ico{background:color-mix(in srgb,var(--c) 26%,transparent);color:color-mix(in srgb,var(--c) 55%,white);}
+  .t-ico svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .item .row1{grid-column:2;display:flex;justify-content:space-between;align-items:flex-start;gap:6px 8px;flex-wrap:wrap;}
+  .t-id{min-width:0;}
+  .item .code{display:block;white-space:nowrap;background:none;color:var(--pui-text,#151b24);padding:0;font-size:15.5px;letter-spacing:0;border-radius:0;}
+  .item .tipo{display:block;font-size:12px;font-weight:600;color:var(--c);text-transform:none;letter-spacing:0;margin-top:1px;}
+  html.oscuro .item .tipo{color:color-mix(in srgb,var(--c) 55%,white);}
+  .tiempo{font-size:12.5px;padding:5px 11px;flex-shrink:0;}
+  html.oscuro .tiempo.ok{color:#7fd3a8;} html.oscuro .tiempo.warn{color:#ff9c8e;background:rgba(192,57,43,.22);}
+  html.oscuro .tiempo.pronto{color:#f1c84b;} html.oscuro .tiempo.closed{color:#c3cad1;background:rgba(255,255,255,.08);}
+  .item .meta{grid-column:2;font-size:13px;color:var(--pui-muted,#5c6a76);margin-top:8px;line-height:1.45;display:flex;flex-wrap:wrap;gap:4px 14px;}
+  .item .meta span{display:inline-flex;align-items:center;gap:5px;}
+  .item .meta svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .item .meta .trab{flex-basis:100%;color:var(--pui-text,#151b24);}
+  .vida{grid-column:2;height:6px;border-radius:6px;background:var(--pui-card,#f0eee9);margin-top:10px;overflow:hidden;}
+  .vida i{display:block;height:100%;border-radius:6px;background:#2f9a62;}
+  .v-porvencer .vida i{background:#e0a800;} .v-vencido .vida i{background:#c0392b;width:100% !important;}
+  .vida-txt{grid-column:2;display:flex;justify-content:space-between;font-size:11.5px;color:var(--pui-muted,#5c6a76);margin-top:4px;}
+  .item .chevron{display:none;}
+  .item.closed{opacity:.92;}
+  .refresh-note{display:flex;align-items:center;gap:8px;}
+  .refresh-note::before{content:"";width:8px;height:8px;border-radius:50%;background:#2fbf71;flex-shrink:0;}
+  .esqueleto{height:118px;border-radius:18px;background:linear-gradient(90deg,var(--pui-card,#f0eee9),var(--pui-panel,#fff),var(--pui-card,#f0eee9));background-size:200% 100%;animation:brillo 1.2s linear infinite;}
+  @keyframes brillo{from{background-position:200% 0}to{background-position:-200% 0}}
+  @media (min-width:1000px){
+    .wrapper{max-width:1180px;}
+    .list{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;}
+    .list > .empty,.list > .esqueleto{grid-column:1 / -1;}
+    .resumen-tablero{grid-template-columns:repeat(3,minmax(0,220px));}
+  }
+  @media (min-width:1500px){ .wrapper{max-width:1500px;} .list{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  @media (max-width:600px){ .rt b{font-size:26px;} .item{grid-template-columns:42px 1fr;column-gap:12px;padding:12px 14px;} .t-ico{width:42px;height:42px;border-radius:12px;} }
 </style>
+<link rel="stylesheet" href="portal-ui.css">
+<script src="portal-ui.js"></script>
+<link rel="stylesheet" href="ui-extra.css">
+<script src="ui-extra.js"></script>
 </head>
 <body>
 <div class="wrapper">
@@ -79,9 +149,16 @@
     <div class="tab" id="tabCerrados" data-tab="cerrados">Histórico cerrados <span class="count" id="countCerrados"></span></div>
   </div>
 
+  <div class="resumen-tablero" id="resumenTablero" aria-live="polite">
+    <button type="button" class="rt" data-filtro-vig=""><b id="rtAbiertos">–</b><small>abiertos</small></button>
+    <button type="button" class="rt rt-vencido" data-filtro-vig="vencido"><b id="rtVencidos">–</b><small>vencidos</small></button>
+    <button type="button" class="rt rt-pronto" data-filtro-vig="porvencer"><b id="rtPronto">–</b><small>vencen en 1 h</small></button>
+  </div>
+
   <div class="searchbar">
     <input type="text" id="searchInput" placeholder="Buscar por código, responsable o tipo…">
   </div>
+  <div class="filtros" id="filtrosTipo" role="toolbar" aria-label="Filtrar por tipo"></div>
 
   <p class="refresh-note" id="refreshNote">Cargando…</p>
   <div class="aviso-incompleto" id="avisoIncompleto" role="alert"></div>
@@ -104,13 +181,33 @@ const PERMIT_BACKENDS = getPermitBackends(false);
 // pendiente. Aquí se suma la tercera pestaña.
 const EPP_BACKEND = PORTAL_CONFIG.BACKENDS.epp;
 
-function iconoPara(nombre){
-  if(nombre.includes('Caliente')) return '🔥';
-  if(nombre.includes('Confinados')) return '🕳️';
-  if(nombre.includes('Izajes')) return '🏗️';
-  if(nombre.includes('Eléctrico')) return '⚡';
-  return '🧗';
+const TIPOS = {
+  caliente:   { nombre:'Caliente',   color:'#c8461a', svg:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>' },
+  alturas:    { nombre:'Alturas',    color:'#1c5f99', svg:'<path d="M8 2v20M16 2v20M8 6h8M8 11h8M8 16h8"/>' },
+  confinados: { nombre:'Confinados', color:'#6b4c9a', svg:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>' },
+  izajes:     { nombre:'Izajes',     color:'#0f7a72', svg:'<path d="M6 21V3l12 4H6M6 7l-3 2M18 7v6M16 13h4v3h-4zM3 21h8"/>' },
+  electrico:  { nombre:'Eléctrico',  color:'#b8860b', svg:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>' },
+  ats:        { nombre:'ATS',        color:'#0f5e63', svg:'<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/>' },
+  epp:        { nombre:'EPP',        color:'#c0392b', svg:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>' }
+};
+const ICO_META = {
+  persona:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  lugar:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  reloj:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'
+};
+function claveTipo(nombre){
+  if(nombre.includes('Caliente')) return 'caliente';
+  if(nombre.includes('Confinados')) return 'confinados';
+  if(nombre.includes('Izajes')) return 'izajes';
+  if(nombre.includes('Eléctrico')) return 'electrico';
+  if(nombre.indexOf('ATS') === 0) return 'ats';
+  return 'alturas';
 }
+function iconoPara(nombre){ return claveTipo(nombre); }
+const icoTipo = (k) => '<span class="t-ico"><svg viewBox="0 0 24 24" aria-hidden="true">' + (TIPOS[k]||TIPOS.alturas).svg + '</svg></span>';
+const icoMeta = (k, txt, cls) => '<span' + (cls ? ' class="' + cls + '"' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO_META[k] + '</svg>' + txt + '</span>';
+let filtroTipo = '';
+let filtroVig = '';
 /* ── Vencimiento real ──
    El dashboard mostraba solo cuántas horas llevaba abierto un permiso, con un
    umbral fijo de 8 horas igual para todos. Pero cada permiso declara su propia
@@ -150,6 +247,13 @@ function formatHoras(h){
   if(h < 1) return Math.round(h*60)+' min';
   return h.toFixed(1)+' h';
 }
+function fechaCorta(v){
+  const t = new Date(v);
+  if(isNaN(t.getTime())) return '—';
+  const hoy = new Date(); const mismoDia = t.toDateString() === hoy.toDateString();
+  const hora = t.toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'}).replace(/\s*a\.\s*m\./,' am').replace(/\s*p\.\s*m\./,' pm');
+  return (mismoDia ? 'hoy' : t.toLocaleDateString('es-CO',{day:'numeric',month:'short'}).replace('.','')) + ' ' + hora;
+}
 function formatFecha(fechaStr){
   const t = new Date(fechaStr);
   if(isNaN(t.getTime())) return '—';
@@ -180,7 +284,7 @@ async function cargarAts(){
     data.rows.forEach(r=>{
       const fin = atsVence(r);
       const item = {
-        tipo: 'ATS', archivo: 'ats.html', icono: '🧭', esAts: true,
+        tipo: 'ATS', archivo: 'ats.html', icono: 'ats', esAts: true,
         code: r.code || '—', responsable: r.lider || '',
         area: [r.centroCostos, r.area].filter(Boolean).join(' · '), trabajo: r.trabajo || '',
         hastaFecha: fin ? String(r.fechaHasta || r.fechaDesde).slice(0,10) : '', hastaHora: '23:59',
@@ -265,7 +369,7 @@ async function cargar(){
 
   document.getElementById('countAbiertos').textContent = abiertos.length ? '('+abiertos.length+')' : '';
   document.getElementById('countCerrados').textContent = cerrados.length ? '('+cerrados.length+')' : '';
-  noteEl.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'}) + ' — se refresca solo cada 2 minutos.';
+  noteEl.textContent = 'En vivo · actualizado ' + new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'}) + ' — se refresca solo cada 2 minutos.';
   mostrarAvisoIncompleto();
   render();
 }
@@ -323,9 +427,10 @@ function renderEpp(listEl, q){
   listEl.innerHTML = items.map(p=>{
     const d = diasDesde(p.updatedAt);
     const espera = d===null ? '' : (d===0 ? 'hoy' : (d===1 ? 'hace 1 día' : 'hace '+d+' días'));
-    return `<a class="item epp" href="inspeccion-epp.html">
+    return `<a class="item epp" href="inspeccion-epp.html" style="--c:#c0392b">
+      ${icoTipo('epp')}
       <div class="row1">
-        <span><span class="icon-type">🦺</span><span class="code">${esc(p.nombre)}</span> <span class="tipo">${esc(p.cargo||'')}</span></span>
+        <span class="t-id"><span class="code">${esc(p.nombre)}</span><span class="tipo">${esc(p.cargo||'')}</span></span>
         <span class="tiempo warn">${p.elementos.length} elemento(s)</span>
       </div>
       <div class="elementos"><ul>${p.elementos.map(e=>'<li>'+esc(e)+'</li>').join('')}</ul></div>
@@ -350,11 +455,31 @@ function mostrarAvisoIncompleto(){
   });
 }
 
+function pintarResumen(){
+  let venc = 0, pronto = 0;
+  abiertos.forEach(it => { const v = estadoVigencia(it); if(v && v.nivel==='vencido') venc++; else if(v && v.nivel==='porvencer') pronto++; });
+  const pon = (id, n) => { const el = document.getElementById(id); el.textContent = ultimaConsulta ? n : '–'; el.parentElement.classList.toggle('hay', !!n); };
+  pon('rtAbiertos', abiertos.length); pon('rtVencidos', venc); pon('rtPronto', pronto);
+  document.querySelectorAll('.rt').forEach(b => b.classList.toggle('sel', tabActual==='abiertos' && b.dataset.filtroVig === filtroVig && !!filtroVig));
+  // Filtros por tipo, con cuántos hay de cada uno en la pestaña actual
+  const base = tabActual === 'abiertos' ? abiertos : cerrados;
+  const cuenta = {}; base.forEach(it => { const k = it.icono; cuenta[k] = (cuenta[k]||0) + 1; });
+  const cont = document.getElementById('filtrosTipo');
+  cont.innerHTML = '<button type="button" class="filtro' + (filtroTipo ? '' : ' sel') + '" data-k="">Todos <span class="n">' + base.length + '</span></button>' +
+    Object.keys(TIPOS).filter(k => k !== 'epp' && cuenta[k]).map(k =>
+      '<button type="button" class="filtro' + (filtroTipo===k ? ' sel' : '') + '" data-k="' + k + '" style="--c:' + TIPOS[k].color + '"><i></i>' + TIPOS[k].nombre + ' <span class="n">' + cuenta[k] + '</span></button>').join('');
+  cont.querySelectorAll('.filtro').forEach(b => b.addEventListener('click', () => { filtroTipo = b.dataset.k; render(); }));
+}
+
 function render(){
   const listEl = document.getElementById('list');
+  if(tabActual !== 'epp') pintarResumen();
+  if(!ultimaConsulta && tabActual !== 'epp'){ listEl.innerHTML = '<div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div>'; return; }
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   if(tabActual === 'epp'){ renderEpp(listEl, q); return; }
   let items = tabActual === 'abiertos' ? abiertos : cerrados;
+  if(filtroTipo) items = items.filter(it => it.icono === filtroTipo);
+  if(filtroVig && tabActual === 'abiertos') items = items.filter(it => { const v = estadoVigencia(it); return v && v.nivel === filtroVig; });
   if(q){
     items = items.filter(it =>
       it.code.toLowerCase().includes(q) ||
@@ -392,24 +517,31 @@ function render(){
         ? `<span class="tiempo ${v.nivel==='vencido'?'warn':(v.nivel==='porvencer'?'pronto':'ok')}">${esc(v.texto)}</span>`
         : `<span class="tiempo ${alerta?'warn':'ok'}">${formatHoras(h)} abierto</span>`;
       const enlace = it.esAts ? 'ats.html?code=' + encodeURIComponent(it.code) + '&ver=1' : it.archivo + '?code=' + encodeURIComponent(it.code);
-      return `<a class="item ${clase}" href="${enlace}">
+      const ap = it.fechaApertura ? new Date(it.fechaApertura).getTime() : NaN;
+      const fin = fechaVencimiento(it);
+      let pct = null;
+      if(fin && !isNaN(ap) && fin.getTime() > ap) pct = Math.max(2, Math.min(100, Math.round((Date.now() - ap) / (fin.getTime() - ap) * 100)));
+      const T = TIPOS[it.icono] || TIPOS.alturas;
+      return `<a class="item ${clase}" href="${enlace}" style="--c:${T.color}">
+        ${icoTipo(it.icono)}
         <div class="row1">
-          <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
+          <span class="t-id"><span class="code">${esc(it.code)}</span><span class="tipo">${esc(it.tipo)}</span></span>
           ${etiqueta}
         </div>
-        <div class="meta">${it.esAts && it.trabajo ? esc(it.trabajo.slice(0,90)) + '<br>' : ''}${it.responsable ? (it.esAts ? 'Líder: ' : 'Responsable: ')+esc(it.responsable) : ''}${it.area ? ' · '+(it.esAts ? '' : 'Área: ')+esc(it.area) : ''}${v && !it.esAts ? ' · Abierto hace '+formatHoras(h) : ''}</div>
-        <div class="chevron">${it.esAts ? 'Toca para revisar el ATS (y cerrarlo desde ahí) →' : 'Toca para abrir el permiso y cerrarlo →'}</div>
+        <div class="meta">${it.esAts && it.trabajo ? '<span class="trab">' + esc(it.trabajo.slice(0,110)) + '</span>' : ''}${it.responsable ? icoMeta('persona', esc(it.responsable)) : ''}${it.area ? icoMeta('lugar', esc(it.area)) : ''}${h!==null ? icoMeta('reloj', 'Abierto hace ' + formatHoras(h)) : ''}</div>
+        ${pct!==null ? `<div class="vida" role="img" aria-label="Lleva ${pct}% de su vigencia"><i style="width:${pct}%"></i></div><div class="vida-txt"><span>Desde ${esc(fechaCorta(it.fechaApertura))}</span><span>Hasta ${esc(fechaCorta(fin))}</span></div>` : ''}
       </a>`;
     }).join('');
   } else {
     listEl.innerHTML = items.map(it=>{
-      return `<a class="item closed" href="${it.esAts ? 'ats.html?code=' + encodeURIComponent(it.code) + '&ver=1' : it.archivo + '?code=' + encodeURIComponent(it.code)}">
+      const T = TIPOS[it.icono] || TIPOS.alturas;
+      return `<a class="item closed" style="--c:${T.color}" href="${it.esAts ? 'ats.html?code=' + encodeURIComponent(it.code) + '&ver=1' : it.archivo + '?code=' + encodeURIComponent(it.code)}">
+        ${icoTipo(it.icono)}
         <div class="row1">
-          <span><span class="icon-type">${it.icono}</span><span class="code">${esc(it.code)}</span> <span class="tipo">${it.tipo}</span></span>
+          <span class="t-id"><span class="code">${esc(it.code)}</span><span class="tipo">${esc(it.tipo)}</span></span>
           <span class="tiempo closed">Cerrado</span>
         </div>
-        <div class="meta">${it.responsable ? 'Responsable: '+esc(it.responsable) : ''}${it.area ? ' · Área: '+esc(it.area) : ''}${it.fechaCierre ? ' · Cerrado: '+formatFecha(it.fechaCierre) : ''}</div>
-        <div class="chevron">Toca para ver el detalle completo →</div>
+        <div class="meta">${it.responsable ? icoMeta('persona', esc(it.responsable)) : ''}${it.area ? icoMeta('lugar', esc(it.area)) : ''}${it.fechaCierre ? icoMeta('reloj', 'Cerrado ' + formatFecha(it.fechaCierre)) : ''}</div>
       </a>`;
     }).join('');
   }
@@ -420,10 +552,17 @@ document.querySelectorAll('.tab').forEach(tab=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
     tabActual = tab.dataset.tab;
+    filtroTipo = '';
+    if(tabActual !== 'abiertos') filtroVig = '';
     render();
   });
 });
 document.getElementById('searchInput').addEventListener('input', render);
+document.querySelectorAll('.rt').forEach(b => b.addEventListener('click', () => {
+  filtroVig = (filtroVig === b.dataset.filtroVig) ? '' : b.dataset.filtroVig;
+  if(tabActual !== 'abiertos') document.getElementById('tabAbiertos').click(); else render();
+}));
+render();
 
 cargar();
 setInterval(cargar, 120000);

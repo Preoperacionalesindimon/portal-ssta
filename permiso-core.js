@@ -1306,10 +1306,53 @@ const PermisoCore = (function () {
     applyPendingExecSignatures();
     $('addPeopleStatus').textContent = '';
   }
+
+  /* Tarjeta de las listas de la portada (abiertos / historial).
+     Solo cambia cómo se ve: al tocarla hace lo mismo que antes. */
+  function tarjetaLista_(r, cerrado) {
+    const ICO = {
+      persona: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+      lugar: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+      reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'
+    };
+    const ic = (k) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[k] + '</svg>';
+    const fmt = (v) => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); };
+    let estado = '', clase = '';
+    if (cerrado) { estado = '<span class="pl-estado cerrado">Cerrado</span>'; }
+    else {
+      let fin = null;
+      if (r.hastaFecha) {
+        const p = String(r.hastaFecha).slice(0, 10).split('-').map(Number);
+        const h = String(r.hastaHora || '23:59').split(':').map(Number);
+        if (p.length === 3 && p[0]) fin = new Date(p[0], p[1] - 1, p[2], h[0] || 0, h[1] || 0);
+      }
+      if (fin && !isNaN(fin)) {
+        const min = Math.round((fin.getTime() - Date.now()) / 60000), a = Math.abs(min);
+        const txt = a < 60 ? a + ' min' : (a < 1440 ? Math.round(a / 60) + ' h' : Math.round(a / 1440) + ' d');
+        if (min < 0) { estado = '<span class="pl-estado vencido">Vencido hace ' + txt + '</span>'; clase = ' vencido'; }
+        else if (min <= 60) { estado = '<span class="pl-estado pronto">Vence en ' + txt + '</span>'; clase = ' pronto'; }
+        else estado = '<span class="pl-estado abierto">Vence en ' + txt + '</span>';
+      } else estado = '<span class="pl-estado abierto">Abierto</span>';
+    }
+    const fecha = cerrado ? (r.updatedAt ? 'Cerrado ' + fmt(r.updatedAt) : '') : (r.openedAt ? 'Abierto ' + fmt(r.openedAt) : '');
+    const div = document.createElement('div');
+    div.className = 'pl-card' + clase + (cerrado ? ' es-cerrado' : '');
+    div.setAttribute('role', 'button');
+    div.tabIndex = 0;
+    div.innerHTML = '<div class="pl-fila"><b class="pl-cod">' + esc(r.permitCode) + '</b>' + estado + '</div>' +
+      '<div class="pl-meta">' +
+        '<span>' + ic('persona') + (r.responsable ? esc(r.responsable) : '<em>sin responsable</em>') + '</span>' +
+        (r.sitio ? '<span>' + ic('lugar') + esc(r.sitio) + '</span>' : '') +
+        (fecha ? '<span>' + ic('reloj') + esc(fecha) + '</span>' : '') +
+      '</div>';
+    div.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); div.click(); } });
+    return div;
+  }
+
   function renderClosedPermits(rows) {
     const listEl = $('closedList');
     if (rows.length === 0) {
-      listEl.innerHTML = '<em>No hay permisos cerrados aún.</em>';
+      listEl.innerHTML = '<div class="pl-vacio">No hay permisos cerrados aún.</div>';
       return;
     }
     listEl.innerHTML = '';
@@ -1317,16 +1360,7 @@ const PermisoCore = (function () {
       .slice()
       .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
       .forEach((r) => {
-        const div = document.createElement('div');
-        div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:#f7f6f2;cursor:pointer;';
-        const updTxt = r.updatedAt
-          ? new Date(r.updatedAt).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : '—';
-        div.innerHTML = `<b>${esc(r.permitCode)}</b> <span style="color:var(--ok);float:right;font-weight:700;">CERRADO</span>
-          <div style="margin-top:3px;color:var(--steel);">Responsable: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
-          ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}
-          <div style="color:var(--muted);font-size:11.5px;">Actualizado: ${updTxt}</div>
-          <div style="color:var(--muted);font-size:11.5px;margin-top:3px;">Toca para ver el permiso completo</div>`;
+        const div = tarjetaLista_(r, true);
         // Antes estas tarjetas eran solo texto: no había forma de abrir un
         // permiso ya cerrado desde la lista. Ahora abren el modo consulta.
         div.addEventListener('click', () => openCloseModeWithCode(r.permitCode));
@@ -1335,16 +1369,12 @@ const PermisoCore = (function () {
   }
   function renderOpenList(container, rows, onPick) {
     if (rows.length === 0) {
-      container.innerHTML = '<em>No hay permisos abiertos.</em>';
+      container.innerHTML = '<div class="pl-vacio">No hay permisos abiertos.</div>';
       return;
     }
     container.innerHTML = '';
     rows.forEach((r) => {
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;cursor:pointer;background:#fff;';
-      div.innerHTML = `<b>${esc(r.permitCode)}</b> <span style="color:var(--muted);float:right;">${r.status}</span>
-        <div style="margin-top:3px;color:var(--steel);">Abierto por: ${r.responsable ? esc(r.responsable) : '<em>sin dato</em>'}</div>
-        ${r.sitio ? `<div style="color:var(--muted);font-size:11.5px;">Sitio: ${esc(r.sitio)}</div>` : ''}`;
+      const div = tarjetaLista_(r, false);
       div.addEventListener('click', () => onPick(r.permitCode));
       container.appendChild(div);
     });

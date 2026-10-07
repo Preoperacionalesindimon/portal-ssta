@@ -46,6 +46,10 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .nota{font-size:11.5px;color:var(--muted);line-height:1.45;margin:10px 2px;}
 </style>
+<link rel="stylesheet" href="portal-ui.css">
+<script src="portal-ui.js"></script>
+<link rel="stylesheet" href="ui-extra.css">
+<script src="ui-extra.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -70,7 +74,7 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
     <div id="equipo"></div>
   </div>
   <p class="nota">Esta página solo LEE de cada servidor: no guarda ni cambia nada. Si un servidor sale en rojo, toca «Abrir enlace de prueba»: lo que muestre esa página (datos o una pantalla de Google) es exactamente lo que recibe el portal.</p>
-  <div class="nota" style="text-align:center;">Portal SSTA · versión v90</div>
+  <div class="nota" style="text-align:center;">Portal SSTA · versión v91</div>
 </div>
 
 <script src="config.js"></script>
@@ -88,7 +92,7 @@ if (typeof UpdateManager !== 'undefined') UpdateManager.init();
    asistencia quedaba "pendiente" y solo abriendo el enlace a mano se vio
    que la implementación no era pública.
    ============================================================ */
-const VERSION = 'v90';
+const VERSION = 'v91';
 const $ = (id)=>document.getElementById(id);
 // Qué se consulta en cada uno (siempre algo de solo lectura).
 const PRUEBAS = [

@@ -799,14 +799,14 @@ canvas.pad-completa{
    Antes cada una tenía el suyo: ⛑ en el inicio, "IN" en los permisos,
    nada en el ATS y un emoji en el tablero.
    ════════════════════════════════════════════════════════════════════ */
-.marca{display:inline-block;flex:0 0 auto;width:64px;height:38px;border-radius:9px;
-  background:#fff url('logo-indimon.png') center/88% auto no-repeat;box-shadow:0 2px 6px rgba(0,0,0,.25);vertical-align:middle;}
-.marca-grande{width:84px;height:48px;border-radius:11px;}
+.marca{display:inline-block;flex:0 0 auto;width:84px;height:36px;border-radius:9px;
+  background:#fff url('logo-indimon-compacto.png') center/84% auto no-repeat;box-shadow:0 2px 6px rgba(0,0,0,.25);vertical-align:middle;}
+.marca-grande{width:100px;height:42px;border-radius:11px;}
 .marca-titulo{display:flex;align-items:center;gap:12px;min-width:0;}
 /* Los permisos traen <div class="hdr-logo">IN</div>: se convierte en el logo
    sin tocar el HTML de cada permiso. */
-body .hdr-logo{width:64px !important;min-width:64px !important;height:38px !important;border-radius:9px !important;
-  background:#fff url('logo-indimon.png') center/88% auto no-repeat !important;color:transparent !important;font-size:0 !important;
+body .hdr-logo{width:84px !important;min-width:84px !important;height:36px !important;border-radius:9px !important;
+  background:#fff url('logo-indimon-compacto.png') center/84% auto no-repeat !important;color:transparent !important;font-size:0 !important;
   box-shadow:0 2px 6px rgba(0,0,0,.25) !important;}
 .btn-clave{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);
   background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}

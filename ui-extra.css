@@ -1,0 +1,103 @@
+/* ============================================================
+   ui-extra.css — Avisos propios, íconos de línea y guía de firma.
+   Común a todas las páginas (claro y oscuro).
+   ============================================================ */
+:root{
+  --ux-panel:#ffffff; --ux-text:#151b24; --ux-muted:#5c6a76; --ux-line:#e3e1da; --ux-card:#f6f5f2;
+}
+html.oscuro{
+  --ux-panel:#151a21; --ux-text:#e8ebee; --ux-muted:#9aa4ae; --ux-line:#2a313a; --ux-card:#1d232b;
+}
+
+/* ── Íconos que reemplazan emojis ── */
+.ux-ico{display:inline-flex;vertical-align:-.18em;margin:0 .12em;}
+.ux-ic{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.ux-alerta{color:#d4840a;}
+html.oscuro .ux-alerta{color:#f1c84b;}
+.ux-ok{color:#1d8a55;}
+html.oscuro .ux-ok{color:#5fd39b;}
+@media print{ .ux-ico{display:none !important;} }
+
+/* ── Avisos cortos: franja abajo que se va sola ── */
+.ux-toasts{position:fixed;left:0;right:0;top:calc(10px + env(safe-area-inset-top));z-index:10100;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 12px;pointer-events:none;}
+.ux-toast{pointer-events:auto;max-width:520px;width:100%;display:flex;align-items:flex-start;gap:10px;padding:12px 10px 12px 14px;border-radius:16px;
+  background:#151b24;color:#f2f4f6;font-family:var(--font-family,system-ui,sans-serif);font-size:14px;line-height:1.45;
+  box-shadow:0 12px 32px rgba(0,0,0,.28);transform:translateY(-16px);opacity:0;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s;}
+html.oscuro .ux-toast{background:#f2f4f6;color:#151b24;}
+.ux-toast.on{transform:none;opacity:1;}
+.ux-toast-ic{width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:#2fbf71;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
+  background:#F2C200;}
+.ux-toast-txt{flex:1;white-space:pre-line;}
+.ux-toast button{flex-shrink:0;width:32px;height:32px;margin:-6px 0;border:none;border-radius:10px;background:transparent;color:inherit;opacity:.6;font-size:20px;cursor:pointer;}
+.ux-toast button:hover{opacity:1;}
+
+/* ── Avisos largos o importantes: tarjeta en el centro ── */
+.ux-modal{position:fixed;inset:0;z-index:10200;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:rgba(8,11,15,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;transition:opacity .18s;}
+.ux-modal.on{opacity:1;}
+.ux-modal-caja{width:100%;max-width:440px;max-height:calc(100vh - 32px);overflow:auto;background:var(--ux-panel);color:var(--ux-text);
+  border-radius:24px;padding:24px 22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.35);font-family:var(--font-family,system-ui,sans-serif);
+  transform:scale(.96);transition:transform .2s cubic-bezier(.2,.8,.2,1);}
+.ux-modal.on .ux-modal-caja{transform:none;}
+.ux-modal-ic{width:48px;height:48px;border-radius:14px;margin-bottom:12px;background:rgba(242,194,0,.18);position:relative;}
+.ux-modal-ic::after{content:"";position:absolute;inset:12px;background:#b98f00;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;}
+.ux-modal.grave .ux-modal-ic{background:rgba(192,57,43,.14);}
+.ux-modal.grave .ux-modal-ic::after{background:#c0392b;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
+          mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");}
+html.oscuro .ux-modal.grave .ux-modal-ic::after{background:#ff8a7a;}
+html.oscuro .ux-modal-ic::after{background:#F2C200;}
+.ux-modal h3{font-family:var(--font-display,inherit);font-size:19px;line-height:1.25;letter-spacing:-.01em;margin:0 0 8px;}
+.ux-modal-txt{font-size:14.5px;line-height:1.55;color:var(--ux-muted);white-space:pre-line;margin-bottom:18px;}
+.ux-modal-ok{width:100%;min-height:50px;border:none;border-radius:14px;background:var(--ux-text);color:var(--ux-panel);font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.ux-modal.grave .ux-modal-ok{background:#c0392b;color:#fff;}
+@media (prefers-reduced-motion: reduce){ .ux-toast,.ux-modal,.ux-modal-caja{transition:none;} }
+@media print{ .ux-toasts,.ux-modal{display:none !important;} }
+
+/* ── Recuadro de firma: línea, X y "Firme aquí" ── */
+canvas.pad,canvas.mini-pad,canvas.sigpad{
+  border:1.5px solid var(--ux-line) !important;border-radius:16px !important;background-color:#fff !important;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%239aa3ad' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
+    linear-gradient(#c3c9cf,#c3c9cf),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='22'%3E%3Ctext x='100' y='15' font-family='sans-serif' font-size='13' font-weight='600' fill='%239aa3ad' text-anchor='middle' letter-spacing='1'%3EFIRME AQU%C3%8D%3C/text%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;
+  background-size:20px 20px,calc(100% - 64px) 1.5px,200px 22px !important;
+  background-position:20px calc(72% - 12px),40px 72%,center calc(72% + 26px) !important;
+  transition:border-color .2s,box-shadow .2s;
+}
+/* Ya firmado: se quita el texto guía y el borde pasa a verde */
+canvas.pad.con-firma,canvas.mini-pad.con-firma,canvas.sigpad.con-firma{
+  border-color:#1d8a55 !important;box-shadow:0 0 0 3px rgba(29,138,85,.14);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23c3c9cf' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
+    linear-gradient(#dfe3e7,#dfe3e7) !important;
+  background-size:20px 20px,calc(100% - 64px) 1.5px !important;
+  background-position:20px calc(72% - 12px),40px 72% !important;
+}
+canvas.pad.locked,canvas.mini-pad.locked,canvas.sigpad.locked{background-image:none !important;border-style:dashed !important;}
+/* En celular el recuadro abre la firma grande: el texto lo dice */
+@media (pointer: coarse) and (max-width: 599px), (pointer: coarse) and (max-height: 599px){
+  canvas.pad:not(.con-firma):not(.locked),canvas.mini-pad:not(.con-firma):not(.locked){
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%239aa3ad' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
+      linear-gradient(#c3c9cf,#c3c9cf),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='22'%3E%3Ctext x='120' y='15' font-family='sans-serif' font-size='13' font-weight='600' fill='%239aa3ad' text-anchor='middle' letter-spacing='1'%3ETOCA AQU%C3%8D PARA FIRMAR%3C/text%3E%3C/svg%3E") !important;
+    background-size:20px 20px,calc(100% - 64px) 1.5px,240px 22px !important;
+  }
+}
+.sig-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px !important;font-weight:600;color:var(--ux-muted) !important;}
+.sig-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#c3c9cf;}
+.sig-status.signed,.sig-status.done{color:#1d7a4c !important;padding:3px 10px;border-radius:999px;background:rgba(29,122,76,.12);}
+.sig-status.signed::before,.sig-status.done::before{background:#1d8a55;}
+html.oscuro .sig-status.signed,html.oscuro .sig-status.done{color:#7fd3a8 !important;background:rgba(29,138,85,.2);}
+.sig-actions button{min-height:36px;padding:0 12px !important;border-radius:10px !important;text-decoration:none !important;
+  border:1px solid var(--ux-line) !important;background:var(--ux-card) !important;color:var(--ux-text) !important;font-weight:600 !important;font-size:12.5px !important;}
+@media print{
+  canvas.pad,canvas.mini-pad,canvas.sigpad{background-image:none !important;box-shadow:none !important;border:1px solid #999 !important;}
+  .sig-status::before{display:none;}
+}
