@@ -298,6 +298,7 @@
   }
 </style>
 <link rel="stylesheet" href="portal-ui.css">
+<link rel="stylesheet" href="entregas-epp.css">
 <script src="portal-ui.js"></script>
 <link rel="stylesheet" href="ui-extra.css">
 <script src="ui-extra.js"></script>
@@ -312,6 +313,7 @@
 <div class="tabs">
   <button type="button" class="tab active" data-screen="screenNueva">Nueva inspección</button>
   <button type="button" class="tab" data-screen="screenHistorial">Historial</button>
+  <button type="button" class="tab" data-screen="screenEntregas" id="tabEntregas">Entregas</button>
 </div>
 
 <div class="wrap">
@@ -450,6 +452,133 @@
     </div>
 
     <div id="listaHist"></div>
+  </div>
+
+
+  <!-- ══ ENTREGAS: reposición por desgaste (SSTA-F-014) y por pérdida (SSTA-F-013) ══ -->
+  <div class="screen" id="screenEntregas">
+
+    <div class="ent-intro">
+      <b>Entrega de EPP</b>
+      Lo que una inspección marcó en <b>M</b> queda pendiente aquí hasta entregarlo
+      (formato <b>SSTA-F-014</b>, desgaste). Las pérdidas se registran en la misma entrega
+      (formato <b>SSTA-F-013</b>).
+    </div>
+
+    <!-- Quién tiene elementos por recibir -->
+    <div class="section">
+      <div class="section-title"><span>Pendientes por entregar</span><span id="entPendCuenta"></span></div>
+      <div class="section-body">
+        <input type="text" id="entBuscarPend" class="ent-buscar" placeholder="Buscar trabajador…" autocomplete="off">
+        <div id="entPendLista"><div class="ent-vacio">Cargando…</div></div>
+      </div>
+    </div>
+
+    <!-- Formulario de entrega -->
+    <div class="section" id="entForm">
+      <div class="section-title">Registrar entrega</div>
+      <div class="section-body">
+        <div class="field">
+          <label for="entNombre">Trabajador que recibe</label>
+          <input type="text" id="entNombre" autocomplete="off" placeholder="Escribe para buscar en el personal registrado">
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="entCedula">Cédula</label><input type="text" id="entCedula" inputmode="numeric" autocomplete="off"></div>
+          <div class="field"><label for="entCargo">Cargo</label><input type="text" id="entCargo" autocomplete="off"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="entCentro">Centro de costo</label><input type="text" id="entCentro" autocomplete="off" placeholder="Ej. Mayekawa"></div>
+          <div class="field"><label for="entFecha">Fecha de entrega</label><input type="date" id="entFecha"></div>
+        </div>
+        <div class="field">
+          <label for="entEntrega">Entregado por</label>
+          <input type="text" id="entEntrega" autocomplete="off" placeholder="Quien entrega (almacén / SST)">
+        </div>
+
+        <h4 class="ent-sub">Elementos que se entregan</h4>
+        <div id="entItems"><div class="ent-vacio">Elige un trabajador para ver lo que tiene pendiente.</div></div>
+
+        <div class="ent-agregar">
+          <div class="ent-agregar-fila">
+            <select id="entNuevoEl" aria-label="Elemento a agregar"></select>
+            <input type="number" id="entNuevoCant" min="1" value="1" inputmode="numeric" aria-label="Cantidad">
+          </div>
+          <input type="text" id="entNuevoOtro" placeholder="¿Cuál elemento?" autocomplete="off" hidden>
+          <div class="ent-agregar-fila">
+            <select id="entNuevoMotivo" aria-label="Motivo">
+              <option value="perdida">Por pérdida (SSTA-F-013)</option>
+              <option value="desgaste">Por desgaste (SSTA-F-014)</option>
+            </select>
+            <button type="button" id="entAgregarBtn">+ Agregar</button>
+          </div>
+        </div>
+
+        <div class="field" id="entPerdidaBox" hidden>
+          <label for="entPerdida">¿Qué pasó con lo perdido?</label>
+          <textarea id="entPerdida" placeholder="Cuándo y cómo se perdió el elemento"></textarea>
+        </div>
+
+        <p class="ent-declara">Hago constar que recibí en perfecto estado la dotación y los elementos de protección
+        personal relacionados, más la respectiva capacitación sobre su uso y mantenimiento, comprometiéndome a cumplir
+        con las especificaciones dadas por el departamento de Seguridad y Salud en el Trabajo y Ambiente de INDIMON SAS,
+        y estoy enterado de que no utilizar los elementos de protección personal es causal de <b>terminación del
+        contrato de trabajo por justa causa</b>, conforme lo contempla el Código Sustantivo del Trabajo en su
+        Capítulo VI, Art. 62 numeral 12 y las demás normas aplicables.</p>
+
+        <div class="sig-block">
+          <h5>Firma del trabajador que recibe</h5>
+          <canvas class="pad" id="padEntrega"></canvas>
+          <div class="sig-actions">
+            <button type="button" data-undo="padEntrega">Deshacer</button>
+            <button type="button" data-clear="padEntrega">Borrar</button>
+            <span class="sig-status" id="status_padEntrega">Sin firmar</span>
+          </div>
+        </div>
+
+        <div class="validation-banner" id="entBanner"></div>
+        <div class="ok-box" id="entOk"></div>
+        <button type="button" class="ent-guardar" id="entGuardar">Registrar entrega</button>
+      </div>
+    </div>
+
+    <!-- Historial por trabajador -->
+    <div class="section" id="entHPBox">
+      <div class="section-title">Historial por trabajador</div>
+      <div class="section-body">
+        <input type="text" id="entHPNombre" class="ent-buscar" placeholder="Escribe el nombre o la cédula" autocomplete="off">
+        <div id="entHP"><div class="ent-vacio">Busca un trabajador para ver todo lo que se le ha entregado.</div></div>
+      </div>
+    </div>
+
+    <!-- Planillas imprimibles -->
+    <div class="section">
+      <div class="section-title">Formatos para imprimir</div>
+      <div class="section-body">
+        <div class="field">
+          <label for="entPlFormato">Formato</label>
+          <select id="entPlFormato">
+            <option value="SSTA-F-014">SSTA-F-014 · Reposición por desgaste</option>
+            <option value="SSTA-F-013">SSTA-F-013 · Reposición por pérdida</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="entPlDesde">Desde</label><input type="date" id="entPlDesde"></div>
+          <div class="field"><label for="entPlHasta">Hasta</label><input type="date" id="entPlHasta"></div>
+        </div>
+        <button type="button" class="ent-sec" id="entPlVer">Ver planilla</button>
+        <h4 class="ent-sub">Últimas entregas</h4>
+        <div id="entHist"><div class="ent-vacio">Cargando…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PLANILLA DEL FORMATO (igual al Excel) ══ -->
+  <div class="screen" id="screenPlanilla">
+    <div class="no-print ent-pl-barra">
+      <button type="button" class="volver-btn" id="entPlVolver">← Volver a entregas</button>
+      <button type="button" class="ent-sec" id="entPlImprimir">Imprimir / PDF</button>
+    </div>
+    <div id="entPlanilla"></div>
   </div>
 
   <!-- ══ DETALLE DE UNA INSPECCIÓN ══ -->
@@ -1365,7 +1494,21 @@ async function abrirFicha(cedula, origen){
     // Lo pendiente se toma de la ÚLTIMA inspección: es el estado actual de su
     // dotación. Sumar los malos de todo el historial daría una lista falsa,
     // porque incluiría lo que ya le repusieron.
-    const pendientes = (rows[0].datos && rows[0].datos.malos) ? rows[0].datos.malos : [];
+    let pendientes = (rows[0].datos && rows[0].datos.malos) ? rows[0].datos.malos : [];
+    // Desde que existen las entregas (SSTA-F-013/014), lo pendiente es lo que
+    // está en M y todavía NO se le ha entregado. Si no se puede consultar
+    // (sin señal o backend viejo), se usa la última inspección como antes.
+    let pendientesReales = false;
+    if (TIPO === 'epp') {
+      try {
+        const rp = await fetchWithRetry(EPP_URL + '?action=pendientes&cedula=' + encodeURIComponent(cedula) + '&token=' + encodeURIComponent(TOKEN));
+        const dp = await rp.json();
+        if (dp && dp.ok && Array.isArray(dp.personas)) {
+          pendientes = dp.personas[0] ? dp.personas[0].pendientes.map(x => x.elemento) : [];
+          pendientesReales = true;
+        }
+      } catch (e) { /* se queda con la última inspección */ }
+    }
 
     const bloques = rows.map(r=>{
       const items = (r.datos && r.datos.items) ? r.datos.items : {};
@@ -1406,10 +1549,10 @@ async function abrirFicha(cedula, origen){
         <div class="sub">CC ${esc(p.cedula||'—')}${p.cargo?' · '+esc(p.cargo):''}</div>
         <div class="sub" style="margin-top:4px;">${rows.length} inspección(es) registrada(s) · documento generado el ${formatFechaHora(new Date())}</div>
         ${pendientes.length
-          ? `<div class="ficha-pend hay"><strong>Pendiente de reposición según la última inspección (${esc(p.fechaInspeccion||'')}):</strong><ul>${pendientes.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
+          ? `<div class="ficha-pend hay"><strong>${pendientesReales ? 'Pendiente por entregar (en mal estado y aún no entregado):' : 'Pendiente de reposición según la última inspección (' + esc(p.fechaInspeccion||'') + '):'}</strong><ul>${pendientes.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
              <div class="no-print" style="margin-top:9px;">Foto para aprobación: ${esc(WA_RESPONSABLE)} (${esc(WA_TEL_LEGIBLE)}).
              <a class="btn-wa" href="${enlaceWhatsApp(p.nombre, p.cedula, p.fechaInspeccion, pendientes, p.inspeccionId, (p.datos&&p.datos.observaciones)||'')}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a></div></div>`
-          : `<div class="ficha-pend no"><strong>Sin elementos pendientes de reposición.</strong>Según la última inspección (${esc(p.fechaInspeccion||'')}), su dotación está completa.</div>`}
+          : `<div class="ficha-pend no"><strong>Sin elementos pendientes de reposición.</strong>${pendientesReales ? 'Todo lo que se encontró en mal estado ya se le entregó.' : 'Según la última inspección (' + esc(p.fechaInspeccion||'') + '), su dotación está completa.'}</div>`}
         <button type="button" class="no-print" id="btnImprimirFicha" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--brand-epp);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🖨 Exportar a PDF / imprimir</button>
       </div>
       ${bloques}`;
@@ -1455,5 +1598,6 @@ document.getElementById('btnVolverDeFicha').addEventListener('click', ()=> showS
   document.getElementById('trabCedula').addEventListener('change', e=> mostrarHistorial(e.target.value.trim()));
 })();
 </script>
+<script src="entregas-epp.js"></script>
 </body>
 </html>

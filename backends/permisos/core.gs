@@ -86,7 +86,25 @@ function getSheet_() {
   return sheet;
 }
 
+/* ── CLAVE DEL PORTAL ──────────────────────────────────────────
+   Igual que en los demás backends: el API_TOKEN está en config.js, que es
+   público. La clave del portal se escribe AQUÍ (o en Configuración del
+   proyecto → Propiedades de la secuencia de comandos → CLAVE_PORTAL, que
+   tiene prioridad). Mientras diga ESCRIBE_AQUI…, se sigue aceptando el
+   token de siempre, para que nada se caiga mientras se actualiza. */
+const CLAVE_PORTAL = 'ESCRIBE_AQUI_LA_CLAVE_DEL_PORTAL';
+
+function claveConfigurada_() {
+  let c = '';
+  try { c = PropertiesService.getScriptProperties().getProperty('CLAVE_PORTAL') || ''; } catch (e) { c = ''; }
+  if (!c && CLAVE_PORTAL && CLAVE_PORTAL.indexOf('ESCRIBE_AQUI') !== 0) c = CLAVE_PORTAL;
+  return String(c).trim();
+}
+
 function checkToken_(token) {
+  const clave = claveConfigurada_();
+  // Con clave configurada, SOLO la clave sirve: el token de config.js es público.
+  if (clave) return String(token || '') === clave;
   return token === API_TOKEN;
 }
 
@@ -381,7 +399,7 @@ function doPost(e) {
     // Se registra el intento, pero SIN el contenido enviado: si alguien está
     // probando tokens al azar, no tiene sentido llenar la bitácora con su basura.
     registrarEvento_(body.permitCode, 'DESCONOCIDA', 'RECHAZADO', 'Token inválido', '', '', '', '');
-    return jsonOut_({ ok: false, error: 'Token inválido.' });
+    return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
   }
   const code = body.permitCode;
   if (!code) {
@@ -557,7 +575,7 @@ function doPost(e) {
 
 function doGet(e) {
   if (!checkToken_(e.parameter.token)) {
-    return jsonOut_({ ok: false, error: 'Token inválido.' });
+    return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
   }
   const code = e.parameter.code;
 

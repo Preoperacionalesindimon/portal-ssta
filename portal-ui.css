@@ -244,3 +244,7 @@ html.oscuro .ats-portada .etiqueta-estado.vencido{color:#ff9c8e !important;backg
   .ats-portada #opAbrir .op-acc{flex-direction:row;}
   .ats-portada #opAbrir .op-acc .btn{flex:1;}
 }
+
+/* ATS: el rango de fechas y horas no debe salirse en celular */
+.ats-portada .rango,.pui2 .rango{display:grid !important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;}
+.pui2 .rango input{min-width:0 !important;width:100% !important;box-sizing:border-box;}

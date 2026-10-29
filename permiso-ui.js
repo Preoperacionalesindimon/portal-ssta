@@ -242,6 +242,25 @@
     var prim = capa.querySelector('button'); if (prim) prim.focus();
   }
 
+
+  // El aviso flotante de "preguntas sin responder" no debe tapar la barra de
+  // botones: se ubica siempre justo encima de ella, mida lo que mida.
+  function acomodarAvisoPendientes() {
+    const pie = document.querySelector('.footer-actions');
+    if (!pie || !window.ResizeObserver) return;
+    const ajustar = () => {
+      const nav = document.getElementById('pendingNav');
+      if (!nav) return;
+      const visible = pie.offsetParent !== null && getComputedStyle(pie).display !== 'none';
+      const alto = visible ? pie.getBoundingClientRect().height : 0;
+      nav.style.bottom = (alto + 10) + 'px';
+    };
+    new ResizeObserver(ajustar).observe(pie);
+    new MutationObserver(ajustar).observe(document.body, { childList: true });
+    window.addEventListener('resize', ajustar);
+    ajustar();
+  }
+
   function armarPortada() {
     document.body.classList.add('pui');
     if (!document.querySelector('meta[name="theme-color"]')) {
@@ -278,6 +297,16 @@
       hero.appendChild(lead);
     }
     landing.insertBefore(hero, landing.firstChild);
+    // En celular la portada va de borde a borde: se compensa el margen REAL de
+    // cada página (alturas usa 10 px, las demás 14 px), si no se desborda.
+    function ajustarBordes() {
+      if (window.innerWidth > 600) { hero.style.marginLeft = hero.style.marginRight = hero.style.marginTop = ''; return; }
+      const cs = getComputedStyle(document.body);
+      const izq = parseFloat(cs.paddingLeft) || 0, der = parseFloat(cs.paddingRight) || 0, arr = parseFloat(cs.paddingTop) || 0;
+      hero.style.marginLeft = (-izq) + 'px'; hero.style.marginRight = (-der) + 'px'; hero.style.marginTop = (-arr) + 'px';
+    }
+    ajustarBordes();
+    window.addEventListener('resize', ajustarBordes);
     ponerCifras(hero, tipo);
 
     // El enlace "← Volver al portal" lo reemplaza el botón de la portada
@@ -323,6 +352,7 @@
     }
     ponerBarraPasos();
     vigilarGuardado();
+    acomodarAvisoPendientes();
     rotular();
   }
 

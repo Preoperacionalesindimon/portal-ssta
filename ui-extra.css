@@ -101,3 +101,21 @@ html.oscuro .sig-status.signed,html.oscuro .sig-status.done{color:#7fd3a8 !impor
   canvas.pad,canvas.mini-pad,canvas.sigpad{background-image:none !important;box-shadow:none !important;border:1px solid #999 !important;}
   .sig-status::before{display:none;}
 }
+
+/* ══ Al imprimir o guardar PDF: SIEMPRE en claro, aunque el equipo esté en modo oscuro ══
+   (antes la inspección de EPP salía oscura y algunas hojas con bordes negros) */
+@media print{
+  html,html.oscuro{color-scheme:light !important;background:#fff !important;
+    --pui-page:#ffffff; --pui-text:#151b24; --pui-muted:#5c6a76;
+    --pui-hero:#ffffff; --pui-hero-fg:#151b24; --pui-hero-muted:#5c6a76; --pui-grid:transparent;
+    --pui-chip:#f3f2ee; --pui-chip-bd:#e3e1da; --pui-chip-hover:#e9e7e1;
+    --pui-panel:#ffffff; --pui-card:#f6f5f2; --pui-line:#d7dce0; --pui-field:#ffffff;
+    --ux-panel:#ffffff; --ux-text:#151b24; --ux-muted:#5c6a76; --ux-line:#d7dce0; --ux-card:#f6f5f2;
+    --page:#ffffff; --text:#151b24; --muted:#5c6a76; --hero:#ffffff; --hero-fg:#151b24; --hero-muted:#5c6a76;
+    --panel:#ffffff; --card:#f6f5f2; --line2:#e7e4dd; --chip:#f3f2ee; --chip-bd:#e3e1da;}
+  html.oscuro body,html.oscuro body.pui,html.oscuro body.pui2{background:#fff !important;color:#151b24 !important;
+    --paper:#ffffff; --paper-panel:#ffffff; --line:#d8d2c4; --line-soft:#e3e8eb; --ink:#20242a; --text:#20242a;
+    --muted:#6b6459; --bg:#ffffff; --ink-soft:#5c6a76; --ink-muted:#5c6a76; --navy-dark:#0a2842; --brand-ats-soft:#e3f0f0;}
+  html.oscuro input,html.oscuro textarea,html.oscuro select{background:#fff !important;color:#151b24 !important;border-color:#bbb !important;}
+  html.oscuro .pui2 button:not([class]),html.oscuro .pui .toggle button,html.oscuro .pui .yn-btn{background:#fff !important;color:#151b24 !important;}
+}

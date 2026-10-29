@@ -804,7 +804,7 @@ grupo('Visual: "Todo cumple", marca común, avisos y barra', () => {
   ok('avance por categoría (ej. 5/12)', /av\.textContent = hechas \+ '\/' \+ filas\.length/.test(core));
   ok('"Todo SÍ" por sección en alturas', /function initTodoSiPorSeccion/.test(core) && /initFreeformYN\(\); initTodoSiPorSeccion\(\);/.test(core));
   ok('la hoja impresa no copia los botones nuevos', /n\.tagName !== 'BUTTON'/.test(core) && /querySelector\('\.cat-nombre'\)/.test(core));
-  ok('el mismo logo en todas las pantallas', /\.marca\{[^}]*logo-indimon\.png/.test(css) && /body \.hdr-logo\{[^}]*logo-indimon\.png/.test(css) &&
+  ok('el mismo logo en todas las pantallas', /\.marca\{[^}]*logo-indimon(-compacto)?\.png/.test(css) && /body \.hdr-logo\{[^}]*logo-indimon(-compacto)?\.png/.test(css) &&
      ['index.html', 'ats.html', 'dashboard.html', 'inspeccion-epp.html', 'personal-autorizado.html'].every((f) => leer(f).includes('class="marca')));
   ok('ya no quedan el ⛑ ni el "📋 Permisos" como logo', !leer('index.html').includes('<div class="logo">⛑</div>') && !leer('dashboard.html').includes('<h1>📋 Permisos</h1>'));
   ok('aviso de personal: franja arriba y se puede cerrar', /const AvisoPersonal = \{/.test(c) && /insertBefore\(el, document\.body\.firstChild\)/.test(c) && /class="cerrar"/.test(c) && !/\.aviso-personal\{[^}]*position:fixed/.test(css));
@@ -1213,6 +1213,41 @@ grupo('Sintaxis de todos los archivos', () => {
 
 /* ═══════════════════════════════════════════════════════════ */
 console.log('\n╔══════════════════════════════════════════════════════╗');
+
+grupo('Entregas de EPP (SSTA-F-013 / SSTA-F-014) en simulador', () => {
+  const { crearEntorno } = require('./simulador-apps-script');
+  const E = crearEntorno(path.join(RAIZ, 'backends/backend-epp.gs'));
+  const T = (leer('config.js').match(/API_TOKEN:\s*'([^']+)'/) || [])[1];
+  const firma = 'data:image/png;base64,' + 'A'.repeat(400);
+  E.post({ token: T, opId: 'i1', inspeccionId: 'EPP-1', cedula: '100', nombre: 'JUAN', cargo: 'SOLDADOR',
+           items: { 'CASCO CON BARBUQUEJO': 'M', 'PROTECTOR AUDITIVO': 'M', 'GUANTES DE IMPACTO / ANTICORTE': 'M' },
+           sigTrabajador: firma, sigInspector: firma });
+  let p = E.get({ token: T, action: 'pendientes', cedula: '100' });
+  ok('lo marcado en M queda pendiente por entregar', p.personas[0] && p.personas[0].pendientes.length === 3);
+  let r = E.post({ token: T, action: 'entrega', opId: 'e1', cedula: '100', nombre: 'JUAN', fecha: '05/10/2026',
+    items: [{ elemento: 'CASCO CON BARBUQUEJO', motivo: 'desgaste', inspeccionId: 'EPP-1', origen: 'CASCO CON BARBUQUEJO' },
+            { elemento: 'PROTECTOR AUDITIVO DE COPA', motivo: 'desgaste', inspeccionId: 'EPP-1', origen: 'PROTECTOR AUDITIVO' },
+            { elemento: 'BOTAS DE SEGURIDAD', motivo: 'perdida' }],
+    descripcionPerdida: 'Se perdieron en obra', sigTrabajador: firma });
+  ok('una entrega mixta queda en dos formatos (F-014 desgaste y F-013 pérdida)',
+     r.ok && r.registros.map(x => x.formato).sort().join() === 'SSTA-F-013,SSTA-F-014');
+  p = E.get({ token: T, action: 'pendientes', cedula: '100' });
+  ok('lo entregado sale de pendientes (y el protector "de copa" cierra el "protector auditivo")',
+     p.personas[0] && p.personas[0].pendientes.map(x => x.elemento).join() === 'GUANTES DE IMPACTO / ANTICORTE');
+  r = E.post({ token: T, action: 'entrega', opId: 'e1', cedula: '100', nombre: 'JUAN', items: [{ elemento: 'X' }], sigTrabajador: firma });
+  ok('un reenvío de la misma entrega no la duplica', r.duplicado === true && E.hojas['Entregas'].filas.length === 3);
+  r = E.post({ token: T, action: 'entrega', opId: 'e2', cedula: '100', nombre: 'JUAN', items: [{ elemento: 'BOTAS', motivo: 'perdida' }], sigTrabajador: firma });
+  ok('una pérdida sin explicar qué pasó se rechaza', !r.ok);
+  r = E.post({ token: T, action: 'entrega', opId: 'e3', cedula: '100', nombre: 'JUAN', items: [{ elemento: 'BOTAS', motivo: 'desgaste' }] });
+  ok('una entrega sin firma del trabajador se rechaza', !r.ok);
+  const l = E.get({ token: T, action: 'entregas', full: '1', formato: 'SSTA-F-013' });
+  ok('la planilla trae la firma completa', l.rows.length === 1 && l.rows[0].datos.sigTrabajador === firma);
+  const front = leer('entregas-epp.js');
+  ok('la pantalla de entregas no aparece en el formato de brigadistas', /TIPO !== 'epp'/.test(front));
+  ok('el service worker guarda los archivos de entregas para usarlos sin señal',
+     /entregas-epp\.js/.test(leer('sw.js')) && /entregas-epp\.css/.test(leer('sw.js')));
+});
+
 console.log('║   PRUEBAS DEL PORTAL SSTA — antes de desplegar        ║');
 console.log('╚══════════════════════════════════════════════════════╝');
 (async () => {

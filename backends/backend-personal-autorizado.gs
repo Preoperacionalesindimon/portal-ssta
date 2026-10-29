@@ -257,8 +257,12 @@ function extraerFirmas_(obj, mapaFirmas) {
     const out = {};
     for (const key in obj) {
       const val = obj[key];
+      // El anexo llama a sus firmas `firma`; los permisos, `sig`. Antes solo se
+      // sacaban las de "sig" y las firmas del anexo quedaban dentro del JSON,
+      // con lo que un día con varias firmas pasaba el límite de la celda.
+      const k = key.toLowerCase();
       if (typeof val === 'string' && val.indexOf('data:image') === 0 &&
-          key.toLowerCase().indexOf('sig') !== -1) {
+          (k.indexOf('sig') !== -1 || k.indexOf('firma') !== -1)) {
         const sigKey = sigKeyFromDataUrl_(val);
         mapaFirmas.push({ sigKey: sigKey, dataUrl: val });
         out[key] = 'SIGREF:' + sigKey;
@@ -485,10 +489,14 @@ function doGet(e) {
 
   if (action === 'ultimoRegistro') {
     const obraId = e.parameter.obraId;
+    // antesDe (opcional): el último registro ANTERIOR a esa fecha. Así "Copiar
+    // último registro" trae el de ayer aunque hoy ya tenga algo guardado.
+    const antesDe = e.parameter.antesDe ? fechaISO_(e.parameter.antesDe) : '';
     if (!obraId) return jsonOut_({ ok: false, error: 'obraId requerido' });
+    const sinPrevios = antesDe ? { ok: false, error: 'Sin registros previos', antesDe: antesDe } : { ok: false, error: 'Sin registros previos' };
     const sheet = getRegistrosSheet_();
     const last = sheet.getLastRow();
-    if (last < 2) return jsonOut_({ ok: false, error: 'Sin registros previos' });
+    if (last < 2) return jsonOut_(sinPrevios);
     // Se busca la fecha más reciente leyendo solo A:B; el dataJson se trae
     // después, y solo el de esa única fila.
     const colAB = sheet.getRange(2, 1, last - 1, 2).getValues();
@@ -496,15 +504,18 @@ function doGet(e) {
     for (let i = 0; i < colAB.length; i++) {
       if (colAB[i][0] !== obraId) continue;
       const f = fechaISO_(colAB[i][1]);
+      if (antesDe && !(f < antesDe)) continue;
       if (mejorFecha === null || f > mejorFecha) { mejorFecha = f; mejorFila = i + 2; }
     }
-    if (mejorFila === -1) return jsonOut_({ ok: false, error: 'Sin registros previos' });
+    if (mejorFila === -1) return jsonOut_(sinPrevios);
     const rawUltimo = sheet.getRange(mejorFila, 3).getValue();
     let parsedUltimo;
     try { parsedUltimo = JSON.parse(rawUltimo); } catch (err) {
       return ContentService.createTextOutput(rawUltimo).setMimeType(ContentService.MimeType.JSON);
     }
-    return jsonOut_(inyectarFirmas_(parsedUltimo, cargarFirmasPorRegistro_(obraId + '|' + mejorFecha)));
+    const salida = inyectarFirmas_(parsedUltimo, cargarFirmasPorRegistro_(obraId + '|' + mejorFecha));
+    salida.fecha = mejorFecha;
+    return jsonOut_(salida);
   }
 
   // Bitácora de una obra o de una persona: ?action=history&clave=OBRA-...&token=...
@@ -538,7 +549,53 @@ function doGet(e) {
 
 /* ================= ESCRITURA ================= */
 
+// Cualquier error del script vuelve como datos ({ok:false,error}) y no como una
+// página de error de Google, que en el celular se ve como "Load failed".
 function doPost(e) {
+  try {
+    return doPostInterno_(e);
+  } catch (err) {
+    console.error('doPost: ' + (err && err.stack || err));
+    return jsonOut_({ ok: false, error: 'Error en el servidor: ' + (err && err.message || err) });
+  }
+}
+
+/** Misma clave que usa el anexo en el navegador (claveP): cédula o nombre. */
+function clavePersona_(p) {
+  const c = String((p && p.cedula) || '').replace(/[^0-9A-Za-z]/g, '');
+  return c ? 'C:' + c : 'N:' + String((p && p.nombre) || '').trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+/** Suma lo nuevo al registro que ya había ese día (dos celulares no se pisan).
+ *  `quitar` es la lista explícita de claves a sacar. Si alguien ya estaba y
+ *  llega sin firma, conserva la que tenía. El verificador solo se cambia si
+ *  viene uno nuevo con nombre. */
+function mezclarRegistro_(previo, nuevo, quitar, opId) {
+  const fuera = {};
+  (quitar || []).forEach(k => { fuera[k] = true; });
+  const lista = [], idx = {};
+  ((previo && previo.trabajadores) || []).forEach(t => {
+    const k = clavePersona_(t);
+    if (fuera[k]) return;
+    idx[k] = lista.length; lista.push(t);
+  });
+  ((nuevo && nuevo.trabajadores) || []).forEach(t => {
+    const k = clavePersona_(t), p = Object.assign({}, t);
+    if (k in idx) { if (!p.firma) p.firma = lista[idx[k]].firma; lista[idx[k]] = p; }
+    else { idx[k] = lista.length; lista.push(p); }
+  });
+  const opIds = ((previo && previo.opIds) || []).slice();
+  if (opId && opIds.indexOf(opId) === -1) opIds.push(opId);
+  const verifNuevo = nuevo && nuevo.verificador && nuevo.verificador.nombre ? nuevo.verificador : null;
+  return Object.assign({}, previo || {}, nuevo || {}, {
+    trabajadores: lista,
+    verificador: verifNuevo || (previo && previo.verificador) || null,
+    permisos: (nuevo && nuevo.permisos && nuevo.permisos.length) ? nuevo.permisos : ((previo && previo.permisos) || (nuevo && nuevo.permisos) || []),
+    opIds: opIds
+  });
+}
+
+function doPostInterno_(e) {
   const body = JSON.parse(e.postData.contents);
   if (!checkToken_(body.token)) {
     // Se registra el intento SIN el contenido: si alguien está probando tokens
@@ -644,9 +701,14 @@ function doPost(e) {
       }
       const sheet = getRegistrosSheet_();
       const mapaFirmas = [];
-      const dataSinFirmas = extraerFirmas_(body.data, mapaFirmas);
-      const json = JSON.stringify(dataSinFirmas);
       const rowIndex = buscarFilaRegistro_(sheet, obraId, fecha); // solo lee A:B
+      // Lo que ya había ese día (con sus firmas como SIGREF) + lo nuevo.
+      let previo = null;
+      if (rowIndex !== -1) {
+        try { previo = JSON.parse(sheet.getRange(rowIndex, 3).getValue()); } catch (err) { previo = null; }
+      }
+      const dataSinFirmas = mezclarRegistro_(previo, extraerFirmas_(body.data || {}, mapaFirmas), body.quitar, body.opId);
+      const json = JSON.stringify(dataSinFirmas);
       // Resumen para las columnas E/F, para que el historial no tenga que abrir
       // el dataJson de cada día.
       const cantidad = (dataSinFirmas.trabajadores || []).length;

@@ -63,7 +63,7 @@ const FORMATOS_EPP = {
       'GAFAS TRANSPARENTES','GAFAS OSCURAS','GAFAS DE SOBREPONER','PROTECTOR AUDITIVO',
       'PROTECCIÓN RESPIRATORIA MEDIA CARA','FILTROS / CARTUCHO','PREFILTRO',
       'PETO MANGAS / CHAQUETA SOLDADOR','GUANTES DE CAUCHO NITRILO','GUANTES DE VAQUETA',
-      'GUANTES DE PRECISIÓN','BOTAS DE SEGURIDAD','CARNÉT'
+      'GUANTES DE PRECISIÓN','GUANTES DE IMPACTO / ANTICORTE','BOTAS DE SEGURIDAD','CARNÉT'
     ].map(function(n){ return { nombre: n, cantidad: null }; })
   },
   brigadista: {
@@ -92,7 +92,25 @@ function formatoDe_(tipo) {
 // Se mantiene por compatibilidad: varias partes del código ya la usaban.
 const ELEMENTOS_EPP = FORMATOS_EPP.epp.elementos.map(function(e){ return e.nombre; });
 
+/* ── CLAVE DEL PORTAL ──────────────────────────────────────────
+   Igual que en los demás backends: el API_TOKEN está en config.js, que es
+   público. La clave del portal se escribe AQUÍ (o en Configuración del
+   proyecto → Propiedades de la secuencia de comandos → CLAVE_PORTAL, que
+   tiene prioridad). Mientras diga ESCRIBE_AQUI…, se sigue aceptando el
+   token de siempre, para que nada se caiga mientras se actualiza. */
+const CLAVE_PORTAL = 'ESCRIBE_AQUI_LA_CLAVE_DEL_PORTAL';
+
+function claveConfigurada_() {
+  let c = '';
+  try { c = PropertiesService.getScriptProperties().getProperty('CLAVE_PORTAL') || ''; } catch (e) { c = ''; }
+  if (!c && CLAVE_PORTAL && CLAVE_PORTAL.indexOf('ESCRIBE_AQUI') !== 0) c = CLAVE_PORTAL;
+  return String(c).trim();
+}
+
 function checkToken_(token) {
+  const clave = claveConfigurada_();
+  // Con clave configurada, SOLO la clave sirve: el token de config.js es público.
+  if (clave) return String(token || '') === clave;
   return token === API_TOKEN;
 }
 
@@ -395,11 +413,230 @@ function enviarSolicitudReposicion_(datos, inspeccionId) {
 
 /* ================= ESCRITURA ================= */
 
+
+/* ================= ENTREGAS DE EPP (SSTA-F-013 y SSTA-F-014) ==========
+   Cierra el ciclo de la inspección: lo que se calificó en M queda
+   "pendiente por entregar" hasta que se le entrega el elemento nuevo al
+   trabajador. Las pérdidas no necesitan inspección previa.
+
+     · SSTA-F-014 — Reposición por DESGASTE (lo que estaba en mal estado)
+     · SSTA-F-013 — Reposición por PÉRDIDA
+
+   Una entrega puede traer elementos de los dos motivos: se guarda una fila
+   por motivo, porque cada uno se imprime en su propio formato. Las dos filas
+   comparten el mismo "grupo" y la misma firma del trabajador.
+   ===================================================================== */
+const ENTREGAS_SHEET_NAME = 'Entregas';
+const FORMATOS_ENTREGA = {
+  desgaste: { codigo: 'SSTA-F-014', titulo: 'Reposición por desgaste' },
+  perdida:  { codigo: 'SSTA-F-013', titulo: 'Reposición por pérdida' }
+};
+const COLS_ENTREGAS = ['entregaId', 'grupo', 'formato', 'motivo', 'fecha', 'cedula', 'nombre',
+                       'cargo', 'centroCosto', 'elementos', 'descripcion', 'inspeccionesOrigen',
+                       'entregadoPor', 'dataJson', 'updatedAt'];
+
+function getEntregasSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(ENTREGAS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(ENTREGAS_SHEET_NAME);
+    sheet.appendRow(COLS_ENTREGAS);
+    sheet.setFrozenRows(1);
+    SpreadsheetApp.flush();
+  }
+  return sheet;
+}
+
+function genEntregaId_() {
+  const d = new Date();
+  return 'ENT-' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0')
+    + '-' + String(Math.floor(Math.random() * 900000) + 100000);
+}
+
+function textoElemento_(it) {
+  return String(it.elemento || '') + (it.detalle ? ' (' + it.detalle + ')' : '') +
+         (Number(it.cantidad) > 1 ? ' x' + Number(it.cantidad) : '');
+}
+
+/** Guarda una entrega. Se valida aquí también: lo que queda en la hoja es el
+ *  soporte de que el trabajador recibió, así que no se acepta incompleto. */
+function guardarEntrega_(body) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    if (body.opId && opIdYaAplicado_(body.opId)) {
+      registrarEvento_(body.entregaId || '', 'ENTREGA', 'DUPLICADO', 'opId ya aplicado; no se repite',
+                       body.opId, body.nombre || '', body.entregadoPor || '', '');
+      return jsonOut_({ ok: true, entregaId: body.entregaId, duplicado: true });
+    }
+    const items = (Array.isArray(body.items) ? body.items : []).filter(it => it && it.elemento)
+      .map(it => ({
+        elemento: String(it.elemento).trim().toUpperCase(),
+        detalle: String(it.detalle || '').trim().toUpperCase(),
+        cantidad: Math.max(1, parseInt(it.cantidad, 10) || 1),
+        motivo: it.motivo === 'perdida' ? 'perdida' : 'desgaste',
+        inspeccionId: String(it.inspeccionId || ''),
+        origen: String(it.origen || '').trim().toUpperCase()   // elemento pendiente que cierra
+      }));
+    const faltan = [];
+    if (!String(body.nombre || '').trim()) faltan.push('nombre del trabajador');
+    if (!String(body.cedula || '').trim()) faltan.push('cédula');
+    if (!items.length) faltan.push('al menos un elemento entregado');
+    if (!String(body.sigTrabajador || '').startsWith('data:image')) faltan.push('firma del trabajador');
+    const hayPerdida = items.some(it => it.motivo === 'perdida');
+    if (hayPerdida && !String(body.descripcionPerdida || '').trim()) faltan.push('qué pasó con lo perdido');
+    if (faltan.length) {
+      registrarEvento_(body.entregaId || '', 'ENTREGA', 'RECHAZADO', 'Falta: ' + faltan.join(', '),
+                       body.opId, body.nombre || '', body.entregadoPor || '', '');
+      return jsonOut_({ ok: false, error: 'Falta: ' + faltan.join(', ') + '.' });
+    }
+
+    const grupo = body.entregaId || genEntregaId_();
+    const ahora = new Date();
+    const fecha = body.fecha || Utilities.formatDate(ahora, 'America/Bogota', 'dd/MM/yyyy');
+    const sheet = getEntregasSheet_();
+    const mapaFirmas = [];
+    const guardadas = [];
+    ['desgaste', 'perdida'].forEach(motivo => {
+      const deEste = items.filter(it => it.motivo === motivo);
+      if (!deEste.length) return;
+      const id = grupo + (motivo === 'perdida' ? '-P' : '-D');
+      const limpio = extraerFirmas_({
+        formato: FORMATOS_ENTREGA[motivo].codigo, motivo: motivo, items: deEste,
+        descripcion: motivo === 'perdida' ? String(body.descripcionPerdida || '') : '',
+        observaciones: String(body.observaciones || ''),
+        sigTrabajador: body.sigTrabajador
+      }, mapaFirmas);
+      const origen = deEste.map(it => it.inspeccionId).filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i).join(' | ');
+      const fila = [id, grupo, FORMATOS_ENTREGA[motivo].codigo, motivo, fecha,
+                    String(body.cedula || '').trim(), String(body.nombre || '').trim(),
+                    body.cargo || '', body.centroCosto || '',
+                    deEste.map(textoElemento_).join(' | '),
+                    motivo === 'perdida' ? String(body.descripcionPerdida || '') : '',
+                    origen, body.entregadoPor || '', JSON.stringify(limpio), ahora];
+      const existe = filasPorValor_(sheet, 1, id);
+      if (existe.length) sheet.getRange(existe[0], 1, 1, fila.length).setValues([fila]);
+      else sheet.appendRow(fila);
+      guardadas.push({ entregaId: id, formato: FORMATOS_ENTREGA[motivo].codigo, motivo: motivo, n: deEste.length });
+    });
+    // Las dos filas comparten la firma: se guarda una sola vez, con el grupo.
+    guardarFirmas_(grupo, mapaFirmas.filter((f, i, a) => a.findIndex(x => x.sigKey === f.sigKey) === i));
+    registrarEvento_(grupo, 'ENTREGA', 'APLICADO',
+                     guardadas.map(g => g.formato + ': ' + g.n + ' elemento(s)').join(' · '),
+                     body.opId, body.nombre || '', body.entregadoPor || '', '');
+    return jsonOut_({ ok: true, entregaId: grupo, registros: guardadas });
+  } catch (err) {
+    registrarEvento_(body.entregaId || '', 'ENTREGA', 'RECHAZADO', 'Error: ' + err.message,
+                     body.opId, body.nombre || '', body.entregadoPor || '', '');
+    return jsonOut_({ ok: false, error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function fechaOrden_(v) {
+  if (v instanceof Date) return v.getTime();
+  const t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
+/** Elementos en M que aún no se han entregado. Por trabajador (cedula) o de
+ *  todos. Un elemento deja de estar pendiente si:
+ *    - se entregó DESPUÉS de esa inspección (con o sin referencia a ella), o
+ *    - una inspección posterior lo calificó B o R (ya lo tiene en buen estado). */
+function calcularPendientes_(cedula) {
+  const insp = getSheet_();
+  const lastI = insp.getLastRow();
+  const porPersona = {};   // cedula -> { nombre, cargo, pend: { elemento: {...} } }
+  if (lastI >= 2) {
+    const filasI = cedula ? filasPorValor_(insp, 2, cedula) : null;
+    const leer = filasI ? filasI.map(r => insp.getRange(r, 1, 1, 9).getValues()[0])
+                        : insp.getRange(2, 1, lastI - 1, 9).getValues();
+    leer.filter(f => f[0] && f[1])
+      .sort((a, b) => fechaOrden_(a[8]) - fechaOrden_(b[8]))
+      .forEach(f => {
+        let datos = {};
+        try { datos = JSON.parse(f[7] || '{}'); } catch (err) { datos = {}; }
+        if ((datos.tipo || 'epp') !== 'epp') return;   // brigadistas: otro proceso
+        const cc = String(f[1]).trim();
+        const p = porPersona[cc] || (porPersona[cc] = { cedula: cc, nombre: f[2], cargo: f[3], pend: {} });
+        p.nombre = f[2] || p.nombre; p.cargo = f[3] || p.cargo;
+        const items = datos.items || {};
+        Object.keys(items).forEach(el => {
+          if (items[el] === 'M') {
+            p.pend[el] = { elemento: el, inspeccionId: f[0], fechaInspeccion: f[4], ts: fechaOrden_(f[8]) };
+          } else if (items[el] === 'B' || items[el] === 'R') {
+            delete p.pend[el];
+          }
+        });
+      });
+  }
+  // Quitar lo ya entregado
+  const ent = getEntregasSheet_();
+  const lastE = ent.getLastRow();
+  if (lastE >= 2) {
+    const filasE = cedula ? filasPorValor_(ent, 6, cedula) : null;
+    const leer = filasE ? filasE.map(r => ent.getRange(r, 1, 1, COLS_ENTREGAS.length).getValues()[0])
+                        : ent.getRange(2, 1, lastE - 1, COLS_ENTREGAS.length).getValues();
+    leer.forEach(f => {
+      const p = porPersona[String(f[5]).trim()];
+      if (!p) return;
+      let datos = {};
+      try { datos = JSON.parse(f[13] || '{}'); } catch (err) { datos = {}; }
+      const tsEntrega = fechaOrden_(f[14]);
+      (datos.items || []).forEach(it => {
+        const pend = p.pend[it.origen || it.elemento] || p.pend[it.elemento];
+        if (!pend) return;
+        if (it.inspeccionId === pend.inspeccionId || tsEntrega >= pend.ts) delete p.pend[pend.elemento];
+      });
+    });
+  }
+  return Object.keys(porPersona).map(cc => {
+    const p = porPersona[cc];
+    return { cedula: p.cedula, nombre: p.nombre, cargo: p.cargo,
+             pendientes: Object.keys(p.pend).map(k => {
+               const x = p.pend[k];
+               return { elemento: x.elemento, inspeccionId: x.inspeccionId, fechaInspeccion: x.fechaInspeccion };
+             }) };
+  }).filter(p => p.pendientes.length);
+}
+
+/** Listado de entregas. Con &full=1 trae los elementos y la firma, que es lo
+ *  que necesita la planilla imprimible del formato. */
+function listarEntregas_(params) {
+  const sheet = getEntregasSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const datosHoja = params.cedula
+    ? filasPorValor_(sheet, 6, params.cedula).map(r => sheet.getRange(r, 1, 1, COLS_ENTREGAS.length).getValues()[0])
+    : sheet.getRange(2, 1, last - 1, COLS_ENTREGAS.length).getValues();
+  const completo = params.full === '1';
+  const firmasPorGrupo = {};
+  const out = [];
+  datosHoja.forEach(f => {
+    if (!f[0]) return;
+    if (params.formato && f[2] !== params.formato) return;
+    const reg = { entregaId: f[0], grupo: f[1], formato: f[2], motivo: f[3], fecha: f[4], cedula: f[5],
+                  nombre: f[6], cargo: f[7], centroCosto: f[8], elementos: f[9], descripcion: f[10],
+                  inspeccionesOrigen: f[11], entregadoPor: f[12], updatedAt: f[14] };
+    if (completo) {
+      let datos = {};
+      try { datos = JSON.parse(f[13] || '{}'); } catch (err) { datos = {}; }
+      if (!firmasPorGrupo[f[1]]) firmasPorGrupo[f[1]] = cargarFirmasPorId_(f[1]);
+      reg.datos = rehidratarFirmas_(datos, firmasPorGrupo[f[1]]);
+    }
+    out.push(reg);
+  });
+  out.sort((a, b) => fechaOrden_(b.updatedAt) - fechaOrden_(a.updatedAt));
+  return out.slice(0, completo ? 150 : 400);
+}
+
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
   if (!checkToken_(body.token)) {
     registrarEvento_('', 'INSPECCION', 'RECHAZADO', 'Token inválido', '', '', '', '');
-    return jsonOut_({ ok: false, error: 'Token inválido.' });
+    return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
   }
 
   // Envío manual del resumen del día, disparado por el botón del portal. Va
@@ -410,6 +647,9 @@ function doPost(e) {
     const seEnvio = resultado.indexOf('Resumen enviado') === 0;
     return jsonOut_({ ok: seEnvio, mensaje: resultado });
   }
+
+  // Entrega de EPP (reposición por desgaste o por pérdida).
+  if (body.action === 'entrega') return guardarEntrega_(body);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -529,12 +769,21 @@ function genInspeccionId_() {
 /* ================= LECTURA ================= */
 
 function doGet(e) {
-  if (!checkToken_(e.parameter.token)) return jsonOut_({ ok: false, error: 'Token inválido.' });
+  if (!checkToken_(e.parameter.token)) return jsonOut_({ ok: false, error: 'Clave del portal incorrecta o faltante (Token inválido).', codigoError: 'CLAVE' });
 
   // Catálogo de elementos: el frontend lo pide para no tener la lista duplicada
   // en dos sitios que se puedan desincronizar.
   if (e.parameter.action === 'elementos') {
     return jsonOut_({ ok: true, elementos: ELEMENTOS_EPP });
+  }
+
+  // Elementos pendientes por entregar (todos, o de una cédula).
+  if (e.parameter.action === 'pendientes') {
+    return jsonOut_({ ok: true, personas: calcularPendientes_(e.parameter.cedula || '') });
+  }
+  // Entregas registradas (para el historial y la planilla del formato).
+  if (e.parameter.action === 'entregas') {
+    return jsonOut_({ ok: true, rows: listarEntregas_(e.parameter) });
   }
 
   // Detalle de una inspección puntual, con las firmas rehidratadas.
