@@ -567,6 +567,10 @@ function pelDe(pi) {
 }
 function claseDe(pi) { const p = PEL[pi.id]; return p ? CLASE[p.clase].nombre : (pi.clase || 'Otro'); }
 const CLAVE_BORRADOR = 'ats-borrador';
+/* La tarea que se está editando vive aparte del ATS (solo entra a `ats.tareas`
+   al pulsar "Guardar tarea"), así que tiene su propio respaldo: salir a medias
+   ya no pierde lo escrito en ella. */
+const CLAVE_BORRADOR_TAREA = 'ats-borrador-tarea';
 const CLAVE_PLANTILLAS = 'ats-plantillas';
 let uidSeq = Date.now();
 const uid = () => 'u' + (uidSeq++).toString(36);
@@ -683,12 +687,14 @@ function controlesCatalogo(id) {
 
 /* ================= GUARDADO ================= */
 let timerGuardar = null;
+let ultimoRespaldo = null; // última vez que se respaldó en este dispositivo
 function guardar(opts) {
   if (!(opts && opts.sinCambios)) ats.sucio = true;
   clearTimeout(timerGuardar);
   timerGuardar = setTimeout(() => {
     const ok = DraftStore.save(CLAVE_BORRADOR, ats);
     if (!ok) { $('estadoGuardado').textContent = '⚠️ No se pudo guardar el borrador en este dispositivo.'; return; }
+    ultimoRespaldo = new Date();
     actualizarEstado();
   }, 600);
 }
@@ -706,10 +712,11 @@ function actualizarEstado() {
   const el = $('estadoGuardado');
   el.classList.remove('sucio', 'subido');
   const hora = (d) => new Date(d).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-  if (!urlAts()) { el.textContent = 'Borrador guardado en este dispositivo.'; return; }
-  if (!ats.code) { el.textContent = 'Guardado solo en este dispositivo: todavía no se ha subido.'; return; }
+  const resp = ultimoRespaldo ? ' (' + hora(ultimoRespaldo) + ')' : '';
+  if (!urlAts()) { el.textContent = 'Borrador guardado en este dispositivo' + resp + '.'; return; }
+  if (!ats.code) { el.textContent = 'Guardado solo en este dispositivo' + resp + ': todavía no se ha subido.'; return; }
   if (cerrado) { el.textContent = '🔒 ' + ats.code + ' cerrado · solo consulta e impresión'; return; }
-  if (ats.sucio) { el.textContent = ats.code + ' · hay cambios sin subir al servidor'; el.classList.add('sucio'); return; }
+  if (ats.sucio) { el.textContent = ats.code + ' · hay cambios sin subir al servidor' + (resp ? ' · respaldo en este equipo' + resp : ''); el.classList.add('sucio'); return; }
   el.textContent = '✓ ' + ats.code + ' guardado en el servidor (versión ' + ats.version + (ats.subidoEn ? ', ' + hora(ats.subidoEn) : '') + ')';
   el.classList.add('subido');
 }
@@ -720,7 +727,21 @@ function guardarYa() {
   clearTimeout(timerGuardar);
   lectoresFirma.forEach((f) => { try { f(); } catch (e) { /* lienzo ya retirado */ } });
   DraftStore.save(CLAVE_BORRADOR, ats);
+  ultimoRespaldo = new Date();
+  persistirEditando();
 }
+/* Respaldo de la tarea en edición: se guarda mientras se escribe (a los 0,5 s)
+   y al salir. Si no hay tarea abierta (se guardó o se canceló) se borra, así
+   no reaparece una tarea que ya no se está editando. La referencia al código
+   del ATS evita devolverla en un ATS distinto. */
+function persistirEditando() {
+  if (!editando || ats.estado === 'CERRADO') { DraftStore.clear(CLAVE_BORRADOR_TAREA); return; }
+  DraftStore.save(CLAVE_BORRADOR_TAREA, { ref: ats.code || '', t: editando });
+}
+const persistirEditandoPronto = debounce(persistirEditando, 500);
+['input', 'change', 'click', 'pointerup'].forEach((ev) => {
+  $('editorTarea').addEventListener(ev, () => { if (editando) persistirEditandoPronto(); });
+});
 window.addEventListener('pagehide', guardarYa);
 document.addEventListener('visibilitychange', () => { if (document.hidden) guardarYa(); });
 function toast(msg) {
@@ -1004,6 +1025,7 @@ function renderQueSigue() {
 function renderTodoTareas() {
   renderTareas(); renderEditor(); renderQueSigue(); renderAlertaPermisos();
   renderEpp(); renderHerr(); renderEmerg();
+  persistirEditando(); // abrir una tarea la respalda; guardarla o cancelarla borra el respaldo
 }
 
 /* Al guardar una tarea, el EPP y los equipos de emergencia que exigen sus
@@ -2528,7 +2550,7 @@ function irAlEditor() {
   cargarTodo(); actualizarEstado();
   window.scrollTo(0, 0);
 }
-function hayBorrador() { return !!(ats.tareas.length || ats.participantes.length || (ats.cab.trabajo || '').trim()); }
+function hayBorrador() { return !!(ats.tareas.length || ats.participantes.length || (ats.cab.trabajo || '').trim() || editando); }
 function pintarMenu() {
   const hay = hayBorrador();
   $('menuContinuar').hidden = !hay;
@@ -2688,7 +2710,7 @@ async function pintarListaServidor() {
 function empezarNuevo() {
   // Si el ATS en curso ya está completo en el servidor, no hay nada que perder.
   const aSalvo = ats.code && !ats.sucio;
-  if (!aSalvo && (ats.tareas.length || ats.participantes.length) && !confirm('¿Empezar un ATS nuevo? El actual se borra de este dispositivo (guárdalo antes como plantilla o PDF si lo necesitas).')) return false;
+  if (!aSalvo && (ats.tareas.length || ats.participantes.length || editando) && !confirm('¿Empezar un ATS nuevo? El actual se borra de este dispositivo (guárdalo antes como plantilla o PDF si lo necesitas).')) return false;
   ats = nuevoAts(); editando = null; ultimaGuardada = null;
   DraftStore.clear(CLAVE_BORRADOR);
   $('bannerBorrador').classList.remove('show');
@@ -2710,9 +2732,19 @@ function cargarTodo() {
     const base = nuevoAts();
     ats = Object.assign(base, b.data);
     ats.cab = Object.assign(base.cab, b.data.cab);
-    const hayAlgo = ats.tareas.length || ats.participantes.length || ats.cab.trabajo;
+  }
+  // La tarea que estaba abierta en el editor cuando se salió.
+  const bt = DraftStore.load(CLAVE_BORRADOR_TAREA);
+  let tareaRecuperada = false;
+  if (bt && bt.data && bt.data.t && (bt.data.ref || '') === (ats.code || '') && ats.estado !== 'CERRADO') {
+    editando = bt.data.t;
+    tareaRecuperada = true;
+  }
+  {
+    const hayAlgo = ats.tareas.length || ats.participantes.length || ats.cab.trabajo || tareaRecuperada;
     if (hayAlgo) {
-      $('bannerTexto').textContent = 'Se recuperó el ATS en curso (guardado ' + formatSavedAt(b.savedAt) + ').';
+      $('bannerTexto').textContent = 'Se recuperó el ATS en curso' + (b ? ' (guardado ' + formatSavedAt(b.savedAt) + ')' : '') + '.' +
+        (tareaRecuperada ? ' Quedó abierta la tarea «' + (editando.titulo || 'sin nombre').slice(0, 60) + '» que estabas editando: sigue donde ibas.' : '');
       $('bannerBorrador').classList.add('show');
     }
   }

@@ -787,7 +787,7 @@ grupo('ATS amarrado con sus permisos', () => {
   ok('el ATS abre cada permiso que requiere con datos y personal', /function abrirPermisoDesdeAts/.test(h) && /personas: ats\.participantes\.map/.test(h) && /'\?desdeAts=1'/.test(h));
   ok('los permisos del ATS se mapean a su backend', /const PERMISO_A_BACKEND = \{ caliente: 'caliente', alturas: 'alturas', confinados: 'confinados', izaje: 'izajes', electrico: 'electrico' \}/.test(h));
   ok('el permiso toma los datos solo si son recientes y de su tipo', /Date\.now\(\) - \(p\.t \|\| 0\) > 30 \* 60000/.test(core) && /p\.tipo && tipo && p\.tipo !== tipo/.test(core));
-  ok('el permiso llega directo al formulario nuevo, después de cargar la página', /get\('desdeAts'\) === '1'\) \{[\s\S]{0,300}?setTimeout\(\(\) => \{ startNewPermit\(\);/.test(core));
+  ok('el permiso llega directo al formulario nuevo, después de cargar la página', /get\('desdeAts'\) === '1'\) \{[\s\S]{0,300}?setTimeout\(\(\) => \{ startNewPermit\(\{ sinRestaurar: true \}\);/.test(core));
   ok('el permiso guarda y restaura el ATS relacionado', /if \(atsRelacionado\) base\.atsRelacionado = atsRelacionado;/.test(core) && /atsRelacionado = data\.atsRelacionado \|\| null;/.test(core));
   ok('el permiso le devuelve su código al ATS', /'ssta-ats-permisos:' \+ atsRelacionado/.test(core) && /'ssta-ats-permisos:' \+ a\.code/.test(h));
   ok('la hoja impresa del permiso dice su ATS', /ATS relacionado: <b>' \+ esc\(atsRelacionado\)/.test(core));
@@ -1256,6 +1256,42 @@ grupo('Entregas de EPP (SSTA-F-013 / SSTA-F-014) en simulador', () => {
   ok('el service worker guarda los archivos de entregas para usarlos sin señal',
      /entregas-epp\.js/.test(leer('sw.js')) && /entregas-epp\.css/.test(leer('sw.js')));
 });
+/* ═══════════════════════════════════════════════════════════
+   AUTOGUARDADO — que salir a medias no obligue a empezar de nuevo
+   ═══════════════════════════════════════════════════════════ */
+grupo('Autoguardado de permisos y ATS', () => {
+  const core = leer('permiso-core.js'), ats = leer('ats.html'), css = leer('common.css');
+  ok('permisos: el borrador se guarda al ocultar o cerrar la página (no solo tras una pausa)',
+     /addEventListener\('pagehide', guardarBorradorYa_\)/.test(core) && /visibilitychange[\s\S]{0,80}guardarBorradorYa_/.test(core),
+     'Con solo la pausa de 1 s, salir justo después de escribir perdía lo último.');
+  ok('permisos: no se guarda un formulario que sigue igual que recién abierto',
+     /huellaOpen_\(data\) === baselineOpen/.test(core) && /huellaClose_\(data\) === baselineClose/.test(core),
+     'Cualquier toque dejaba un borrador vacío que pisaba uno real.');
+  ok('permisos: el borrador se restaura solo, sin tener que elegir',
+     /restaurarBorradorAbierto_\(draft\);[\s\S]{0,200}Se recuperó automáticamente/.test(core) && /aplicarDraftCierre_\(draft\.data\)/.test(core));
+  ok('permisos: un permiso que quedó en cola sin señal no se restaura solo (podría estar ya subido)',
+     /marcarBorradorEnCola_\(\);/.test(core) && /meta\.enCola/.test(core));
+  ok('permisos: se conserva el opId del primer envío al restaurar (no duplica)',
+     /opIdApertura = m\.opId/.test(core) && /localStorage\.setItem\(draftKeyOpenOpId\(\)/.test(core));
+  ok('permisos: tras guardar y verificar deja de respaldarse (no reaparece uno ya subido)',
+     /borradorTerminado = true/.test(core) && /if \(borradorTerminado \|\| enModoAgregarPersonal_\(\)\) return;/.test(core));
+  ok('permisos: repetir un permiso o abrirlo desde un ATS no restaura el borrador anterior',
+     /startNewPermit\(\{ sinRestaurar: true \}\);\n    const copia/.test(core));
+  ok('permisos: el aviso "Autoguardado" existe, se oculta al imprimir y está en el CSS',
+     /autoguardado-estado no-print/.test(core) && /\.autoguardado-estado\.visible/.test(css));
+  ok('ATS: la tarea que se está editando tiene su propio respaldo',
+     /const CLAVE_BORRADOR_TAREA = 'ats-borrador-tarea'/.test(ats) && /function persistirEditando\(\)/.test(ats),
+     'La tarea solo entra al ATS al pulsar "Guardar tarea": salir a medias la perdía.');
+  ok('ATS: el respaldo de la tarea se actualiza al escribir y al salir',
+     /persistirEditandoPronto\(\)/.test(ats) && /function guardarYa\(\) \{[\s\S]{0,400}persistirEditando\(\);/.test(ats));
+  ok('ATS: al volver se recupera la tarea abierta, solo si es del mismo ATS',
+     /\(bt\.data\.ref \|\| ''\) === \(ats\.code \|\| ''\)/.test(ats) && /editando = bt\.data\.t;/.test(ats));
+  ok('ATS: guardar o cancelar la tarea borra su respaldo',
+     /persistirEditando\(\); \/\/ abrir una tarea la respalda/.test(ats) && /if \(!editando \|\| ats\.estado === 'CERRADO'\) \{ DraftStore\.clear\(CLAVE_BORRADOR_TAREA\)/.test(ats));
+  ok('ATS: empezar uno nuevo avisa también si solo había una tarea a medias', /ats\.participantes\.length \|\| editando\) && !confirm/.test(ats));
+});
+
+
 
 console.log('║   PRUEBAS DEL PORTAL SSTA — antes de desplegar        ║');
 console.log('╚══════════════════════════════════════════════════════╝');

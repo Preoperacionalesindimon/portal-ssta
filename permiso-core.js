@@ -1097,85 +1097,216 @@ const PermisoCore = (function () {
     banner.innerHTML = '';
   }
 
-  /* ================= DRAFTS ================= */
+  /* ================= DRAFTS (AUTOGUARDADO) =================
+     El formulario se respalda solo en este dispositivo mientras se diligencia
+     y, al volver, se recupera solo: no hay que elegir ni volver a empezar.
+     Lo que lo hace confiable:
+     - Se guarda ~0,8 s después de dejar de escribir Y de inmediato si la
+       página se oculta o se cierra (pagehide / visibilitychange): salir justo
+       después de escribir ya no pierde lo último.
+     - Solo se guarda si hay algo distinto del formulario recién abierto. Antes
+       cualquier toque dejaba un borrador vacío que pisaba uno real anterior y
+       luego se ofrecía como si fuera trabajo perdido.
+     - Al volver se restaura automáticamente, con aviso y opción de empezar de
+       cero. Se conserva la clave de idempotencia del envío (opId) para que un
+       permiso que quedó en la cola sin señal no se duplique al reenviarlo.
+     - Si el permiso quedó en la cola de envíos (sin señal) NO se restaura solo:
+       se pregunta, porque puede que ya se haya subido.
+     - Tras guardar y verificar en el servidor deja de respaldarse: así no
+       reaparece un permiso que ya se subió. */
+  let baselineOpen = null;      // cómo se ve la apertura recién abierta y sin tocar
+  let baselineClose = null;     // ídem para el cierre (null = no hay cierre editable)
+  let borradorTerminado = false; // ya se subió y verificó: no se vuelve a respaldar
   function draftKeyOpen() {
     return 'indimon-draft-' + cfg.draftSlug + '-open';
+  }
+  function draftKeyOpenOpId() {
+    return draftKeyOpen() + '-opid';
   }
   function draftKeyClose(code) {
     return 'indimon-draft-' + cfg.draftSlug + '-close-' + code;
   }
   function dismissOpenDraftBannerOnEdit() {
-    // Antes esto ocultaba el aviso apenas el usuario tocaba cualquier campo,
-    // sin haber elegido "Restaurar" ni "Descartar" — el borrador anterior
-    // quedaba pisado por el autoguardado 1.2s después, sin ningún rastro
-    // visible de que eso había pasado. Ahora el aviso se queda fijo en
-    // pantalla hasta que el usuario elige explícitamente una de las dos
-    // opciones, aunque siga escribiendo en el formulario nuevo mientras tanto.
+    // El aviso de borrador se queda fijo hasta que el usuario elige una opción;
+    // tocar el formulario no lo oculta (ver historial: antes se perdía el
+    // borrador anterior sin rastro).
+  }
+  function huella_(d, quitar) {
+    try {
+      const c = Object.assign({}, d);
+      (quitar || []).forEach((k) => { delete c[k]; });
+      return JSON.stringify(c);
+    } catch (e) { return ''; }
+  }
+  function huellaOpen_(d) { return huella_(d || collectOpenData(), ['createdAt', 'permitCode']); }
+  function huellaClose_(d) { return huella_(d || collectCloseData(), ['closedAt']); }
+  function enModoAgregarPersonal_() {
+    return !!($('app') && $('app').classList.contains('modo-agregar-personal'));
+  }
+  function leerMetaBorrador_() {
+    try { return JSON.parse(localStorage.getItem(draftKeyOpenOpId()) || 'null'); } catch (e) { return null; }
+  }
+  function escribirMetaBorrador_(extra) {
+    try {
+      localStorage.setItem(draftKeyOpenOpId(), JSON.stringify(Object.assign({ code: permitCode, opId: opIdApertura }, extra || {})));
+    } catch (e) { /* si no cabe, el borrador igual se restaura; solo se pierde el opId */ }
+  }
+  function limpiarBorradorAbierto_() {
+    DraftStore.clear(draftKeyOpen());
+    DraftStore.clear(draftKeyOpenOpId());
+  }
+  /* Marca que el permiso quedó en la cola de envíos sin señal. El borrador se
+     conserva (red de seguridad), pero ya no se restaura solo. */
+  function marcarBorradorEnCola_() {
+    escribirMetaBorrador_({ enCola: true });
+  }
+  /* Aviso discreto "💾 Autoguardado hh:mm" que se desvanece solo. */
+  function marcarAutoguardado_() {
+    let el = $('autoguardadoEstado');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'autoguardadoEstado';
+      el.className = 'autoguardado-estado no-print';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    const hh = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = '💾 Autoguardado ' + hh;
+    el.classList.add('visible');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('visible'), 3500);
+  }
+  /* Guarda YA el estado actual del formulario (sin esperar la pausa). */
+  function guardarBorradorYa_() {
+    try {
+      if (borradorTerminado || enModoAgregarPersonal_()) return;
+      if (MODE === 'open') {
+        if (baselineOpen === null) return;
+        const data = collectOpenData();
+        if (huellaOpen_(data) === baselineOpen) {
+          // Quedó igual que al abrir: si había un borrador de ESTE permiso, ya no
+          // dice nada. Uno de otro permiso no se toca.
+          const previo = DraftStore.load(draftKeyOpen());
+          if (previo && previo.data && previo.data.permitCode === permitCode) limpiarBorradorAbierto_();
+          return;
+        }
+        if (DraftStore.save(draftKeyOpen(), data)) {
+          const m = leerMetaBorrador_();
+          // Si ya había quedado en cola, esa marca se conserva.
+          escribirMetaBorrador_(m && m.code === permitCode && m.enCola ? { enCola: true } : {});
+          marcarAutoguardado_();
+        }
+      } else if (MODE === 'close') {
+        if (baselineClose === null) return;
+        const data = collectCloseData();
+        if (huellaClose_(data) === baselineClose) {
+          DraftStore.clear(draftKeyClose(permitCode));
+          return;
+        }
+        if (DraftStore.save(draftKeyClose(permitCode), data)) marcarAutoguardado_();
+      }
+    } catch (e) {
+      console.error('Autoguardado falló:', e);
+    }
+  }
+  function mostrarAvisoBorrador_(texto, etqOk, etqNo, alOk, alNo) {
+    const banner = $('draftBanner');
+    $('draftBannerText').textContent = texto;
+    $('draftRestoreBtn').textContent = etqOk;
+    $('draftDiscardBtn').textContent = etqNo;
+    $('draftRestoreBtn').onclick = alOk;
+    $('draftDiscardBtn').onclick = alNo;
+    banner.classList.add('show');
+  }
+  function restaurarBorradorAbierto_(draft) {
+    loadOpenDataIntoForm(draft.data);
+    $('permitCodeDisplay').textContent = permitCode;
+    copiadoDe = draft.data.copiadoDe || null;
+    const m = leerMetaBorrador_();
+    if (m && m.code === permitCode && m.opId) opIdApertura = m.opId;
   }
   function checkForOpenDraft() {
     const draft = DraftStore.load(draftKeyOpen());
     const banner = $('draftBanner');
-    if (!draft) {
+    // Un borrador igual al formulario vacío no es trabajo que recuperar (los
+    // que dejó la versión anterior por tocar la pantalla).
+    if (!draft || !draft.data || huellaOpen_(draft.data) === baselineOpen) {
+      if (draft) limpiarBorradorAbierto_();
       banner.classList.remove('show');
       return;
     }
-    $('draftBannerText').textContent = `Hay un borrador sin guardar de un permiso de apertura (${formatSavedAt(draft.savedAt)}). Si sigues escribiendo aquí sin elegir una opción, ese borrador anterior se va a perder.`;
-    banner.classList.add('show');
-    $('draftRestoreBtn').onclick = () => {
-      if (draft.data.permitCode) {
-        permitCode = draft.data.permitCode;
-        $('permitCodeDisplay').textContent = permitCode;
+    const meta = leerMetaBorrador_();
+    const cuando = formatSavedAt(draft.savedAt);
+    if (meta && meta.code === draft.data.permitCode && meta.enCola) {
+      // Ya se intentó enviar: puede que el permiso ya esté en el servidor.
+      mostrarAvisoBorrador_(
+        'Hay un borrador de un permiso que quedó en cola sin señal (' + cuando + '). Puede que ya se haya subido: revisa el Dashboard antes de recuperarlo.',
+        'Recuperar borrador', 'Descartar',
+        () => { restaurarBorradorAbierto_(draft); banner.classList.remove('show'); $('footerStatus').textContent = 'Borrador restaurado. Continúe diligenciando y guarde cuando termine.'; },
+        () => { limpiarBorradorAbierto_(); banner.classList.remove('show'); }
+      );
+      return;
+    }
+    restaurarBorradorAbierto_(draft);
+    $('footerStatus').textContent = 'Se recuperó el permiso que estaba en curso. Continúe diligenciando y guarde cuando termine.';
+    mostrarAvisoBorrador_(
+      'Se recuperó automáticamente el permiso que estabas diligenciando (' + cuando + '). Todo lo escrito y firmado sigue aquí.',
+      'Entendido', 'Empezar uno nuevo',
+      () => { banner.classList.remove('show'); },
+      () => {
+        if (!confirm('¿Empezar un permiso nuevo? Se borra lo que se había diligenciado en este borrador.')) return;
+        limpiarBorradorAbierto_();
+        location.href = location.pathname + '?nuevo=1';
       }
-      loadOpenDataIntoForm(draft.data);
-      banner.classList.remove('show');
-      $('footerStatus').textContent = 'Borrador restaurado. Continúe diligenciando y guarde cuando termine.';
-    };
-    $('draftDiscardBtn').onclick = () => {
-      DraftStore.clear(draftKeyOpen());
-      banner.classList.remove('show');
-    };
+    );
+  }
+  function aplicarDraftCierre_(d) {
+    $('cierreFecha').value = d.cierreFecha || '';
+    $('cierreHora').value = d.cierreHora || '';
+    $('motivoCierre').value = d.motivoCierre || '';
+    ['q1', 'q2', 'q3', 'q4'].forEach((q) => {
+      if (d[q]) {
+        const r = document.querySelector(`input[name=${q}][value="${d[q]}"]`);
+        if (r) r.checked = true;
+      }
+    });
+    const signers = cfg.closeSigners || [
+      { idPrefix: 'cierre1', padKey: 'padCierre1', field: 'cierre1', combined: false },
+      { idPrefix: 'cierre2', padKey: 'padCierre2', field: 'cierre2', combined: false }
+    ];
+    signers.forEach((s) => {
+      const f = d[s.field] || {};
+      if (s.combined) {
+        if ($(s.idPrefix)) $(s.idPrefix).value = f.nombreCedula || '';
+      } else {
+        if ($(s.idPrefix + 'nombre')) $(s.idPrefix + 'nombre').value = f.nombre || '';
+        if ($(s.idPrefix + 'cc')) $(s.idPrefix + 'cc').value = f.cc || '';
+        if ($(s.idPrefix + 'cargo')) $(s.idPrefix + 'cargo').value = f.cargo || '';
+      }
+      if (pads[s.padKey] && f.sig) pads[s.padKey].setDataUrl(f.sig);
+    });
   }
   function checkForCloseDraft(code) {
     const draft = DraftStore.load(draftKeyClose(code));
     const banner = $('draftBanner');
-    if (!draft) {
+    if (!draft || !draft.data || huellaClose_(draft.data) === baselineClose) {
+      if (draft) DraftStore.clear(draftKeyClose(code));
       banner.classList.remove('show');
       return;
     }
-    $('draftBannerText').textContent = `Hay un borrador sin guardar del cierre de este permiso (${formatSavedAt(draft.savedAt)}).`;
-    banner.classList.add('show');
-    $('draftRestoreBtn').onclick = () => {
-      $('cierreFecha').value = draft.data.cierreFecha || '';
-      $('cierreHora').value = draft.data.cierreHora || '';
-      $('motivoCierre').value = draft.data.motivoCierre || '';
-      ['q1', 'q2', 'q3', 'q4'].forEach((q) => {
-        if (draft.data[q]) {
-          const r = document.querySelector(`input[name=${q}][value="${draft.data[q]}"]`);
-          if (r) r.checked = true;
-        }
-      });
-      const signers = cfg.closeSigners || [
-        { idPrefix: 'cierre1', padKey: 'padCierre1', field: 'cierre1', combined: false },
-        { idPrefix: 'cierre2', padKey: 'padCierre2', field: 'cierre2', combined: false }
-      ];
-      signers.forEach((s) => {
-        const d = draft.data[s.field] || {};
-        if (s.combined) {
-          if ($(s.idPrefix)) $(s.idPrefix).value = d.nombreCedula || '';
-        } else {
-          if ($(s.idPrefix + 'nombre')) $(s.idPrefix + 'nombre').value = d.nombre || '';
-          if ($(s.idPrefix + 'cc')) $(s.idPrefix + 'cc').value = d.cc || '';
-          if ($(s.idPrefix + 'cargo')) $(s.idPrefix + 'cargo').value = d.cargo || '';
-        }
-        if (pads[s.padKey] && d.sig) pads[s.padKey].setDataUrl(d.sig);
-      });
-      banner.classList.remove('show');
-      $('footerStatus').textContent = 'Borrador de cierre restaurado. Continúe y guarde cuando termine.';
-    };
-    $('draftDiscardBtn').onclick = () => {
-      DraftStore.clear(draftKeyClose(code));
-      banner.classList.remove('show');
-    };
+    aplicarDraftCierre_(draft.data);
+    $('footerStatus').textContent = 'Se recuperó el cierre que estaba en curso. Continúe y guarde cuando termine.';
+    mostrarAvisoBorrador_(
+      'Se recuperó automáticamente el cierre que estabas diligenciando (' + formatSavedAt(draft.savedAt) + ').',
+      'Entendido', 'Empezar de cero',
+      () => { banner.classList.remove('show'); },
+      () => {
+        if (!confirm('¿Empezar el cierre de cero? Se borra lo que se había diligenciado en este borrador.')) return;
+        DraftStore.clear(draftKeyClose(code));
+        location.reload();
+      }
+    );
   }
 
   /* ================= FLUJO DE PANTALLAS ================= */
@@ -1184,8 +1315,10 @@ const PermisoCore = (function () {
     $('app').style.display = 'block';
     $('footerActions').style.display = 'flex';
   }
-  function startNewPermit() {
+  function startNewPermit(opts) {
     MODE = 'open';
+    borradorTerminado = false;
+    baselineClose = null;
     permitCode = genCode();
     firstSaveDone = false;
     // Clave de idempotencia del PRIMER guardado de este permiso. Se genera una
@@ -1206,7 +1339,13 @@ const PermisoCore = (function () {
     $('closeFields').classList.add('hidden');
     atsRelacionado = null; codigoAvisadoAlAts = null; copiadoDe = null;
     pintarAtsRelacionado_();
-    checkForOpenDraft();
+    // Cómo se ve el permiso recién abierto: lo que no se aparte de esto no se
+    // respalda. Se toma antes de restaurar un borrador anterior.
+    baselineOpen = huellaOpen_();
+    $('draftBanner').classList.remove('show');
+    // Un permiso que viene de otro (repetir, o abierto desde un ATS) no
+    // restaura el borrador anterior: ya trae sus propios datos.
+    if (!(opts && opts.sinRestaurar === true)) checkForOpenDraft();
     aplicarPrefillDesdeAts_();
   }
   async function openCloseModeWithCode(code) {
@@ -1214,6 +1353,9 @@ const PermisoCore = (function () {
     const data = await fetchFromSheet(code);
     if (!data) return;
     MODE = 'close';
+    borradorTerminado = false;
+    baselineOpen = null;
+    baselineClose = null;
     goToApp();
     initRender();
     loadOpenDataIntoForm(data);
@@ -1238,6 +1380,7 @@ const PermisoCore = (function () {
       $('footerStatus').textContent = 'Permiso cerrado — solo consulta. No se puede modificar.';
     } else {
       $('mainActionBtn').style.display = '';
+      baselineClose = huellaClose_();
       checkForCloseDraft(permitCode);
     }
   }
@@ -1629,6 +1772,8 @@ const PermisoCore = (function () {
             lockOpenSections();
             mostrarQrDelPermiso();
             DraftStore.clear(draftKeyOpen());
+            DraftStore.clear(draftKeyOpenOpId());
+            borradorTerminado = true; // ya está en el servidor: no se vuelve a respaldar
           } else {
             btn.disabled = false; // se puede reintentar sin volver a llenar nada
           }
@@ -1637,6 +1782,7 @@ const PermisoCore = (function () {
           if (typeof Outbox !== 'undefined') {
             try {
               await Outbox.add(getWebAppUrl(), Object.assign({}, data, { token: PORTAL_CONFIG.API_TOKEN }));
+              marcarBorradorEnCola_(); // el borrador se conserva, pero ya no se restaura solo
               if (typeof Jornada !== 'undefined') Jornada.marcarPermiso(tipoDeEstaPagina_(), permitCode, atsRelacionado, true);
               $('footerStatus').textContent = res.error || 'Sin conexión — quedó guardado y se reintentará solo. Verás un aviso abajo mientras esté pendiente.';
             } catch (e) {
@@ -1658,6 +1804,7 @@ const PermisoCore = (function () {
           const verif = await verificarGuardado_(permitCode, full);
           if (mostrarVerificacion_(verif, 'cierre')) {
             DraftStore.clear(draftKeyClose(permitCode));
+            borradorTerminado = true;
           } else {
             btn.disabled = false;
           }
@@ -1678,24 +1825,16 @@ const PermisoCore = (function () {
       btn.textContent = originalText;
     });
 
-    $('app').addEventListener('input', () => {
-      if (MODE === 'open') {
-        dismissOpenDraftBannerOnEdit();
-        saveOpenDraftDebounced();
-      } else if (MODE === 'close') {
-        saveCloseDraftDebounced();
-      }
-    });
-    ['change', 'click', 'mouseup', 'touchend'].forEach((evt) => {
+    // Cualquier cambio programa el autoguardado. 'pointerup'/'touchend' cubren
+    // el trazo de una firma, que no dispara 'input'.
+    ['input', 'change', 'click', 'mouseup', 'touchend', 'pointerup'].forEach((evt) => {
       $('app').addEventListener(evt, () => {
-        if (MODE === 'open') {
-          dismissOpenDraftBannerOnEdit();
-          saveOpenDraftDebounced();
-        } else if (MODE === 'close') {
-          saveCloseDraftDebounced();
-        }
+        if (MODE === 'open' || MODE === 'close') saveOpenDraftDebounced();
       });
     });
+    // Salir (o que el celular bloquee la pantalla) guarda YA lo último escrito.
+    window.addEventListener('pagehide', guardarBorradorYa_);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) guardarBorradorYa_(); });
 
     $('printBtn').addEventListener('click', imprimirHoja);
     $('backToStartBtn').addEventListener('click', () => {
@@ -1709,7 +1848,11 @@ const PermisoCore = (function () {
     if (!codeFromUrl && new URLSearchParams(location.search).get('desdeAts') === '1') {
       // Después de que la página termine de definir sus selectores (herramientas,
       // gases…): init() corre antes de eso y abrir el permiso aquí mismo fallaba.
-      setTimeout(() => { startNewPermit(); history.replaceState(null, '', location.pathname); }, 0);
+      setTimeout(() => { startNewPermit({ sinRestaurar: true }); history.replaceState(null, '', location.pathname); }, 0);
+    }
+    if (!codeFromUrl && new URLSearchParams(location.search).get('nuevo') === '1') {
+      // "Empezar uno nuevo" desde el aviso de borrador: permiso en blanco.
+      setTimeout(() => { startNewPermit({ sinRestaurar: true }); history.replaceState(null, '', location.pathname); }, 0);
     }
     if (codeFromUrl) {
       $('codeInput').value = codeFromUrl;
@@ -1807,7 +1950,7 @@ const PermisoCore = (function () {
   async function repetirPermiso_(code) {
     const data = await fetchFromSheet(code);
     if (!data) return;
-    startNewPermit();
+    startNewPermit({ sinRestaurar: true });
     const copia = copiaParaRepetir_(data);
     copia.permitCode = permitCode;            // el código NUEVO, no el del permiso copiado
     loadOpenDataIntoForm(copia);
@@ -2238,14 +2381,9 @@ const PermisoCore = (function () {
     OutboxBadge.init();
     if (typeof ScrollProgress !== 'undefined' && cfg.themeColor) ScrollProgress.init(cfg.themeColor);
     cargarPersonalCompartido();
-    saveOpenDraftDebounced = debounce(() => {
-      if (MODE !== 'open') return;
-      DraftStore.save(draftKeyOpen(), collectOpenData());
-    }, 1200);
-    saveCloseDraftDebounced = debounce(() => {
-      if (MODE !== 'close') return;
-      DraftStore.save(draftKeyClose(permitCode), collectCloseData());
-    }, 1200);
+    // Un solo guardado que decide según el modo (apertura o cierre).
+    saveOpenDraftDebounced = debounce(guardarBorradorYa_, 800);
+    saveCloseDraftDebounced = saveOpenDraftDebounced;
     wireEvents();
     conectarPersonalACamposComunes();
     if (new URLSearchParams(location.search).get('debug') === '1') initDebugPanel_();
