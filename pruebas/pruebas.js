@@ -1154,7 +1154,11 @@ grupo('Legibilidad en obra', () => {
   };
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
-  const muted = /--ink-muted:\s*(#[0-9a-fA-F]{6})/.exec(css);
+  // Los colores viven en tokens.css: --ink-muted:var(--pizarra-550) se resuelve al hex real.
+  const tokens = leer('tokens.css');
+  const resolver = (v) => { let x = String(v || '').trim(), n = 0; while (/^var\(--/.test(x) && n++ < 5) { const m = new RegExp('(' + /^var\((--[\w-]+)\)/.exec(x)[1] + '):\\s*([^;]+);').exec(tokens); x = m ? m[2].trim() : ''; } return x; };
+  const mutedVal = resolver((/--ink-muted:\s*([^;]+);/.exec(css) || [])[1]);
+  const muted = /^#[0-9a-fA-F]{6}$/.test(mutedVal) ? [null, mutedVal] : null;
   ok('existe --ink-muted para el texto secundario', !!muted);
   if (muted) ok(`--ink-muted cumple 4.5:1 sobre blanco (${ratio(muted[1], '#ffffff').toFixed(2)}:1)`,
                 ratio(muted[1], '#ffffff') >= 4.5);
@@ -1167,6 +1171,11 @@ grupo('Legibilidad en obra', () => {
       const sinComentarios = t.replace(/\/\*[\s\S]*?\*\//g, '');
       ok(`${f} no usa ${g} (contraste insuficiente)`, !sinComentarios.includes(g));
     });
+    // Con tokens el gris se escribe por nombre: --pizarra-300 = #aab3ba, --pizarra-400 = #8a97a3.
+    // Para TEXTO no sirven (un ícono decorativo de fondo sí puede usarlos).
+    const sinComentarios = t.replace(/\/\*[\s\S]*?\*\//g, '');
+    ok(`${f} no escribe texto con --pizarra-300 / --pizarra-400 (contraste insuficiente)`,
+       !/(^|[^-])color:\s*var\(--pizarra-(300|400)\)/m.test(sinComentarios));
   });
 
   const touch = /--touch:\s*(\d+)px/.exec(css);

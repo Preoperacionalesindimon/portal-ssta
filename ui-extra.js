@@ -196,3 +196,216 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
   else iniciar();
 })();
+
+/* ============================================================
+   3) Estados de carga, estados de la interfaz y accesibilidad.
+   - UX.esqueleto(n): tarjetas grises que brillan mientras carga.
+   - UX.estado(tipo, titulo, texto, boton): vacío / error / sin señal.
+   - Barra superior cuando se consulta un servidor de Google.
+   - Botones "Guardando…" con ruedita y aria-busy.
+   - Nombres accesibles: cada campo, firma y aviso se anuncia bien
+     con lector de pantalla (TalkBack / VoiceOver).
+   ============================================================ */
+(function () {
+  'use strict';
+  var ICONOS = {
+    vacio: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    error: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+    offline: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.18-2.65M22 8.82a15 15 0 0 0-11.29-3.76M5 12.86a10 10 0 0 1 5.17-2.69M19 12.86a10 10 0 0 0-2-1.54M2 2l20 20"/>'
+  };
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  var UX = window.UX = window.UX || {};
+  UX.esqueleto = function (n, texto) {
+    n = n || 3;
+    var h = '<div class="ux-skel" role="status" aria-live="polite"><span class="ux-sr">' + esc(texto || 'Cargando…') + '</span>';
+    for (var i = 0; i < n; i++) h += '<div class="ux-skel-item" aria-hidden="true"><div class="ux-skel-ic"></div><div class="ux-skel-tx"><div class="ux-skel-l l1"></div><div class="ux-skel-l l2"></div><div class="ux-skel-l l3"></div></div></div>';
+    return h + '</div>';
+  };
+  /** tipo: 'vacio' | 'error' | 'offline'. Si se pasa boton, el botón lleva class ux-reintentar. */
+  UX.estado = function (tipo, titulo, texto, boton) {
+    if (tipo === 'error' && !navigator.onLine) { tipo = 'offline'; titulo = 'Sin conexión'; texto = 'Cuando vuelva la señal, toca Reintentar.'; }
+    return '<div class="ux-estado ' + tipo + '" role="' + (tipo === 'vacio' ? 'status' : 'alert') + '">' +
+      '<div class="ux-estado-ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONOS[tipo] || ICONOS.vacio) + '</svg></div>' +
+      (titulo ? '<b>' + esc(titulo) + '</b>' : '') + (texto ? '<span>' + esc(texto) + '</span>' : '') +
+      (boton ? '<button type="button" class="ux-reintentar">' + esc(boton) + '</button>' : '') + '</div>';
+  };
+  /** Pinta un estado en `cont` y, si hay botón, lo conecta a `alTocar`. */
+  UX.pintarEstado = function (cont, tipo, titulo, texto, boton, alTocar) {
+    if (!cont) return;
+    cont.innerHTML = UX.estado(tipo, titulo, texto, boton);
+    var b = cont.querySelector('.ux-reintentar');
+    if (b && alTocar) b.addEventListener('click', alTocar);
+  };
+
+  /* ── Barra superior mientras hay consultas a los servidores ── */
+  var activas = 0, barra = null, temporizador = null;
+  function mostrarBarra(on) {
+    if (!document.body) return;
+    if (!barra) { barra = document.createElement('div'); barra.className = 'ux-barra'; barra.setAttribute('aria-hidden', 'true'); document.body.appendChild(barra); }
+    barra.classList.toggle('on', on);
+    if (on) document.body.setAttribute('aria-busy', 'true'); else document.body.removeAttribute('aria-busy');
+  }
+  if (window.fetch) {
+    var fetchOriginal = window.fetch;
+    window.fetch = function (recurso) {
+      var url = typeof recurso === 'string' ? recurso : (recurso && recurso.url) || '';
+      var cuenta = /script\.google(usercontent)?\.com/.test(url);
+      if (!cuenta) return fetchOriginal.apply(this, arguments);
+      activas++;
+      if (activas === 1) { clearTimeout(temporizador); temporizador = setTimeout(function () { if (activas > 0) mostrarBarra(true); }, 250); }
+      var fin = function () { activas = Math.max(0, activas - 1); if (!activas) { clearTimeout(temporizador); mostrarBarra(false); } };
+      return fetchOriginal.apply(this, arguments).then(function (r) { fin(); return r; }, function (e) { fin(); throw e; });
+    };
+  }
+
+  /* ── Botones trabajando ── */
+  function revisarBoton(b) {
+    if (!b || b.tagName !== 'BUTTON') return;
+    var ocupado = b.disabled && /…\s*$|\.\.\.\s*$/.test(b.textContent || '');
+    b.classList.toggle('ux-ocupado', ocupado);
+    if (ocupado) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+  }
+
+  /* ── Nombres accesibles ── */
+  function texto(el) { return el ? String(el.textContent || '').replace(/\s+/g, ' ').replace(/[\s*:]+$/, '').trim() : ''; }
+  function tieneNombre(c) {
+    if (c.getAttribute('aria-label') || c.getAttribute('aria-labelledby') || c.getAttribute('title')) return true;
+    if (c.labels && c.labels.length) return true;
+    return false;
+  }
+  var SEL_CTRL = 'input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([type=button]):not([type=submit]),select,textarea';
+  function nombrarControl(c) {
+    if (tieneNombre(c)) return;
+    var campo = c.closest('.field,.form-group,.campo');
+    var lab = campo && campo.querySelector('label,.label');
+    var controles = campo ? campo.querySelectorAll(SEL_CTRL) : [];
+    if (lab && lab.tagName === 'LABEL' && !lab.htmlFor && controles.length === 1 && c.id && !lab.contains(c)) { lab.htmlFor = c.id; return; }
+    var nombre = '';
+    if (lab) {
+      nombre = texto(lab);
+      if (controles.length > 1) {
+        var i = Array.prototype.indexOf.call(controles, c);
+        var extra = c.placeholder ? c.placeholder.replace(/…$/, '') :
+          (controles.length === 2 && /date|time/.test(c.type) ? (i === 0 ? 'desde' : 'hasta') : 'campo ' + (i + 1));
+        nombre += ' — ' + extra;
+      }
+    }
+    if (!nombre) {
+      var td = c.closest('td');
+      if (td) {
+        var tabla = td.closest('table'), fila = td.parentElement;
+        var th = tabla && tabla.querySelector('thead tr:last-child');
+        var cab = th && th.children[td.cellIndex] ? texto(th.children[td.cellIndex]) : '';
+        var primera = fila && fila.cells[0] && fila.cells[0] !== td ? texto(fila.cells[0]) : '';
+        nombre = [primera, cab].filter(Boolean).join(' — ');
+      }
+    }
+    if (!nombre && c.placeholder) nombre = c.placeholder.replace(/…$/, '');
+    if (!nombre) {
+      var sec = c.closest('.section,.card,section');
+      var t = sec && sec.querySelector('.section-title,h2,h3');
+      nombre = texto(t);
+    }
+    if (nombre) c.setAttribute('aria-label', nombre.slice(0, 120));
+  }
+  function nombrarFirma(cv) {
+    if (cv.getAttribute('aria-label')) return;
+    var cont = cv.closest('.sig-block,.firma,.field,.exec-card,.as-row,.worker-row,.sig-wrap,td,.campo');
+    var t = '';
+    if (cont) { var l = cont.querySelector('label,.label,.sig-label,h4,b'); t = texto(l); }
+    cv.setAttribute('role', 'img');
+    cv.setAttribute('aria-label', 'Espacio para firmar' + (t ? ': ' + t.slice(0, 80) : ''));
+  }
+  var SIMBOLOS = { '×': 'Cerrar', '✕': 'Quitar', '✖': 'Quitar', '↻': 'Actualizar', '←': 'Volver', '☰': 'Menú', '+': 'Agregar', '−': 'Quitar' };
+  function nombrarBoton(b) {
+    if (b.getAttribute('aria-label')) return;
+    var t = (b.textContent || '').trim();
+    if (!t && b.title) { b.setAttribute('aria-label', b.title); return; }
+    if (SIMBOLOS[t]) b.setAttribute('aria-label', SIMBOLOS[t]);
+  }
+  function nombrarEnlace(a) {
+    if (a.target !== '_blank' || a.querySelector('.ux-sr') || a.getAttribute('aria-label')) return;
+    var s = document.createElement('span'); s.className = 'ux-sr';
+    s.textContent = /forms\.gle|docs\.google\.com\/forms/.test(a.href) ? ' (abre el formulario de Google en otra pestaña)' : ' (se abre en otra pestaña)';
+    a.appendChild(s);
+  }
+  function marcarAvisos(raiz) {
+    var els = raiz.querySelectorAll('[id$="Status"],[id$="status"],[id$="Nota"],.status-msg');
+    Array.prototype.forEach.call(els, function (el) {
+      if (el.tagName === 'BUTTON' || el.tagName === 'INPUT' || el.hasAttribute('aria-live') || el.getAttribute('role')) return;
+      el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    });
+  }
+  function accesible(raiz) {
+    if (!raiz || raiz.nodeType !== 1) return;
+    try {
+      Array.prototype.forEach.call(raiz.querySelectorAll(SEL_CTRL), nombrarControl);
+      if (raiz.matches && raiz.matches(SEL_CTRL)) nombrarControl(raiz);
+      Array.prototype.forEach.call(raiz.querySelectorAll('canvas'), nombrarFirma);
+      Array.prototype.forEach.call(raiz.querySelectorAll('button'), nombrarBoton);
+      Array.prototype.forEach.call(raiz.querySelectorAll('a[target="_blank"]'), nombrarEnlace);
+      marcarAvisos(raiz);
+    } catch (e) { /* nunca debe romper la página */ }
+  }
+
+  /* ── Ventanas que se arman con estilos sueltos (repetir permiso, traer
+     de ATS, jornada, pendientes, elegir obra): mismo aspecto en claro y
+     oscuro, se anuncian como diálogo, Escape las cierra y el foco entra. ── */
+  function esFondoSuelto(n) {
+    if (!n || n.nodeType !== 1 || n.parentNode !== document.body || n.classList.contains('ux-hoja-fondo')) return false;
+    var st = n.getAttribute('style') || '';
+    return /position:\s*fixed/.test(st) && /inset:\s*0/.test(st);
+  }
+  function mejorarVentana(fondo) {
+    var caja = fondo.firstElementChild;
+    if (!caja) return;
+    fondo.classList.add('ux-hoja-fondo');
+    caja.classList.add('ux-hoja');
+    if (getComputedStyle(fondo).alignItems === 'center') caja.classList.add('centrada');
+    caja.setAttribute('role', 'dialog');
+    caja.setAttribute('aria-modal', 'true');
+    var previo = document.activeElement;
+    var ponerTitulo = function () {
+      var h = caja.querySelector('h3,h2');
+      if (h && !caja.getAttribute('aria-label')) caja.setAttribute('aria-label', texto(h));
+    };
+    ponerTitulo();
+    setTimeout(function () {
+      ponerTitulo();
+      var f = caja.querySelector('input:not([type=hidden]),button:not([data-cerrar]):not([data-cancelar]),a[href],select,textarea') || caja.querySelector('button');
+      try { if (f && !caja.contains(document.activeElement)) f.focus({ preventScroll: true }); } catch (e) {}
+    }, 60);
+    var tecla = function (e) {
+      if (!document.body.contains(fondo)) { document.removeEventListener('keydown', tecla); try { previo && previo.focus && previo.focus(); } catch (x) {} return; }
+      if (e.key !== 'Escape') return;
+      var c = caja.querySelector('[data-cerrar],[data-cancelar]');
+      if (c) c.click(); else fondo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    };
+    document.addEventListener('keydown', tecla);
+    new MutationObserver(function (m, obs) {
+      if (!document.body.contains(fondo)) { obs.disconnect(); document.removeEventListener('keydown', tecla); try { previo && previo.focus && previo.focus(); } catch (x) {} }
+    }).observe(document.body, { childList: true });
+  }
+
+  var pendiente = null;
+  function programar() {
+    if (pendiente) return;
+    pendiente = setTimeout(function () { pendiente = null; accesible(document.body); }, 120);
+  }
+  function iniciar() {
+    accesible(document.body);
+    new MutationObserver(function (cambios) {
+      var hayNodos = false;
+      cambios.forEach(function (c) {
+        if (c.type === 'attributes') { revisarBoton(c.target); return; }
+        var b = c.target.nodeType === 1 ? c.target.closest('button') : (c.target.parentElement && c.target.parentElement.closest('button'));
+        if (b) revisarBoton(b);
+        if (c.addedNodes.length) { hayNodos = true; if (c.target === document.body) c.addedNodes.forEach(function (n) { if (esFondoSuelto(n)) mejorarVentana(n); }); }
+      });
+      if (hayNodos) programar();
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+  else iniciar();
+})();

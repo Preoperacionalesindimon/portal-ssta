@@ -4,23 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SSTA-F-149 · Personal Autorizado</title>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
 <style>
 :root{
-  --amber:#c9a227; --amber-dark:#8a6408; --ink:#151b24; --line:#dde3e8; --muted:#8a97a3;
-  --ok:#1d7a4c; --warn:#c0392b;
+  --amber:var(--ambar-310); --amber-dark:var(--ambar-570); --ink:var(--pizarra-900); --line:var(--pizarra-100); --muted:var(--pizarra-400);
+  --ok:var(--verde-570); --warn:var(--rojo-550);
 }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
+body{margin:0;background:var(--bg,var(--gris-70));color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
 .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
 
 .hdr{display:block;background:var(--ink);padding:1.4rem 1.2rem 1.1rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
-.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
-.hdr h1{font-family:var(--font-display);font-size:18px;color:#fff;margin:0 0 2px;}
-.hdr p{font-size:11.5px;color:#8b97a3;margin:0;}
-.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:#c9a227;text-decoration:none;font-weight:600;}
+.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--pizarra-400);margin-bottom:6px;}
+.hdr h1{font-family:var(--font-display);font-size:18px;color:var(--blanco);margin:0 0 2px;}
+.hdr p{font-size:11.5px;color:var(--pizarra-400);margin:0;}
+.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:var(--ambar-310);text-decoration:none;font-weight:600;}
 
-.card{background:var(--paper,#fff);border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:10px;}
+.card{background:var(--paper,var(--blanco));border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:10px;}
 .card .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
 .card .v{font-size:14px;color:var(--ink);font-weight:600;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -33,50 +34,50 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 
 .field{margin-bottom:12px;}
 .field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;}
-.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:#fcfbf8;font-family:inherit;}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:13px 14px;font-size:16px;min-height:48px;background:var(--gris-10);font-family:inherit;}
 
-.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:14px;margin-top:8px;cursor:pointer;}
-.btn.amber{background:var(--amber);color:#151b24;}
-.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:var(--blanco);font-weight:700;font-size:14px;border:none;border-radius:10px;padding:14px;margin-top:8px;cursor:pointer;}
+.btn.amber{background:var(--amber);color:var(--pizarra-900);}
+.btn.ghost{background:var(--blanco);border:1.5px solid var(--line);color:var(--ink);}
 .btn:disabled{opacity:.55;}
 
-.obra-item{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;text-decoration:none;color:inherit;border-left:4px solid var(--amber);}
+.obra-item{display:block;background:var(--blanco);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;text-decoration:none;color:inherit;border-left:4px solid var(--amber);}
 .obra-item .nombre{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--ink);}
 .obra-item .meta{font-size:11.5px;color:var(--muted);margin-top:3px;}
-.empty{background:#fff;border:1px solid var(--line);border-radius:14px;padding:2rem;text-align:center;color:var(--muted);font-size:13px;}
+.empty{background:var(--blanco);border:1px solid var(--line);border-radius:14px;padding:2rem;text-align:center;color:var(--muted);font-size:13px;}
 
-.linked-permit{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #e3e7ea;}
+.linked-permit{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--gris-90);}
 .linked-permit:last-of-type{border-bottom:none;}
-.badge-tipo{display:inline-block;font-size:10px;font-weight:700;background:#fbeed4;color:var(--amber-dark);padding:3px 8px;border-radius:20px;flex-shrink:0;}
-.code-chip{font-family:var(--font-display);font-size:11px;font-weight:700;background:var(--ink);color:#fff;padding:3px 8px;border-radius:5px;}
+.badge-tipo{display:inline-block;font-size:10px;font-weight:700;background:var(--ambar-70);color:var(--amber-dark);padding:3px 8px;border-radius:20px;flex-shrink:0;}
+.code-chip{font-family:var(--font-display);font-size:11px;font-weight:700;background:var(--ink);color:var(--blanco);padding:3px 8px;border-radius:5px;}
 .remove-x{margin-left:auto;color:var(--warn);font-size:13px;cursor:pointer;background:none;border:none;}
 
-.picker-item{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:8px;background:#fff;cursor:pointer;}
-.picker-item.selected{border-color:var(--amber);background:#fdf8ec;}
+.picker-item{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:8px;background:var(--blanco);cursor:pointer;}
+.picker-item.selected{border-color:var(--amber);background:var(--arena-20);}
 .picker-item .pi-code{font-family:var(--font-display);font-size:12.5px;font-weight:700;}
 .picker-item .pi-meta{font-size:10.5px;color:var(--muted);margin-top:1px;}
 .picker-item .check{margin-left:auto;color:var(--amber-dark);font-weight:700;}
 
-.worker-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:#fcfbf8;}
-.worker-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:#fff;min-height:44px;font-family:inherit;}
+.worker-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:var(--gris-10);}
+.worker-row input{width:100%;border:1.5px solid var(--gris-90);border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:var(--blanco);min-height:44px;font-family:inherit;}
 .worker-row .firma-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:4px 0 6px;display:block;}
 .fila-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px;}
 .fila-cab .fila-n{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid #f0c8c1;background:#fff;color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
-.btn-quitar:active{background:#fdf1ef;}
-canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid var(--rojo-160);background:var(--blanco);color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
+.btn-quitar:active{background:var(--rojo-50);}
+canvas.mini-pad{width:100%;height:170px;border:1.5px dashed var(--arena-250);border-radius:8px;background:var(--blanco);touch-action:none;cursor:crosshair;display:block;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
-.sig-actions button{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
+.sig-actions button{font-size:11px;border:1px solid var(--line);background:var(--blanco);border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.signed{color:var(--ok);font-weight:700;}
 
-.day-item{display:block;background:#fff;border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:11px;padding:12px 14px;margin-bottom:9px;text-decoration:none;color:inherit;}
+.day-item{display:block;background:var(--blanco);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:11px;padding:12px 14px;margin-bottom:9px;text-decoration:none;color:inherit;}
 .day-item .row1{display:flex;justify-content:space-between;align-items:center;}
 .day-item .fecha{font-family:var(--font-display);font-weight:700;font-size:13.5px;}
-.day-item .count{font-size:11px;font-weight:700;background:#eef1f4;color:#5c6570;border-radius:20px;padding:3px 9px;}
+.day-item .count{font-size:11px;font-weight:700;background:var(--gris-70);color:var(--pizarra-600);border-radius:20px;padding:3px 9px;}
 .day-item .meta{font-size:11.5px;color:var(--muted);margin-top:4px;}
 
-.persona-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
+.persona-item{display:flex;align-items:center;gap:10px;background:var(--blanco);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
 .persona-item .pnombre{font-weight:700;font-size:13px;}
 .persona-item .pmeta{font-size:11px;color:var(--muted);margin-top:2px;}
 .persona-item .remove-x{margin-left:auto;}
@@ -85,7 +86,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
 .status-msg{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;min-height:16px;}
 .ya-cab{font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:4px 2px 8px;display:flex;justify-content:space-between;}
 .ya-cab span{font-size:11px;color:var(--muted);font-weight:600;}
-.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--blanco);}
 .guardado.quitado{opacity:.45;text-decoration:line-through;}
 .guardado .gi{flex:1;min-width:0;}
 .guardado .gn{font-weight:700;font-size:13px;line-height:1.3;overflow-wrap:anywhere;}
@@ -93,18 +94,18 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
 .guardado img{height:34px;width:72px;object-fit:contain;flex-shrink:0;}
 .guardado .sf{font-size:10.5px;font-weight:700;color:var(--ok);}
 .guardado .sf.no{color:var(--warn);}
-.verif-ok{background:#eef8f2;border:1px solid #bfe3cd;color:#1d5c3a;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin-bottom:10px;display:flex;gap:10px;align-items:center;}
-.verif-ok img{height:36px;width:80px;object-fit:contain;background:#fff;border-radius:6px;}
-.aviso-info{background:#eef5fd;border:1px solid #c8dcf3;color:#1d4a7a;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:10px;}
-.aviso-fallo{background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.45;text-align:left;margin-bottom:10px;}
-.day-item .btn-pdf{margin-top:9px;width:100%;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:9px;cursor:pointer;}
+.verif-ok{background:var(--verde-50);border:1px solid var(--verde-150);color:var(--verde-670);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin-bottom:10px;display:flex;gap:10px;align-items:center;}
+.verif-ok img{height:36px;width:80px;object-fit:contain;background:var(--blanco);border-radius:6px;}
+.aviso-info{background:var(--pizarra-50);border:1px solid var(--pizarra-160);color:var(--azul-700);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:10px;}
+.aviso-fallo{background:var(--rojo-50);border:1px solid var(--rojo-160);color:var(--rojo-700);border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.45;text-align:left;margin-bottom:10px;}
+.day-item .btn-pdf{margin-top:9px;width:100%;font-size:12px;font-weight:700;border:1.5px solid var(--line);background:var(--blanco);color:var(--ink);border-radius:8px;padding:9px;cursor:pointer;}
 .hp-anexo{padding-top:1px;}
 .hp-anexo .hp-permisos td{height:auto;padding:3px 4px;}
 .hp-anexo .hp-personal td{height:34px;}
 .hp-anexo .hp-personal .firma img{max-height:30px;}
 .hp-anexo .firma-verif{text-align:center;vertical-align:middle;height:52px;}
 .hp-anexo .firma-verif img{max-height:46px;max-width:100%;}
-.hp-anexo .sin-firma{font-size:7px;color:#888;font-style:italic;}
+.hp-anexo .sin-firma{font-size:7px;color:var(--gris-450);font-style:italic;}
 .hp-anexo .hp-cab .hp-tit{font-size:11.5px;}
 .version-portal{font-size:10.5px;color:var(--muted);text-align:center;margin:18px 0 0;}
 .hint{font-size:11px;color:var(--muted);text-align:center;margin:6px 0 12px;}
@@ -130,7 +131,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed #b9b2a2;border-radiu
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v94</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v96</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -405,12 +406,13 @@ let trabajadorCounter = 0;
 let obrasCache = [];
 async function cargarObras(){
   const listEl = document.getElementById('obrasList');
-  listEl.innerHTML = '<div class="status-msg">Cargando obras…</div>';
+  listEl.innerHTML = window.UX ? UX.esqueleto(3, 'Cargando obras…') : '<div class="status-msg">Cargando obras…</div>';
   try{
     const res = await fetchWithRetry(FIXED_WEBAPP_URL + '?action=listObras&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
     const data = await res.json();
     obrasCache = (data.ok && Array.isArray(data.obras)) ? data.obras : [];
-    if(!data.ok || !data.obras.length){
+    if(!data.ok) throw new Error(data.error || 'el servidor no devolvió las obras');
+    if(!data.obras.length){
       listEl.innerHTML = '<div class="empty">Aún no hay obras registradas. Crea la primera con el botón de abajo.</div>';
       return;
     }
@@ -427,7 +429,8 @@ async function cargarObras(){
       });
     });
   }catch(err){
-    listEl.innerHTML = '<div class="empty">No se pudo conectar. Verifique su conexión e intente de nuevo.</div>';
+    if (window.UX) UX.pintarEstado(listEl, 'error', 'No se pudieron cargar las obras', 'Verifique su conexión e intente de nuevo.', 'Reintentar', cargarObras);
+    else listEl.innerHTML = '<div class="empty">No se pudo conectar. Verifique su conexión e intente de nuevo.</div>';
   }
 }
 document.getElementById('btnNuevaObra').addEventListener('click', ()=> showScreen('screenCrearObra'));
@@ -534,8 +537,8 @@ async function consultarAbiertos(backend, esAts){
 async function cargarPermisosAbiertos(){
   const statusEl = document.getElementById('pickerStatus');
   const listEl = document.getElementById('pickerList');
-  statusEl.innerHTML = 'Buscando permisos y ATS abiertos…';
-  listEl.innerHTML = '';
+  statusEl.innerHTML = window.UX ? '' : 'Buscando permisos y ATS abiertos…';
+  listEl.innerHTML = window.UX ? UX.esqueleto(3, 'Buscando permisos y ATS abiertos…') : '';
   permisosAbiertosCache = [];
   const fuentes = PERMIT_BACKENDS.map(b=>({ backend:b, esAts:false }));
   const ats = PORTAL_CONFIG.BACKENDS.ats;
@@ -557,6 +560,7 @@ async function cargarPermisosAbiertos(){
     msg = 'No hay permisos ni ATS abiertos en este momento.';
   }
   statusEl.innerHTML = msg;
+  listEl.innerHTML = '';
   const btnR = document.getElementById('btnReintentarPicker');
   if(btnR) btnR.addEventListener('click', cargarPermisosAbiertos);
   renderPicker();
@@ -1087,11 +1091,11 @@ async function iniciarAnexoDeJornada(){
   const lista = obrasCache.map(o=>({ o, p:puntaje(o) })).sort((a,b)=> b.p - a.p);
   const fondo = document.createElement('div');
   fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
-  fondo.innerHTML = '<div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:84vh;overflow:auto;padding:16px 16px 22px;">' +
+  fondo.innerHTML = '<div style="background:var(--ds-panel);border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:84vh;overflow:auto;padding:16px 16px 22px;">' +
     '<h3 style="margin:0 0 4px;font-size:16px;">🗂️ ¿En qué obra registras al personal?</h3>' +
-    '<p style="margin:0 0 12px;font-size:12.5px;color:#5c6a76;line-height:1.45;">Jornada del ' + esc(j.atsCode) + ' · ' + esc(j.trabajo || '') + '</p>' +
+    '<p style="margin:0 0 12px;font-size:12.5px;color:var(--ds-texto-2);line-height:1.45;">Jornada del ' + esc(j.atsCode) + ' · ' + esc(j.trabajo || '') + '</p>' +
     '<button type="button" class="btn amber" data-nueva style="margin:0 0 12px;">➕ Crear obra con los datos del ATS</button>' +
-    (lista.length ? lista.slice(0, 30).map(x=>'<a href="#" class="obra-item" data-obra="' + esc(x.o.obraId) + '" style="' + (x.p ? 'border-left-color:#1d7a4c;' : '') + '"><div class="nombre">' + esc(x.o.nombre) + (x.p ? ' <span style="font-size:10.5px;color:#1d7a4c;">· coincide</span>' : '') + '</div><div class="meta">' + esc(x.o.area || '') + '</div></a>').join('') : '<div class="empty">No hay obras todavía.</div>') +
+    (lista.length ? lista.slice(0, 30).map(x=>'<a href="#" class="obra-item" data-obra="' + esc(x.o.obraId) + '" style="' + (x.p ? 'border-left-color:var(--ds-ok-texto);' : '') + '"><div class="nombre">' + esc(x.o.nombre) + (x.p ? ' <span style="font-size:10.5px;color:var(--ds-ok-texto);">· coincide</span>' : '') + '</div><div class="meta">' + esc(x.o.area || '') + '</div></a>').join('') : '<div class="empty">No hay obras todavía.</div>') +
     '<button type="button" class="btn ghost" data-cancelar>Ahora no</button></div>';
   document.body.appendChild(fondo);
   fondo.querySelector('[data-cancelar]').onclick = ()=> fondo.remove();

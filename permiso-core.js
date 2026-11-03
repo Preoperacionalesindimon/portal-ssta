@@ -710,15 +710,27 @@ const PermisoCore = (function () {
   function listQuery() {
     return (PORTAL_CONFIG.BACKENDS[cfg.key] || {}).listQuery || 'list=1';
   }
+  // Una lista vacía con .error: quien la pinta muestra "no se pudo consultar"
+  // con Reintentar, en vez de un "No hay permisos abiertos" que no es cierto.
+  let cargarCerradosRef_ = null;
+  function listaConError_(msg) { const l = []; l.error = String(msg || 'sin respuesta'); return l; }
+  const UXok_ = () => typeof window !== 'undefined' && window.UX && window.UX.esqueleto;
+  function cargandoLista_(el) { el.innerHTML = UXok_() ? window.UX.esqueleto(3, 'Buscando permisos…') : 'Buscando…'; }
+  function errorLista_(el, rows, reintentar) {
+    const txt = navigator.onLine ? 'No se pudo consultar la hoja de permisos. Revisa la señal e intenta de nuevo.' : 'Sin conexión.';
+    if (UXok_()) window.UX.pintarEstado(el, 'error', 'No se pudo cargar la lista', txt, 'Reintentar', reintentar);
+    else el.textContent = txt;
+  }
   async function fetchOpenList() {
     const url = getWebAppUrl();
     if (!url) return [];
     try {
       const res = await fetchWithRetry(url + '?' + listQuery() + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
       const data = await res.json();
-      return (data.rows || []).filter((r) => r.status === 'ABIERTO');
+      if (!data || data.ok === false || !Array.isArray(data.rows)) return listaConError_((data && data.error) || 'el servidor no devolvió la lista');
+      return data.rows.filter((r) => r.status === 'ABIERTO');
     } catch (err) {
-      return [];
+      return listaConError_(err && err.message);
     }
   }
   async function fetchClosedList() {
@@ -727,9 +739,10 @@ const PermisoCore = (function () {
     try {
       const res = await fetchWithRetry(url + '?' + listQuery() + '&token=' + encodeURIComponent(PORTAL_CONFIG.API_TOKEN));
       const data = await res.json();
-      return (data.rows || []).filter((r) => r.status === 'CERRADO');
+      if (!data || data.ok === false || !Array.isArray(data.rows)) return listaConError_((data && data.error) || 'el servidor no devolvió la lista');
+      return data.rows.filter((r) => r.status === 'CERRADO');
     } catch (err) {
-      return [];
+      return listaConError_(err && err.message);
     }
   }
 
@@ -1351,8 +1364,9 @@ const PermisoCore = (function () {
 
   function renderClosedPermits(rows) {
     const listEl = $('closedList');
+    if (rows.error) { errorLista_(listEl, rows, () => cargarCerradosRef_ && cargarCerradosRef_()); return; }
     if (rows.length === 0) {
-      listEl.innerHTML = '<div class="pl-vacio">No hay permisos cerrados aún.</div>';
+      listEl.innerHTML = UXok_() ? window.UX.estado('vacio', 'Aún no hay permisos cerrados', 'Los permisos que se cierren quedarán aquí para consultarlos.') : '<div class="pl-vacio">No hay permisos cerrados aún.</div>';
       return;
     }
     listEl.innerHTML = '';
@@ -1368,8 +1382,12 @@ const PermisoCore = (function () {
       });
   }
   function renderOpenList(container, rows, onPick) {
+    if (rows.error) {
+      errorLista_(container, rows, async () => { cargandoLista_(container); renderOpenList(container, await fetchOpenList(), onPick); });
+      return;
+    }
     if (rows.length === 0) {
-      container.innerHTML = '<div class="pl-vacio">No hay permisos abiertos.</div>';
+      container.innerHTML = UXok_() ? window.UX.estado('vacio', 'No hay permisos abiertos', 'Cuando alguien abra uno, aparecerá aquí.') : '<div class="pl-vacio">No hay permisos abiertos.</div>';
       return;
     }
     container.innerHTML = '';
@@ -1443,7 +1461,7 @@ const PermisoCore = (function () {
     });
     $('listOpenForAddBtn').addEventListener('click', async () => {
       const listEl = $('openListForAdd');
-      listEl.innerHTML = 'Buscando…';
+      cargandoLista_(listEl);
       const rows = await fetchOpenList();
       renderOpenList(listEl, rows, (code) => cargarParaAgregarPersonal(code));
     });
@@ -1499,7 +1517,7 @@ const PermisoCore = (function () {
                 '\n\nNo cierres esta página. Vuelve a guardar y verifica en el permiso.');
           return;
         }
-        $('backFromAddPeopleBtn').style.cssText = 'background:var(--ok,#1d7a4c);color:#fff;border-color:var(--ok,#1d7a4c);font-weight:700;';
+        $('backFromAddPeopleBtn').style.cssText = 'background:var(--ok,var(--verde-570));color:var(--blanco);border-color:var(--ok,var(--verde-570));font-weight:700;';
         baseExecCount = todasLasFilas.length; // lo recién guardado ya no cuenta como "nuevo" si se sigue agregando más
         opIdAddWorkers = null; // esta operación ya se completó; la siguiente necesita su propia clave
         alert(
@@ -1527,23 +1545,27 @@ const PermisoCore = (function () {
 
     $('listOpenBtn').addEventListener('click', async () => {
       const listEl = $('openList');
-      listEl.innerHTML = 'Buscando…';
+      cargandoLista_(listEl);
       const rows = await fetchOpenList();
       renderOpenList(listEl, rows, (code) => openCloseModeWithCode(code));
     });
+    async function cargarCerrados_() {
+      cargandoLista_($('closedList'));
+      closedPermitsCache = await fetchClosedList();
+      renderClosedPermits(closedPermitsCache);
+    }
+    cargarCerradosRef_ = cargarCerrados_;
     $('listClosedBtn').addEventListener('click', async () => {
       const panel = $('historyPanel');
       const listEl = $('closedList');
       const opening = panel.style.display === 'none';
       panel.style.display = opening ? 'block' : 'none';
       if (!opening) return;
-      listEl.innerHTML = 'Buscando…';
-      closedPermitsCache = await fetchClosedList();
-      renderClosedPermits(closedPermitsCache);
+      cargarCerrados_();
     });
     $('historySearch').addEventListener('input', (e) => {
       const q = e.target.value.trim().toLowerCase();
-      if (!q) {
+      if (!q || closedPermitsCache.error) {
         renderClosedPermits(closedPermitsCache);
         return;
       }
@@ -1746,14 +1768,14 @@ const PermisoCore = (function () {
     const fondo = document.createElement('div');
     fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
     const caja = document.createElement('div');
-    caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:84vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);color:#151b24;';
+    caja.style.cssText = 'background:var(--ds-panel);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:84vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);color:var(--ds-texto);';
     fondo.appendChild(caja); document.body.appendChild(fondo);
     const cerrar = () => fondo.remove();
     fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
     const cab = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;font-size:16px;">🔁 ¿Qué permiso repetir?</h3>' +
-      '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
-      '<input type="search" id="repBuscar" placeholder="Buscar por código, sitio o responsable…" style="width:100%;border:1.5px solid #dde3e8;border-radius:9px;padding:11px 12px;font-size:15px;margin:12px 0 10px;">';
-    caja.innerHTML = cab + '<div id="repLista" style="text-align:center;color:#5c6a76;font-size:13px;padding:14px;">Buscando permisos anteriores…</div>';
+      '<button type="button" data-cerrar style="border:1px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
+      '<input type="search" id="repBuscar" placeholder="Buscar por código, sitio o responsable…" style="width:100%;border:1.5px solid var(--ds-linea-fria);border-radius:9px;padding:11px 12px;font-size:15px;margin:12px 0 10px;">';
+    caja.innerHTML = cab + '<div id="repLista">' + (window.UX ? UX.esqueleto(4, 'Buscando permisos anteriores…') : 'Buscando permisos anteriores…') + '</div>';
     caja.querySelector('[data-cerrar]').onclick = cerrar;
     let rows = [];
     try {
@@ -1762,19 +1784,19 @@ const PermisoCore = (function () {
       if (!d || !d.ok || !Array.isArray(d.rows)) throw new Error((d && d.error) || 'el servidor no respondió con datos');
       rows = d.rows.slice().sort((a, b) => String(b.openedAt || b.updatedAt || '').localeCompare(String(a.openedAt || a.updatedAt || ''))).slice(0, 60);
     } catch (e) {
-      $('repLista').innerHTML = '<div style="background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px;text-align:left;">No se pudieron traer los permisos: ' + esc(e.message || 'sin conexión') + '.</div>';
+      $('repLista').innerHTML = '<div style="background:var(--ds-error-suave);border:1px solid var(--ds-error-borde);color:var(--ds-error-texto);border-radius:10px;padding:11px;text-align:left;">No se pudieron traer los permisos: ' + esc(e.message || 'sin conexión') + '.</div>';
       return;
     }
     const pinta = () => {
       const q = ($('repBuscar').value || '').trim().toLowerCase();
       const lista = rows.filter((r) => !q || [r.permitCode || r.code, r.sitio, r.responsable].some((v) => String(v || '').toLowerCase().includes(q)));
-      if (!lista.length) { $('repLista').innerHTML = '<div style="padding:14px;color:#5c6a76;">No hay permisos que coincidan.</div>'; return; }
+      if (!lista.length) { $('repLista').innerHTML = '<div style="padding:14px;color:var(--ds-texto-2);">No hay permisos que coincidan.</div>'; return; }
       $('repLista').innerHTML = lista.slice(0, 25).map((r) => {
         const code = r.permitCode || r.code;
         const f = String(r.openedAt || r.updatedAt || '').slice(0, 10);
-        return '<button type="button" data-rep="' + esc(code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid #dde3e8;background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
-          '<b style="font-size:13px;">' + esc(code) + '</b><span style="float:right;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 8px;background:' + (r.status === 'ABIERTO' ? '#e3f4ea;color:#1d7a4c' : '#eef1f4;color:#5c6570') + ';">' + esc(r.status || '') + '</span><br>' +
-          '<span style="font-size:12px;">' + esc(r.sitio || 'Sin sitio') + '</span><br><span style="font-size:11px;color:#5c6a76;">' + esc([f, r.responsable].filter(Boolean).join(' · ')) + '</span></button>';
+        return '<button type="button" data-rep="' + esc(code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:11px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
+          '<b style="font-size:13px;">' + esc(code) + '</b><span style="float:right;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 8px;background:' + (r.status === 'ABIERTO' ? 'var(--ds-ok-suave);color:var(--ds-ok-texto)' : 'var(--ds-chip);color:var(--ds-texto-2)') + ';">' + esc(r.status || '') + '</span><br>' +
+          '<span style="font-size:12px;">' + esc(r.sitio || 'Sin sitio') + '</span><br><span style="font-size:11px;color:var(--ds-texto-2);">' + esc([f, r.responsable].filter(Boolean).join(' · ')) + '</span></button>';
       }).join('');
       $('repLista').style.textAlign = 'left'; $('repLista').style.padding = '0';
       $('repLista').querySelectorAll('[data-rep]').forEach((b) => { b.onclick = () => { cerrar(); repetirPermiso_(b.dataset.rep); }; });
@@ -2293,7 +2315,7 @@ const PermisoCore = (function () {
     if (!cont || !permitCode) return;
     cont.classList.add('show');
     cont.innerHTML = '<div class="hp-titulo">Historial del permiso</div>' +
-                     '<div class="hp-cuerpo"><div class="hp-vacio">Consultando…</div></div>';
+                     '<div class="hp-cuerpo">' + (window.UX ? UX.esqueleto(2, 'Consultando el historial…') : '<div class="hp-vacio">Consultando…</div>') + '</div>';
     const url = getWebAppUrl();
     if (!url) { cont.innerHTML = ''; cont.classList.remove('show'); return; }
     try {
@@ -2470,7 +2492,7 @@ const PermisoCore = (function () {
   // (y la línea que lo llama arriba) cuando ya no haga falta.
   function initDebugPanel_() {
     const panel = document.createElement('div');
-    panel.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#111;color:#0f0;font:11px/1.4 monospace;padding:10px;border-radius:8px;max-height:45vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+    panel.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:var(--gris-950);color:var(--verde-110);font:11px/1.4 monospace;padding:10px;border-radius:8px;max-height:45vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,.5);';
     panel.innerHTML =
       '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
       '<button id="dbgRefrescar" style="flex:1;padding:8px;font-weight:700;">Ver estado de firmas</button>' +

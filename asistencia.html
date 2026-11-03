@@ -4,22 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SSTA-F-005 · Asistencia a charlas</title>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
 <style>
-:root{ --amber:#c9a227; --amber-dark:#8a6408; --ink:#151b24; --line:#dde3e8; --muted:#8a97a3; --ok:#1d7a4c; --warn:#c0392b; --azul:#2f6fbf; }
+:root{ --amber:var(--ambar-310); --amber-dark:var(--ambar-570); --ink:var(--pizarra-900); --line:var(--pizarra-100); --muted:var(--pizarra-400); --ok:var(--verde-570); --warn:var(--rojo-550); --azul:var(--azul-550); }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
+body{margin:0;background:var(--bg,var(--gris-70));color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:120px;}
 .wrap{max-width:680px;margin:0 auto;padding:0 14px;}
 .hdr{display:block;background:var(--ink);padding:1.3rem 1.2rem 1.05rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
-.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
-.hdr h1{font-family:var(--font-display);font-size:18px;color:#fff;margin:0 0 2px;}
-.hdr p{font-size:11.5px;color:#8b97a3;margin:0;}
-.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:#c9a227;text-decoration:none;font-weight:600;}
-.card{background:var(--paper,#fff);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:12px;}
+.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--pizarra-400);margin-bottom:6px;}
+.hdr h1{font-family:var(--font-display);font-size:18px;color:var(--blanco);margin:0 0 2px;}
+.hdr p{font-size:11.5px;color:var(--pizarra-400);margin:0;}
+.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:var(--ambar-310);text-decoration:none;font-weight:600;}
+.card{background:var(--paper,var(--blanco));border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:12px;}
 .card h2{font-family:var(--font-display);font-size:14.5px;margin:0 0 10px;}
 .field{margin-bottom:12px;position:relative;}
 .field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;}
-.field input,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:#fcfbf8;font-family:inherit;}
+.field input,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:var(--gris-10);font-family:inherit;}
 .field textarea{min-height:70px;resize:vertical;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 /* iPhone (Safari/Brave): los campos de fecha y hora traen un ancho mínimo propio
@@ -27,36 +28,36 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}
 .field input[type=date],.field input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;width:100%;display:block;text-align:left;}
 .field input::-webkit-date-and-time-value{text-align:left;}
-.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:#fcfbf8;font-family:inherit;color:var(--ink);-webkit-appearance:none;appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,#8a97a3 50%),linear-gradient(135deg,#8a97a3 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:32px;}
+.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:12px 13px;font-size:16px;min-height:46px;background:var(--gris-10);font-family:inherit;color:var(--ink);-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--pizarra-400) 50%),linear-gradient(135deg,var(--pizarra-400) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:32px;}
 .field select + input{margin-top:8px;}
-.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:14px;margin-top:8px;cursor:pointer;font-family:inherit;}
-.btn.amber{background:var(--amber);color:#151b24;}
-.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:var(--blanco);font-weight:700;font-size:14px;border:none;border-radius:10px;padding:14px;margin-top:8px;cursor:pointer;font-family:inherit;}
+.btn.amber{background:var(--amber);color:var(--pizarra-900);}
+.btn.ghost{background:var(--blanco);border:1.5px solid var(--line);color:var(--ink);}
 .btn:disabled{opacity:.55;}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
-.chips button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink);}
-.chips button.on{border-color:var(--amber);background:#fdf6e3;}
+.chips button{border:1.5px solid var(--line);background:var(--blanco);border-radius:20px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink);}
+.chips button.on{border-color:var(--amber);background:var(--arena-50);}
 .status-msg{font-size:12.5px;color:var(--muted);text-align:center;margin-top:10px;min-height:16px;}
-.empty{background:#fff;border:1px solid var(--line);border-radius:14px;padding:1.6rem;text-align:center;color:var(--muted);font-size:13px;}
-.aviso{background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.45;margin-bottom:12px;}
-.aviso.info{background:#eef5fd;border-color:#c8dcf3;color:#1d4a7a;}
+.empty{background:var(--blanco);border:1px solid var(--line);border-radius:14px;padding:1.6rem;text-align:center;color:var(--muted);font-size:13px;}
+.aviso{background:var(--rojo-50);border:1px solid var(--rojo-160);color:var(--rojo-700);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.45;margin-bottom:12px;}
+.aviso.info{background:var(--pizarra-50);border-color:var(--pizarra-160);color:var(--azul-700);}
 .screen{display:none;}
 .screen.active{display:block;}
-.semana-item{display:block;background:#fff;border:1px solid var(--line);border-left:4px solid var(--azul);border-radius:12px;padding:12px 14px;margin-bottom:9px;text-decoration:none;color:inherit;cursor:pointer;}
+.semana-item{display:block;background:var(--blanco);border:1px solid var(--line);border-left:4px solid var(--azul);border-radius:12px;padding:12px 14px;margin-bottom:9px;text-decoration:none;color:inherit;cursor:pointer;}
 .semana-item .t{font-family:var(--font-display);font-weight:700;font-size:13.5px;}
 .semana-item .m{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
-.dia-item{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;}
-.dia-item.hoy{border-color:var(--amber);box-shadow:0 0 0 2px #f4e4b0;}
+.dia-item{display:flex;gap:12px;align-items:center;background:var(--blanco);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;}
+.dia-item.hoy{border-color:var(--amber);box-shadow:0 0 0 2px var(--ambar-100);}
 .dia-item .dn{width:52px;flex-shrink:0;text-align:center;}
 .dia-item .dn b{display:block;font-family:var(--font-display);font-size:13px;}
 .dia-item .dn span{font-size:11px;color:var(--muted);}
 .dia-item .dt{flex:1;min-width:0;}
 .dia-item .tema{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;}
-.dia-item .tema.vacio{color:#aab3ba;font-weight:500;}
+.dia-item .tema.vacio{color:var(--pizarra-300);font-weight:500;}
 .dia-item .meta{font-size:11px;color:var(--muted);margin-top:2px;}
-.dia-item .n{font-size:11px;font-weight:700;background:#eef1f4;color:#5c6570;border-radius:20px;padding:3px 9px;flex-shrink:0;}
-.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+.dia-item .n{font-size:11px;font-weight:700;background:var(--gris-70);color:var(--pizarra-600);border-radius:20px;padding:3px 9px;flex-shrink:0;}
+.guardado{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--blanco);}
 .guardado.quitado{opacity:.45;text-decoration:line-through;}
 .guardado .gi{flex:1;min-width:0;}
 .guardado .gn{font-weight:700;font-size:13px;line-height:1.3;overflow-wrap:anywhere;}
@@ -65,53 +66,53 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
 .guardado .sf{font-size:10.5px;color:var(--ok);font-weight:700;}
 .guardado .sf.no{color:var(--warn);}
 
-.as-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:#fcfbf8;}
-.as-row input{width:100%;border:1.5px solid #e3e7ea;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:#fff;min-height:44px;font-family:inherit;}
+.as-row{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:12px;background:var(--gris-10);}
+.as-row input{width:100%;border:1.5px solid var(--gris-90);border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;background:var(--blanco);min-height:44px;font-family:inherit;}
 .as-row .firma-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:4px 0 6px;display:block;}
 .fila-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px;}
 .fila-cab .fila-n{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid #f0c8c1;background:#fff;color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
-.btn-quitar:active{background:#fdf1ef;}
-canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radius:8px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.btn-quitar{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;border:1.5px solid var(--rojo-160);background:var(--blanco);color:var(--warn);font-size:12.5px;font-weight:700;border-radius:20px;padding:6px 12px;min-height:34px;cursor:pointer;font-family:inherit;}
+.btn-quitar:active{background:var(--rojo-50);}
+canvas.mini-pad{width:100%;height:150px;border:1.5px dashed var(--arena-250);border-radius:8px;background:var(--blanco);touch-action:none;cursor:crosshair;display:block;}
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
-.sig-actions button{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
+.sig-actions button{font-size:11px;border:1px solid var(--line);background:var(--blanco);border-radius:5px;padding:5px 10px;cursor:pointer;color:var(--muted);}
 .sig-status{font-size:11px;color:var(--muted);}
 .sig-status.signed{color:var(--ok);font-weight:700;}
 .sec-t{font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:16px 2px 8px;display:flex;justify-content:space-between;align-items:center;}
 .sec-t span{font-size:11px;color:var(--muted);font-weight:600;}
 .version-portal{font-size:10.5px;color:var(--muted);text-align:center;margin:18px 0 0;}
 .modal-fondo{position:fixed;inset:0;background:rgba(15,25,35,.5);z-index:9000;display:flex;align-items:flex-end;justify-content:center;}
-.modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:80vh;overflow:auto;padding:16px;}
+.modal{background:var(--blanco);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:80vh;overflow:auto;padding:16px;}
 .modal h3{margin:0 0 10px;font-size:15px;}
-.toast.aviso{background:#8a2a1c;}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:#1d7a4c;color:#fff;font-weight:600;font-size:13px;padding:10px 16px;border-radius:9px;z-index:9500;box-shadow:0 3px 12px rgba(0,0,0,.25);max-width:92%;}
+.toast.aviso{background:var(--rojo-700);}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;background:var(--verde-570);color:var(--blanco);font-weight:600;font-size:13px;padding:10px 16px;border-radius:9px;z-index:9500;box-shadow:0 3px 12px rgba(0,0,0,.25);max-width:92%;}
 
 /* ── Hoja SSTA-F-005 para imprimir / PDF (carta horizontal) ── */
-.f5{padding:1px 2px 0 1px;font-family:Arial, Helvetica, sans-serif;color:#000;font-size:8.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.f5{padding:1px 2px 0 1px;font-family:Arial, Helvetica, sans-serif;color:var(--negro);font-size:8.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .f5 table{width:100%;border-collapse:collapse;table-layout:fixed;}
-.f5 td,.f5 th{border:1px solid #000;padding:2px 4px;vertical-align:middle;overflow-wrap:anywhere;}
+.f5 td,.f5 th{border:1px solid var(--negro);padding:2px 4px;vertical-align:middle;overflow-wrap:anywhere;}
 .f5 tr{break-inside:avoid;page-break-inside:avoid;}
 .f5 .cab .logo img{max-height:44px;max-width:100%;display:block;margin:0 auto;}
 .f5 .cab .tit{text-align:center;font-weight:700;font-size:11px;}
-.f5 .cab .meta td{font-size:7px;padding:1px 3px;border:none;border-bottom:1px solid #000;}
+.f5 .cab .meta td{font-size:7px;padding:1px 3px;border:none;border-bottom:1px solid var(--negro);}
 .f5 .cab .meta tr:last-child td{border-bottom:none;}
-.f5 .cab .meta td + td{border-left:1px solid #000;}
+.f5 .cab .meta td + td{border-left:1px solid var(--negro);}
 .f5 .cab td.meta-c{padding:0;}
-.f5 .azul{background:#5b8fd3;font-weight:700;text-align:center;}
+.f5 .azul{background:var(--azul-400);font-weight:700;text-align:center;}
 .f5 .tem td{height:17px;font-size:8.5px;}
 .f5 .tem b{font-weight:700;}
 .f5 .asis{margin-top:-1px;}
 .f5 .asis thead th{font-weight:700;font-size:8px;text-align:center;}
-.f5 .asis thead tr.dias th{background:#fff;font-size:8px;padding:1px 2px;}
+.f5 .asis thead tr.dias th{background:var(--blanco);font-size:8px;padding:1px 2px;}
 .f5 .asis td{height:30px;}
 .f5 .asis td.n{text-align:center;font-size:7px;}
 .f5 .asis td.f{text-align:center;padding:1px;}
 .f5 .asis td.f img{max-height:26px;max-width:100%;}
-.f5 .asis td.f .no{font-size:7.5px;font-weight:700;color:#8a2a1c;}
-.f5 .asis td.f.nd{background:#ececec;color:#777;font-size:8px;}
-.f5 .tem .sin{color:#777;font-style:italic;}
-.f5 .asis td.f .tx{font-size:6.5px;color:#333;}
-.f5 .pie{font-size:6.5px;color:#555;text-align:right;margin-top:3px;}
+.f5 .asis td.f .no{font-size:7.5px;font-weight:700;color:var(--rojo-700);}
+.f5 .asis td.f.nd{background:var(--gris-80);color:var(--gris-500);font-size:8px;}
+.f5 .tem .sin{color:var(--gris-500);font-style:italic;}
+.f5 .asis td.f .tx{font-size:6.5px;color:var(--gris-800);}
+.f5 .pie{font-size:6.5px;color:var(--gris-650);text-align:right;margin-top:3px;}
 </style>
 <link rel="stylesheet" href="portal-ui.css">
 <script src="portal-ui.js"></script>
@@ -151,7 +152,7 @@ canvas.mini-pad{width:100%;height:150px;border:1.5px dashed #b9b2a2;border-radiu
   </details>
   <div class="sec-t">Semanas recientes <span id="semanasNota"></span></div>
   <div id="semanasList"><div class="status-msg">Cargando…</div></div>
-  <div class="version-portal">Portal SSTA · versión v94</div>
+  <div class="version-portal">Portal SSTA · versión v96</div>
 </div>
 
 <!-- ═══════ SEMANA ═══════ -->
@@ -378,8 +379,10 @@ if (!URL_ASIS) {
   $('avisoServidor').innerHTML = '<div class="aviso info"><b>Modo solo en este equipo.</b> Todavía no está configurado el servidor de asistencia (falta la URL en config.js → BACKENDS.asistencia). Las charlas se guardan en este celular y se pueden imprimir o guardar en PDF, pero no se comparten con otros equipos.</div>';
 }
 
+let semanasCargando = false;
 function renderSemanas(){
   const el = $('semanasList');
+  if (!semanasCache.length && semanasCargando && window.UX){ el.innerHTML = UX.esqueleto(2, 'Cargando semanas…'); return; }
   if (!semanasCache.length){ el.innerHTML = '<div class="empty">Aún no hay semanas registradas. Abre la primera charla arriba.</div>'; return; }
   el.innerHTML = semanasCache.map(s=>`
     <div class="semana-item" data-code="${esc(s.code)}">
@@ -390,7 +393,9 @@ function renderSemanas(){
   el.querySelectorAll('.semana-item').forEach(x=> x.addEventListener('click', ()=> abrirSemanaPorCodigo(x.dataset.code)));
 }
 async function cargarSemanas(){
+  semanasCargando = !!URL_ASIS;
   renderSemanas();
+  semanasCargando = false;
   if (!URL_ASIS){
     // Modo local: el listado sale de lo guardado en el equipo.
     semanasCache = semanasCache.map(s=>{ const d = lsGet(LS.doc(s.code), null); return d ? Object.assign(s, resumenLocal(d)) : s; });
@@ -895,7 +900,7 @@ function htmlHojaF005(doc, nueva){
   personas.forEach((p, i)=>{
     h += '<tr><td class="n">' + (i + 1) + '</td><td>' + e(p.nombre) + '</td><td>' + e(p.cedula || '—') + '</td>' + DIAS.map(d=> celdaDia(p, d)).join('') + '</tr>';
   });
-  if (!personas.length) h += '<tr><td colspan="10" style="text-align:center;color:#777;">Sin asistentes registrados esta semana.</td></tr>';
+  if (!personas.length) h += '<tr><td colspan="10" style="text-align:center;color:var(--gris-500);">Sin asistentes registrados esta semana.</td></tr>';
   h += '</tbody></table><div class="pie">Semana ' + e(doc.code) + ' · Impreso el ' + e(new Date().toLocaleString('es-CO')) + ' desde el Portal SSTA · INDIMON</div></div>';
   return h;
 }

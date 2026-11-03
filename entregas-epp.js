@@ -89,6 +89,7 @@
   /* ── Pendientes de todos ── */
   async function cargarPendientes() {
     const cont = $('entPendLista');
+    if (window.UX && !cargadoPend) cont.innerHTML = UX.esqueleto(3, 'Buscando pendientes…');
     try {
       const r = await fetchWithRetry(EPP_URL + '?action=pendientes&token=' + encodeURIComponent(TOKEN));
       const d = await r.json();
@@ -97,7 +98,8 @@
       cargadoPend = true;
       pintarPendientes();
     } catch (e) {
-      cont.innerHTML = '<div class="ent-vacio">No se pudo consultar la hoja. Revisa la señal; puedes registrar la entrega igual buscando al trabajador abajo.</div>';
+      if (window.UX) UX.pintarEstado(cont, 'error', 'No se pudieron traer los pendientes', 'Revisa la señal. Puedes registrar la entrega igual buscando al trabajador abajo.', 'Reintentar', cargarPendientes);
+      else cont.innerHTML = '<div class="ent-vacio">No se pudo consultar la hoja. Revisa la señal; puedes registrar la entrega igual buscando al trabajador abajo.</div>';
       $('entPendCuenta').textContent = '';
     }
   }
@@ -135,7 +137,7 @@
     items = items.filter(it => !it.inspeccionId);
     let pend = pendientesConocidos;
     if (!pend) {
-      $('entItems').innerHTML = '<div class="ent-vacio">Buscando pendientes…</div>';
+      $('entItems').innerHTML = (window.UX ? UX.esqueleto(2, 'Buscando pendientes…') : '<div class="ent-vacio">Buscando pendientes…</div>');
       try {
         const r = await fetchWithRetry(EPP_URL + '?action=pendientes&cedula=' + encodeURIComponent(p.cedula) + '&token=' + encodeURIComponent(TOKEN));
         const d = await r.json();
@@ -305,6 +307,7 @@
   /* ── Historial corto ── */
   async function cargarHistorial() {
     const cont = $('entHist');
+    if (window.UX && !cont.querySelector('.ent-h')) cont.innerHTML = UX.esqueleto(3, 'Cargando entregas…');
     try {
       const r = await fetchWithRetry(EPP_URL + '?action=entregas&token=' + encodeURIComponent(TOKEN));
       const d = await r.json();
@@ -317,7 +320,8 @@
           '<div class="ent-h-el">' + esc(x.elementos) + '</div>' +
         '</div>').join('') : '<div class="ent-vacio">Todavía no hay entregas registradas.</div>';
     } catch (e) {
-      cont.innerHTML = '<div class="ent-vacio">No se pudo consultar el historial (sin señal).</div>';
+      if (window.UX) UX.pintarEstado(cont, 'error', 'No se pudo consultar el historial', 'Revisa la señal e intenta de nuevo.', 'Reintentar', cargarHistorial);
+      else cont.innerHTML = '<div class="ent-vacio">No se pudo consultar el historial (sin señal).</div>';
     }
   }
 
@@ -328,7 +332,7 @@
   async function verHistorialPersona(p) {
     const cont = $('entHP');
     $('entHPNombre').value = p.nombre || '';
-    cont.innerHTML = '<div class="ent-vacio">Buscando entregas de ' + esc(p.nombre || p.cedula) + '…</div>';
+    cont.innerHTML = window.UX ? UX.esqueleto(2, 'Buscando entregas de ' + (p.nombre || p.cedula) + '…') : '<div class="ent-vacio">Buscando entregas de ' + esc(p.nombre || p.cedula) + '…</div>';
     try {
       const [r1, r2] = await Promise.all([
         fetchWithRetry(EPP_URL + '?action=entregas&full=1&cedula=' + encodeURIComponent(p.cedula) + '&token=' + encodeURIComponent(TOKEN)).then(r => r.json()),
@@ -345,7 +349,8 @@
       const bi = $('entHPImprimir');
       if (bi) bi.addEventListener('click', () => { impresionHorizontal = false; $('entPlanilla').innerHTML = armarHistorial(histPersona, true); showScreen('screenPlanilla'); });
     } catch (e) {
-      cont.innerHTML = '<div class="ent-vacio">No se pudo consultar el historial (sin señal).</div>';
+      if (window.UX) UX.pintarEstado(cont, 'error', 'No se pudo consultar el historial', 'Revisa la señal e intenta de nuevo.', 'Reintentar', () => verHistorialPersona(p));
+      else cont.innerHTML = '<div class="ent-vacio">No se pudo consultar el historial (sin señal).</div>';
     }
   }
   function armarHistorial(h, imprimir) {

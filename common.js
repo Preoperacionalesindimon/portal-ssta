@@ -268,7 +268,7 @@ const Jornada = {
     const fondo = document.createElement('div');
     fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
     const caja = document.createElement('div');
-    caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:86vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
+    caja.style.cssText = 'background:var(--ds-panel);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:86vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
     fondo.appendChild(caja); document.body.appendChild(fondo);
     const cerrar = () => fondo.remove();
     fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
@@ -277,20 +277,20 @@ const Jornada = {
       if (!jj) { cerrar(); return; }
       const pasos = this.pasos(jj);
       caja.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;font-size:16px;">🗂️ Jornada del ' + esc(jj.atsCode) + '</h3>' +
-        '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cerrar</button></div>' +
-        '<p style="margin:6px 0 12px;font-size:12.5px;color:#5c6a76;line-height:1.45;">' + esc(jj.trabajo || '') + (jj.sitio ? ' · ' + esc(jj.sitio) : '') + '<br>Cada paso se abre con los datos y el personal del ATS (' + (jj.personas || []).length + ' persona(s)) ya puestos. Cada persona firma en cada formato.</p>' +
+        '<button type="button" data-cerrar style="border:1px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cerrar</button></div>' +
+        '<p style="margin:6px 0 12px;font-size:12.5px;color:var(--ds-texto-2);line-height:1.45;">' + esc(jj.trabajo || '') + (jj.sitio ? ' · ' + esc(jj.sitio) : '') + '<br>Cada paso se abre con los datos y el personal del ATS (' + (jj.personas || []).length + ' persona(s)) ya puestos. Cada persona firma en cada formato.</p>' +
         pasos.map((p, i) => {
           const h = p.hecho;
-          const estado = !h ? '<span style="color:#8a6408;font-weight:700;">Pendiente</span>'
-            : h.omitido ? '<span style="color:#8a97a3;font-weight:700;">Omitido</span>'
-            : '<span style="color:#1d7a4c;font-weight:700;">✓ ' + (h.code ? esc(h.code) : 'Hecho') + (h.pendiente ? ' (en cola)' : '') + '</span>';
+          const estado = !h ? '<span style="color:var(--ds-aviso-texto);font-weight:700;">Pendiente</span>'
+            : h.omitido ? '<span style="color:var(--ds-texto-3);font-weight:700;">Omitido</span>'
+            : '<span style="color:var(--ds-ok-texto);font-weight:700;">✓ ' + (h.code ? esc(h.code) : 'Hecho') + (h.pendiente ? ' (en cola)' : '') + '</span>';
           const acc = p.id === 'ats' ? '' :
-            '<div style="display:flex;gap:7px;margin-top:8px;"><button type="button" data-abrir="' + esc(p.id) + '" style="flex:1;padding:10px;border:none;background:' + (h ? '#fff;border:1.5px solid #dde3e8;color:#151b24' : '#c9a227;color:#151b24') + ';border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">' + (h ? 'Abrir de nuevo' : 'Abrir ' + esc(p.titulo.toLowerCase())) + '</button>' +
-            (h ? '' : '<button type="button" data-omitir="' + esc(p.id) + '" style="padding:10px 12px;border:1.5px solid #dde3e8;background:#fff;border-radius:8px;font-weight:700;font-size:12px;color:#5c6a76;cursor:pointer;">No aplica</button>') + '</div>';
-          return '<div style="border:1px solid #dde3e8;border-radius:11px;padding:11px 12px;margin-bottom:8px;' + (h ? '' : 'border-left:4px solid #c9a227;') + '">' +
+            '<div style="display:flex;gap:7px;margin-top:8px;"><button type="button" data-abrir="' + esc(p.id) + '" style="flex:1;padding:10px;border:none;background:' + (h ? 'var(--ds-panel);border:1.5px solid var(--ds-linea-fria);color:var(--ds-texto)' : 'var(--ambar-310);color:var(--pizarra-900)') + ';border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">' + (h ? 'Abrir de nuevo' : 'Abrir ' + esc(p.titulo.toLowerCase())) + '</button>' +
+            (h ? '' : '<button type="button" data-omitir="' + esc(p.id) + '" style="padding:10px 12px;border:1.5px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:8px;font-weight:700;font-size:12px;color:var(--ds-texto-2);cursor:pointer;">No aplica</button>') + '</div>';
+          return '<div style="border:1px solid var(--ds-linea-fria);border-radius:11px;padding:11px 12px;margin-bottom:8px;' + (h ? '' : 'border-left:4px solid var(--ambar-310);') + '">' +
             '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px;"><b>' + (i + 1) + '. ' + esc(p.icono + ' ' + p.titulo) + '</b>' + estado + '</div>' + acc + '</div>';
         }).join('') +
-        '<button type="button" data-terminar style="width:100%;margin-top:6px;padding:11px;border:1.5px solid #f0c8c1;background:#fff;color:#c0392b;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;">Terminar la jornada en este equipo</button>';
+        '<button type="button" data-terminar style="width:100%;margin-top:6px;padding:11px;border:1.5px solid var(--ds-error-borde);background:var(--ds-panel);color:var(--ds-error);border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;">Terminar la jornada en este equipo</button>';
       caja.querySelector('[data-cerrar]').onclick = cerrar;
       caja.querySelectorAll('[data-abrir]').forEach((b) => { b.onclick = () => { cerrar(); this.abrir(b.dataset.abrir); }; });
       caja.querySelectorAll('[data-omitir]').forEach((b) => { b.onclick = () => { this.omitir(b.dataset.omitir); pinta(); }; });
@@ -316,29 +316,29 @@ const TraerDeAts = {
       fondo.className = 'tda-fondo';
       fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
       const caja = document.createElement('div');
-      caja.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:82vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
+      caja.style.cssText = 'background:var(--ds-panel);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:82vh;overflow:auto;padding:16px 16px 22px;font-family:var(--font-family,sans-serif);';
       fondo.appendChild(caja);
       document.body.appendChild(fondo);
       const cerrar = (r) => { fondo.remove(); resolve(r); };
       fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(null); });
       const cab = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;"><h3 style="margin:0;font-size:16px;">🧭 Traer personal de un ATS</h3>' +
-        '<button type="button" data-cerrar style="border:1px solid #dde3e8;background:#fff;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
-        '<p style="margin:0 0 12px;font-size:12px;color:#5c6a76;line-height:1.45;">Se traen nombre, cédula y cargo de quienes están en el ATS. Cada persona debe firmar aquí.</p>';
+        '<button type="button" data-cerrar style="border:1px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">Cancelar</button></div>' +
+        '<p style="margin:0 0 12px;font-size:12px;color:var(--ds-texto-2);line-height:1.45;">Se traen nombre, cédula y cargo de quienes están en el ATS. Cada persona debe firmar aquí.</p>';
       const pinta = (html) => { caja.innerHTML = cab + html; caja.querySelector('[data-cerrar]').onclick = () => cerrar(null); };
-      pinta('<div style="text-align:center;color:#5c6a76;font-size:13px;padding:18px;">Buscando ATS abiertos…</div>');
+      pinta(window.UX ? UX.esqueleto(3, 'Buscando ATS abiertos…') : '<div style="text-align:center;color:var(--ds-texto-2);font-size:13px;padding:18px;">Buscando ATS abiertos…</div>');
       const token = encodeURIComponent(PORTAL_CONFIG.API_TOKEN);
       fetchWithRetry(B.url + '?list=1&token=' + token).then((r) => r.json()).then((data) => {
         if (!data || !data.ok || !Array.isArray(data.rows)) throw new Error((data && data.error) || 'el servidor del ATS no respondió con datos');
         const abiertos = data.rows.filter((r) => String(r.estado || '').toUpperCase() !== 'CERRADO')
           .sort((a, b) => String(b.fechaDesde || b.updatedAt || '').localeCompare(String(a.fechaDesde || a.updatedAt || ''))).slice(0, 40);
-        if (!abiertos.length) { pinta('<div style="padding:14px;text-align:center;color:#5c6a76;font-size:13px;">No hay ATS abiertos en este momento.</div>'); return; }
+        if (!abiertos.length) { pinta('<div style="padding:14px;text-align:center;color:var(--ds-texto-2);font-size:13px;">No hay ATS abiertos en este momento.</div>'); return; }
         pinta(abiertos.map((r) => {
-          const venc = (typeof atsVencido === 'function' && atsVencido(r)) ? ' · <b style="color:#c0392b;">vencido</b>' : '';
+          const venc = (typeof atsVencido === 'function' && atsVencido(r)) ? ' · <b style="color:var(--ds-error);">vencido</b>' : '';
           const f = String(r.fechaDesde || '').slice(0, 10);
-          return '<button type="button" data-ats="' + esc(r.code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid #dde3e8;background:#fff;border-radius:11px;padding:11px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
-            '<b style="font-size:13px;">' + esc(r.code) + '</b><span style="float:right;font-size:11px;font-weight:700;background:#eef1f4;border-radius:20px;padding:2px 8px;">' + (Number(r.participantes) || 0) + ' 👤</span><br>' +
-            '<span style="font-size:12px;color:#151b24;">' + esc(String(r.trabajo || '').slice(0, 90)) + '</span><br>' +
-            '<span style="font-size:11px;color:#5c6a76;">' + esc([f, r.area, r.centroCostos].filter(Boolean).join(' · ')) + venc + '</span></button>';
+          return '<button type="button" data-ats="' + esc(r.code) + '" style="display:block;width:100%;text-align:left;border:1.5px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:11px;padding:11px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;">' +
+            '<b style="font-size:13px;">' + esc(r.code) + '</b><span style="float:right;font-size:11px;font-weight:700;background:var(--ds-chip);border-radius:20px;padding:2px 8px;">' + (Number(r.participantes) || 0) + ' 👤</span><br>' +
+            '<span style="font-size:12px;color:var(--ds-texto);">' + esc(String(r.trabajo || '').slice(0, 90)) + '</span><br>' +
+            '<span style="font-size:11px;color:var(--ds-texto-2);">' + esc([f, r.area, r.centroCostos].filter(Boolean).join(' · ')) + venc + '</span></button>';
         }).join(''));
         caja.querySelectorAll('[data-ats]').forEach((b) => {
           b.onclick = async () => {
@@ -361,7 +361,7 @@ const TraerDeAts = {
           };
         });
       }).catch((e) => {
-        pinta('<div style="padding:12px;background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:10px;font-size:12.5px;line-height:1.45;">No se pudo consultar los ATS: ' + esc(e.message || 'sin conexión') + '.</div>');
+        pinta('<div style="padding:12px;background:var(--ds-error-suave);border:1px solid var(--ds-error-borde);color:var(--ds-error-texto);border-radius:10px;font-size:12.5px;line-height:1.45;">No se pudo consultar los ATS: ' + esc(e.message || 'sin conexión') + '.</div>');
       });
     });
   }
@@ -463,11 +463,11 @@ window.addEventListener('draft-guardado-fallido', () => {
   const el = document.createElement('div');
   el.id = 'draftFailBanner';
   el.setAttribute('role', 'alert');
-  el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#b3261e;color:#fff;font-weight:600;font-size:13px;padding:10px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:10px;';
+  el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:var(--rojo-620);color:var(--blanco);font-weight:600;font-size:13px;padding:10px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:10px;';
   el.innerHTML = '<span>⚠️ El respaldo automático de este formulario no se está guardando en este dispositivo (memoria llena o modo privado). Si cierras la página sin guardar, podrías perder lo escrito — guarda cuanto antes.</span>';
   const btn = document.createElement('button');
   btn.textContent = '✕';
-  btn.style.cssText = 'background:none;border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;';
+  btn.style.cssText = 'background:none;border:none;color:var(--blanco);font-size:16px;cursor:pointer;flex-shrink:0;';
   btn.addEventListener('click', () => el.remove());
   el.appendChild(btn);
   document.body.appendChild(el);
@@ -818,7 +818,7 @@ const OutboxBadge = {
     if (document.getElementById('outboxBadge')) return;
     const el = document.createElement('div');
     el.id = 'outboxBadge';
-    el.style.cssText = 'display:none;position:fixed;left:12px;bottom:12px;z-index:9997;background:#c9a227;color:#151b24;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    el.style.cssText = 'display:none;position:fixed;left:12px;bottom:12px;z-index:9997;background:var(--ambar-310);color:var(--pizarra-900);font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
     document.body.appendChild(el);
     const actualizar = async () => {
       const items = await Outbox.list();
@@ -836,7 +836,7 @@ const OutboxBadge = {
       const t = ev && ev.detail && ev.detail.url ? OutboxBadge.tipoDe(ev.detail) : { uno: 'registro', articulo: 'Un' };
       const aviso = document.createElement('div');
       aviso.textContent = '✓ ' + t.articulo + ' ' + t.uno + ' pendiente se envió correctamente.';
-      aviso.style.cssText = 'position:fixed;left:12px;bottom:52px;z-index:9998;background:#1d7a4c;color:#fff;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
+      aviso.style.cssText = 'position:fixed;left:12px;bottom:52px;z-index:9998;background:var(--verde-570);color:var(--blanco);font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.25);';
       document.body.appendChild(aviso);
       setTimeout(()=> aviso.remove(), 5000);
     });
@@ -863,13 +863,13 @@ const OutboxBadge = {
     const fondo = document.createElement('div');
     fondo.style.cssText = 'position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:10002;display:flex;align-items:center;justify-content:center;padding:16px;';
     const caja = document.createElement('div');
-    caja.style.cssText = 'background:#fff;border-radius:14px;max-width:460px;width:100%;max-height:80vh;overflow:auto;padding:18px;font-family:var(--font-family,sans-serif);';
+    caja.style.cssText = 'background:var(--ds-panel);border-radius:14px;max-width:460px;width:100%;max-height:80vh;overflow:auto;padding:18px;font-family:var(--font-family,sans-serif);';
     fondo.appendChild(caja);
 
     const pinta = (lista) => {
       caja.innerHTML =
         '<h3 style="margin:0 0 4px;font-size:16px;">Pendientes de enviar</h3>' +
-        '<p style="margin:0 0 14px;font-size:12.5px;color:#5c6a76;line-height:1.5;">' +
+        '<p style="margin:0 0 14px;font-size:12.5px;color:var(--ds-texto-2);line-height:1.5;">' +
         'Esto se guardó en el celular pero no se ha confirmado que llegara al servidor. ' +
         'Si ya los ves en el dashboard, es que sí llegaron y la confirmación se perdió: usa «Comprobar» para limpiarlos.</p>' +
         lista.map((it,i)=>{
@@ -879,20 +879,20 @@ const OutboxBadge = {
           const tipo = OutboxBadge.tipoDe(it);
           const f = new Date(it.savedAt);
           const cuando = isNaN(f.getTime()) ? '' : f.toLocaleDateString('es-CO') + ' ' + f.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-          return '<div style="border:1px solid #dde3e8;border-radius:9px;padding:11px;margin-bottom:9px;font-size:12.5px;line-height:1.5;">' +
-            '<span style="color:#5c6a76;font-size:11.5px;">' + esc(tipo.detalle) + '</span><br>' +
-            '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:#c0392b;">(cierre)</span>' : (agrego ? ' (personal agregado)' : ' (apertura o cambios)')) +
-            '<br><span style="color:#5c6a76;">Guardado: ' + esc(cuando) + (it.intentos ? ' · ' + it.intentos + ' intento(s)' : '') + '</span>' +
-            (it.ultimoError ? '<div style="margin-top:7px;background:#fdf1ef;border:1px solid #f0c8c1;color:#8a2a1c;border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.45;overflow-wrap:anywhere;"><b>Último intento:</b> ' + esc(it.ultimoError) + '</div>' : '') +
+          return '<div style="border:1px solid var(--ds-linea-fria);border-radius:9px;padding:11px;margin-bottom:9px;font-size:12.5px;line-height:1.5;">' +
+            '<span style="color:var(--ds-texto-2);font-size:11.5px;">' + esc(tipo.detalle) + '</span><br>' +
+            '<b>' + esc(code) + '</b>' + (cierre ? ' <span style="color:var(--ds-error);">(cierre)</span>' : (agrego ? ' (personal agregado)' : ' (apertura o cambios)')) +
+            '<br><span style="color:var(--ds-texto-2);">Guardado: ' + esc(cuando) + (it.intentos ? ' · ' + it.intentos + ' intento(s)' : '') + '</span>' +
+            (it.ultimoError ? '<div style="margin-top:7px;background:var(--ds-error-suave);border:1px solid var(--ds-error-borde);color:var(--ds-error-texto);border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.45;overflow-wrap:anywhere;"><b>Último intento:</b> ' + esc(it.ultimoError) + '</div>' : '') +
             '<div style="display:flex;gap:7px;margin-top:9px;">' +
-            '<button data-comprobar="' + it.id + '" style="flex:1;padding:9px;border:1px solid #1f6f8b;background:#fff;color:#1f6f8b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Comprobar</button>' +
-            '<button data-descartar="' + it.id + '" style="padding:9px 12px;border:1px solid #e08a80;background:#fff;color:#c0392b;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Descartar</button>' +
+            '<button data-comprobar="' + it.id + '" style="flex:1;padding:9px;border:1px solid var(--ds-info);background:var(--ds-panel);color:var(--ds-info);border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Comprobar</button>' +
+            '<button data-descartar="' + it.id + '" style="padding:9px 12px;border:1px solid var(--ds-error-borde);background:var(--ds-panel);color:var(--ds-error);border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;">Descartar</button>' +
             '</div></div>';
         }).join('') +
-        '<button id="obxReenviar" style="width:100%;padding:12px;border:none;background:#c9a227;color:#151b24;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin:2px 0 8px;">↻ Reenviar ahora</button>' +
+        '<button id="obxReenviar" style="width:100%;padding:12px;border:none;background:var(--ambar-310);color:var(--pizarra-900);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin:2px 0 8px;">↻ Reenviar ahora</button>' +
         '<div style="display:flex;gap:8px;margin-top:6px;">' +
-        '<button id="obxTodos" style="flex:1;padding:12px;border:none;background:#151b24;color:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Comprobar todos</button>' +
-        '<button id="obxCerrar" style="padding:12px 16px;border:1px solid #dde3e8;background:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>' +
+        '<button id="obxTodos" style="flex:1;padding:12px;border:none;background:var(--ds-texto);color:var(--ds-panel);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Comprobar todos</button>' +
+        '<button id="obxCerrar" style="padding:12px 16px;border:1px solid var(--ds-linea-fria);background:var(--ds-panel);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>' +
         '</div>';
 
       caja.querySelector('#obxCerrar').onclick = () => fondo.remove();

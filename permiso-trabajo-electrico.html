@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SSTA-F-180 · Permiso de Trabajo Eléctrico</title>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
 <style>
 :root{
-  --ember:#b8860b;--ember-dark:#8a6408;--steel:#1f2a33;--steel-mid:#3a4753;
-  --paper:#f6f3ec;--paper-panel:#ffffff;--line:#d8d2c4;--ok:#2f6b45;--warn:#b8860b;
-  --ink:#20242a;--muted:#6b6459;font-family:var(--font-family, 'Segoe UI', system-ui, sans-serif);
+  --ember:var(--ambar-410);--ember-dark:var(--ambar-570);--steel:var(--pizarra-850);--steel-mid:var(--pizarra-700);
+  --paper:var(--arena-70);--paper-panel:var(--blanco);--line:var(--arena-150);--ok:var(--verde-600);--warn:var(--ambar-410);
+  --ink:var(--pizarra-880);--muted:var(--arena-550);font-family:var(--font-family, 'Segoe UI', system-ui, sans-serif);
 }
 
 body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035) 0 2px, transparent 2px 14px),var(--paper);color:var(--ink);padding:24px 16px 80px;}
@@ -24,15 +25,15 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   display:flex;align-items:center;gap:9px;
   min-height:var(--touch,44px);
   border:1.5px solid var(--line);border-radius:8px;
-  padding:8px 11px;background:#fcfbf8;
+  padding:8px 11px;background:var(--gris-10);
   font-size:var(--fs-menor,12.5px);font-weight:600;text-transform:none;
-  color:var(--ink,#151b24);margin:0;cursor:pointer;transition:.12s;
+  color:var(--ink,var(--pizarra-900));margin:0;cursor:pointer;transition:.12s;
 }
-.tension-grid label:has(input:checked){border-color:var(--ink);background:#fff;box-shadow:inset 0 0 0 1px var(--ink);}
+.tension-grid label:has(input:checked){border-color:var(--ink);background:var(--blanco);box-shadow:inset 0 0 0 1px var(--ink);}
 .tension-grid input[type=checkbox]{width:20px;height:20px;flex-shrink:0;margin:0;}
 .tension-sub{
   font-size:var(--fs-etiqueta,11px);font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--ink-muted,#5c6a76);margin:2px 0 6px;
+  text-transform:uppercase;color:var(--ink-muted,var(--pizarra-550));margin:2px 0 6px;
 }
 @media(max-width:420px){ .tension-grid{grid-template-columns:1fr;} }
 
@@ -58,7 +59,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   .exec-table thead{display:none;}
   .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
   .exec-table{border:none;}
-  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:var(--gris-10);box-shadow:0 1px 3px rgba(0,0,0,.04);}
   .exec-table td{border:none;padding:9px 0;}
   .exec-table td[data-label]::before{
     content: attr(data-label);
@@ -87,7 +88,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
   .exec-table thead{display:none;}
   .exec-table, .exec-table tbody, .exec-table tr, .exec-table td{display:block;width:100%;}
   .exec-table{border:none;}
-  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:#fcfbf8;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .exec-table tr{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;background:var(--gris-10);box-shadow:0 1px 3px rgba(0,0,0,.04);}
   .exec-table td{border:none;padding:9px 0;}
   .exec-table td[data-label]::before{
     content: attr(data-label);
@@ -111,9 +112,9 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 
 .radio-row label{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;padding:4px 0;}
 
-.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 12px;font-size:11.5px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:#aab3ba;min-width:44px;transition:.14s;}
-.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
-.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700;}
+.toggle button{border:1.5px solid var(--line);background:transparent;padding:6px 12px;font-size:11.5px;font-weight:600;border-radius:var(--radius-sm, 7px);cursor:pointer;color:var(--pizarra-300);min-width:44px;transition:.14s;}
+.toggle button.active-c{background:var(--ok);border-color:var(--ok);color:var(--blanco);font-weight:700;box-shadow:0 2px 6px rgba(29,122,76,.3);}
+.toggle button.active-na{background:var(--warn);border-color:var(--warn);color:var(--blanco);font-weight:700;}
 
 .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
 .sig-actions button{background:none;border:none;color:var(--ember-dark);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;}
@@ -122,13 +123,13 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 
 .footer-actions{margin-top:24px;max-width:980px;margin-left:auto;margin-right:auto;background:var(--steel);border-radius:var(--radius-lg, 14px);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-card);}
 
-.btn-secondary{background:transparent;color:#c7cdd2;border:1px solid #4a5762;padding:9px 16px;border-radius:var(--radius-sm, 7px);font-size:12px;font-weight:600;cursor:pointer;}
-.btn-secondary:hover{border-color:#c7cdd2;color:#fff;}
+.btn-secondary{background:transparent;color:var(--pizarra-210);border:1px solid var(--pizarra-650);padding:9px 16px;border-radius:var(--radius-sm, 7px);font-size:12px;font-weight:600;cursor:pointer;}
+.btn-secondary:hover{border-color:var(--pizarra-210);color:var(--blanco);}
 /* LANDING */
 
 .landing-choices{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:560px){.landing-choices{grid-template-columns:1fr;}}
-.choice-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 18px;cursor:pointer;transition:.15s;}
+.choice-card{background:var(--blanco);border:1px solid var(--line);border-radius:12px;padding:24px 18px;cursor:pointer;transition:.15s;}
 .choice-card:hover{border-color:var(--ember);box-shadow:0 4px 14px rgba(200,70,26,.15);}
 .choice-card .icon{font-size:30px;margin-bottom:10px;}
 .choice-card h3{margin:0 0 6px;font-size:14.5px;color:var(--steel);}
@@ -136,26 +137,26 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
 .file-input-wrap{margin-top:10px;}
 .file-input-wrap input{font-size:12px;}
 
-.validation-banner{display:none;background:#fdecea;border:1px solid #e08a80;color:#7a1f14;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;}
+.validation-banner{display:none;background:var(--rojo-60);border:1px solid var(--rojo-350);color:var(--rojo-750);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;}
 .validation-banner.show{display:block;}
 .validation-banner strong{display:block;margin-bottom:4px;font-size:12.5px;}
 .validation-banner ul{margin:0;padding-left:18px;}
-.draft-banner{display:none;background:#eaf3ff;border:1px solid #a9c9ef;color:#1a4a7a;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.draft-banner{display:none;background:var(--pizarra-60);border:1px solid var(--azul-200);color:var(--azul-700);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 .draft-banner.show{display:flex;}
 
 @media print{
   .footer-actions,.add-row-btn,.sig-actions,#landing,.validation-banner,.draft-banner{display:none !important;}
-  body{background:#fff;padding:0;}
+  body{background:var(--blanco);padding:0;}
   .wrap{max-width:100%;}
-  .hdr{background:#fff !important;color:#1a1a1a !important;border:2px solid var(--steel);box-shadow:none;}
+  .hdr{background:var(--blanco) !important;color:var(--gris-900) !important;border:2px solid var(--steel);box-shadow:none;}
   .hdr::before{display:none;}
   .hdr .brand{color:var(--ember);}
-  .hdr .meta{color:#444;}
-  .hdr-logo{background:var(--ember) !important;color:#fff !important;}
-  .section{box-shadow:none;border:1px solid #999;break-inside:avoid;}
-  .section-title{background:#eee !important;color:#1a1a1a !important;}
-  .toggle button.on{background:var(--ember) !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  canvas.pad,canvas.mini-pad{border:1px solid #999 !important;}
+  .hdr .meta{color:var(--gris-700);}
+  .hdr-logo{background:var(--ember) !important;color:var(--blanco) !important;}
+  .section{box-shadow:none;border:1px solid var(--gris-350);break-inside:avoid;}
+  .section-title{background:var(--gris-80) !important;color:var(--gris-900) !important;}
+  .toggle button.on{background:var(--ember) !important;color:var(--blanco) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  canvas.pad,canvas.mini-pad{border:1px solid var(--gris-350) !important;}
   @page{margin:14mm 10mm;}
 }
 </style>
@@ -212,7 +213,7 @@ body{margin:0;background:repeating-linear-gradient(135deg, rgba(200,70,26,0.035)
         </div>
       </div>
     </div>
-    <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:#888;text-decoration:none;">← Volver al portal SSTA</a>
+    <a href="index.html" style="display:block;margin-top:18px;font-size:12.5px;color:var(--gris-450);text-decoration:none;">← Volver al portal SSTA</a>
   </div>
 
   <!-- APP -->
@@ -446,7 +447,7 @@ const cfg = {
   key: 'electrico',
   codePrefix: 'PTE',
   draftSlug: 'electrico',
-  themeColor: '#b8860b',
+  themeColor: 'var(--ambar-410)',
   // Mismo par de valores C/NA que los otros tipos, pero acá el texto de los
   // botones es "SÍ"/"NO" en vez de "C"/"NA" (así está en el formulario original).
   toggleStates: [

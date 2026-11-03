@@ -1,0 +1,178 @@
+/* ============================================================
+   tokens.css — Paleta única del Portal SSTA (tokens de diseño).
+   Se carga ANTES que cualquier otra hoja en todas las páginas.
+
+   Dos capas:
+   1) Paleta base (--gris-500, --rojo-550…): cada color del portal
+      escrito UNA sola vez. El número sube de claro (25) a oscuro (975).
+      Nadie escribe colores sueltos: se usa la variable.
+   2) Roles (--ds-texto, --ds-panel, --ds-error…): lo que significa el
+      color. Cambian solos en modo oscuro. Lo nuevo se escribe con roles.
+
+   Para cambiar un color en todo el portal: se cambia aquí.
+   ============================================================ */
+:root{
+  /* Grises puros (hojas impresas) y blanco/negro */
+  --blanco:#ffffff; --gris-10:#fcfbf8; --gris-50:#f4f8fb; --gris-60:#f6f5f2;
+  --gris-70:#eef1f4; --gris-80:#eeeeee; --gris-90:#e8ebee; --gris-150:#d9d9d9;
+  --gris-200:#cccccc; --gris-250:#bfbfbf; --gris-350:#999999; --gris-450:#888888;
+  --gris-500:#777777; --gris-550:#666666; --gris-650:#555555; --gris-700:#444444;
+  --gris-800:#333333; --gris-850:#222222; --gris-900:#1a1a1a; --gris-950:#111111;
+  --gris-960:#0b0e12; --negro:#000000;
+  /* Arena: papeles, tarjetas y líneas cálidas */
+  --arena-10:#fffdf5; --arena-20:#fdf8ec; --arena-50:#fff7e0; --arena-60:#fff2e5;
+  --arena-70:#f6f3ec; --arena-80:#f6f0dc; --arena-90:#fbeae3; --arena-100:#eceae4;
+  --arena-110:#e7e4dd; --arena-150:#d8d2c4; --arena-250:#b9b2a2; --arena-500:#7a7466;
+  --arena-550:#6b6459; --arena-950:#16130a;
+  /* Pizarra: textos, líneas frías y fondos del modo oscuro */
+  --pizarra-50:#eef5fd; --pizarra-60:#eaf3ff; --pizarra-70:#e3f0f0; --pizarra-80:#e3eef7;
+  --pizarra-90:#e5ecfb; --pizarra-100:#dde3e8; --pizarra-150:#d7dce0; --pizarra-160:#c8dcf3;
+  --pizarra-170:#cfd6dc; --pizarra-180:#c9d6e6; --pizarra-190:#b8d9d9; --pizarra-200:#c9d1d9;
+  --pizarra-210:#c7cdd2; --pizarra-220:#b8c2cc; --pizarra-300:#aab3ba; --pizarra-310:#a3adb6;
+  --pizarra-350:#9aa4ae; --pizarra-400:#8a97a3; --pizarra-450:#7f8a95; --pizarra-500:#6b7884;
+  --pizarra-550:#5c6a76; --pizarra-600:#5c6570; --pizarra-650:#4a5762; --pizarra-700:#3a4753;
+  --pizarra-750:#2f3a48; --pizarra-800:#2a313a; --pizarra-850:#1f2a33; --pizarra-860:#13263b;
+  --pizarra-870:#1c2530; --pizarra-880:#20242a; --pizarra-900:#151b24; --pizarra-950:#0f1318;
+  /* Azules (alturas, información, foco) */
+  --azul-150:#bcd8f5; --azul-200:#a9c9ef; --azul-250:#7cc4dd; --azul-260:#8cb4ff;
+  --azul-400:#5b8fd3; --azul-550:#2f6fbf; --azul-560:#1c6ea4; --azul-570:#1f6f8b;
+  --azul-580:#1a5fd0; --azul-600:#2c5fc4; --azul-610:#1c5f99; --azul-620:#1f5f8b;
+  --azul-650:#3e4aa0; --azul-700:#1a4a7a; --azul-710:#2b4a6b; --azul-750:#123a63;
+  --azul-760:#0f3a5f; --azul-800:#333344; --azul-850:#0a2842;
+  /* Teal (ATS, EPP) */
+  --teal-200:#8fd0d3; --teal-450:#2f8a8f; --teal-550:#0f7a72; --teal-650:#0f5e63;
+  --teal-660:#0a5a54; --teal-700:#0f4c4f;
+  /* Verdes (correcto, abierto, firmado) */
+  --verde-50:#eef8f2; --verde-60:#e3f4ea; --verde-100:#b9f0d2; --verde-110:#00ff00;
+  --verde-150:#bfe3cd; --verde-160:#9fe3bf; --verde-170:#b9dcc2; --verde-200:#9fd1b3;
+  --verde-210:#7fd3a8; --verde-250:#5fd39b; --verde-260:#25d366; --verde-300:#2fbf71;
+  --verde-350:#7cb342; --verde-450:#2f9a62; --verde-500:#1d8a55; --verde-550:#0e7c4a;
+  --verde-560:#1f7a55; --verde-570:#1d7a4c; --verde-600:#2f6b45; --verde-610:#1d6b43;
+  --verde-650:#14603a; --verde-660:#2e5e18; --verde-670:#1d5c3a; --verde-700:#0f4f3a;
+  /* Ámbar y amarillo INDIMON (marca, avisos) */
+  --ambar-50:#fff4d6; --ambar-60:#fff3cd; --ambar-70:#fbeed4; --ambar-100:#f4e4b0;
+  --ambar-150:#ffd84d; --ambar-160:#f2d27a; --ambar-170:#f0c98d; --ambar-200:#f1c84b;
+  --ambar-210:#e8c56a; --ambar-250:#e0b270; --ambar-260:#d9ad00; --ambar-300:#e0a800;
+  --ambar-310:#c9a227; --ambar-400:#b98f00; --ambar-410:#b8860b; --ambar-450:#a8851c;
+  --ambar-460:#a47f00; --ambar-500:#8a6d1f; --ambar-550:#8a6d00; --ambar-560:#8a6800;
+  --ambar-570:#8a6408; --ambar-600:#8a5a00; --ambar-610:#7a5b00; --ambar-620:#7a5600;
+  --ambar-650:#6b4a00; --ambar-700:#5c4a12; --ambar-800:#3d2f00; --ambar-850:#2a2410;
+  --amarillo-indimon:#f2c200;
+  /* Naranjas (avisos, caliente) */
+  --naranja-200:#f0c19c; --naranja-210:#e2b79c; --naranja-400:#d4840a; --naranja-500:#b26a00;
+  --naranja-510:#a86400; --naranja-650:#7a3e00;
+  /* Rojos (errores, vencido, cerrar) */
+  --rojo-50:#fdf1ef; --rojo-60:#fdecea; --rojo-100:#fbe4e0; --rojo-150:#f7c9c2;
+  --rojo-160:#f0c8c1; --rojo-170:#ffc2b8; --rojo-200:#ffb4a8; --rojo-210:#f3b6b1;
+  --rojo-250:#e3b3ad; --rojo-260:#ff9c8e; --rojo-270:#e0a89f; --rojo-300:#ff8a7a;
+  --rojo-350:#e08a80; --rojo-500:#d24a1c; --rojo-510:#c8461a; --rojo-550:#c0392b;
+  --rojo-600:#b8323a; --rojo-610:#b4342a; --rojo-620:#b3261e; --rojo-650:#9c3413;
+  --rojo-660:#a02d20; --rojo-670:#a1281c; --rojo-700:#8a2a1c; --rojo-710:#7a2f25;
+  --rojo-750:#7a1f14; --rojo-850:#3a1713;
+  /* Morados (izajes) */
+  --morado-50:#f5e9f7; --morado-600:#6b4c9a; --morado-650:#7b3b86; --morado-700:#5b3a91;
+  --morado-750:#432a6c;
+}
+
+/* ── 2) ROLES: qué significa cada color (cambian solos en modo oscuro) ── */
+:root{
+  /* superficies y texto */
+  --ds-fondo:var(--gris-10);          /* fondo de la página */
+  --ds-panel:var(--blanco);           /* tarjetas principales, ventanas */
+  --ds-tarjeta:var(--gris-60);        /* tarjetas dentro de un panel */
+  --ds-chip:var(--gris-70);           /* etiquetas pequeñas */
+  --ds-linea:var(--arena-110);        /* bordes suaves */
+  --ds-linea-fria:var(--pizarra-100); /* bordes de campos */
+  --ds-texto:var(--pizarra-900);
+  --ds-texto-2:var(--pizarra-550);    /* texto secundario */
+  --ds-texto-3:var(--pizarra-400);    /* ayudas, marcadores de posición */
+  --ds-velo:rgba(8,11,15,.55);        /* fondo detrás de una ventana */
+  --ds-sombra-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(15,25,35,.07);
+  --ds-sombra-2:0 12px 32px rgba(0,0,0,.25);
+  /* marca */
+  --ds-marca:var(--amarillo-indimon);
+  --ds-sobre-marca:var(--arena-950);  /* texto encima del amarillo */
+  /* estados */
+  --ds-ok:var(--verde-500);       --ds-ok-texto:var(--verde-570);  --ds-ok-suave:var(--verde-60);
+  --ds-aviso:var(--naranja-500);  --ds-aviso-texto:var(--naranja-500); --ds-aviso-suave:var(--arena-50);
+  --ds-error:var(--rojo-610);     --ds-error-texto:var(--rojo-750); --ds-error-suave:var(--rojo-60); --ds-error-borde:var(--rojo-160);
+  --ds-info:var(--azul-570);      --ds-info-suave:var(--pizarra-70);
+  --ds-foco:var(--azul-580);      --ds-foco-anillo:0 0 0 3px rgba(26,95,208,.28);
+  /* acento de cada formulario */
+  --acento-caliente:var(--rojo-510);
+  --acento-alturas:var(--azul-700);
+  --acento-ats:var(--teal-650);
+  --acento-epp:var(--azul-570);
+  --acento-izajes:var(--morado-600);
+  --acento-anexos:var(--ambar-450);
+  --acento-tablero:var(--ambar-400);
+  /* forma, alturas, espacio y movimiento */
+  --ds-r-sm:8px; --ds-r-md:12px; --ds-r-lg:16px; --ds-r-xl:24px; --ds-r-full:999px;
+  --ds-ctl-h:48px; --ds-ctl-h-sm:44px; --ds-touch:44px;
+  --ds-s1:4px; --ds-s2:8px; --ds-s3:12px; --ds-s4:16px; --ds-s5:20px; --ds-s6:24px; --ds-s8:32px;
+  --ds-t-rapido:.12s; --ds-t-medio:.22s; --ds-curva:cubic-bezier(.2,.8,.2,1);
+  /* esqueleto de carga */
+  --ds-skel-a:var(--arena-110); --ds-skel-b:var(--gris-60);
+}
+html.oscuro{
+  --ds-fondo:var(--gris-960);
+  --ds-panel:var(--pizarra-900);
+  --ds-tarjeta:var(--pizarra-880);
+  --ds-chip:var(--pizarra-800);
+  --ds-linea:var(--pizarra-800);
+  --ds-linea-fria:var(--pizarra-800);
+  --ds-texto:var(--gris-90);
+  --ds-texto-2:var(--pizarra-350);
+  --ds-texto-3:var(--pizarra-450);
+  --ds-sombra-1:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --ds-sobre-marca:var(--arena-950);
+  --ds-ok:var(--verde-250);       --ds-ok-texto:var(--verde-210);  --ds-ok-suave:rgba(95,211,155,.12);
+  --ds-aviso:var(--ambar-200);    --ds-aviso-texto:var(--ambar-200); --ds-aviso-suave:rgba(241,200,75,.12);
+  --ds-error:var(--rojo-300);     --ds-error-texto:var(--rojo-200); --ds-error-suave:rgba(255,138,122,.12); --ds-error-borde:var(--rojo-710);
+  --ds-info:var(--azul-250);      --ds-info-suave:rgba(124,198,223,.12);
+  --ds-foco:var(--azul-260);      --ds-foco-anillo:0 0 0 3px rgba(140,180,255,.35);
+  --ds-skel-a:var(--pizarra-850); --ds-skel-b:var(--pizarra-750);
+}
+
+/* Al imprimir siempre se usa papel claro, aunque la pantalla esté en modo oscuro. */
+@media print{
+  html.oscuro{
+  /* superficies y texto */
+  --ds-fondo:var(--gris-10);          /* fondo de la página */
+  --ds-panel:var(--blanco);           /* tarjetas principales, ventanas */
+  --ds-tarjeta:var(--gris-60);        /* tarjetas dentro de un panel */
+  --ds-chip:var(--gris-70);           /* etiquetas pequeñas */
+  --ds-linea:var(--arena-110);        /* bordes suaves */
+  --ds-linea-fria:var(--pizarra-100); /* bordes de campos */
+  --ds-texto:var(--pizarra-900);
+  --ds-texto-2:var(--pizarra-550);    /* texto secundario */
+  --ds-texto-3:var(--pizarra-400);    /* ayudas, marcadores de posición */
+  --ds-velo:rgba(8,11,15,.55);        /* fondo detrás de una ventana */
+  --ds-sombra-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(15,25,35,.07);
+  --ds-sombra-2:0 12px 32px rgba(0,0,0,.25);
+  /* marca */
+  --ds-marca:var(--amarillo-indimon);
+  --ds-sobre-marca:var(--arena-950);  /* texto encima del amarillo */
+  /* estados */
+  --ds-ok:var(--verde-500);       --ds-ok-texto:var(--verde-570);  --ds-ok-suave:var(--verde-60);
+  --ds-aviso:var(--naranja-500);  --ds-aviso-texto:var(--naranja-500); --ds-aviso-suave:var(--arena-50);
+  --ds-error:var(--rojo-610);     --ds-error-texto:var(--rojo-750); --ds-error-suave:var(--rojo-60); --ds-error-borde:var(--rojo-160);
+  --ds-info:var(--azul-570);      --ds-info-suave:var(--pizarra-70);
+  --ds-foco:var(--azul-580);      --ds-foco-anillo:0 0 0 3px rgba(26,95,208,.28);
+  /* acento de cada formulario */
+  --acento-caliente:var(--rojo-510);
+  --acento-alturas:var(--azul-700);
+  --acento-ats:var(--teal-650);
+  --acento-epp:var(--azul-570);
+  --acento-izajes:var(--morado-600);
+  --acento-anexos:var(--ambar-450);
+  --acento-tablero:var(--ambar-400);
+  /* forma, alturas, espacio y movimiento */
+  --ds-r-sm:8px; --ds-r-md:12px; --ds-r-lg:16px; --ds-r-xl:24px; --ds-r-full:999px;
+  --ds-ctl-h:48px; --ds-ctl-h-sm:44px; --ds-touch:44px;
+  --ds-s1:4px; --ds-s2:8px; --ds-s3:12px; --ds-s4:16px; --ds-s5:20px; --ds-s6:24px; --ds-s8:32px;
+  --ds-t-rapido:.12s; --ds-t-medio:.22s; --ds-curva:cubic-bezier(.2,.8,.2,1);
+  /* esqueleto de carga */
+  --ds-skel-a:var(--arena-110); --ds-skel-b:var(--gris-60);
+}
+}

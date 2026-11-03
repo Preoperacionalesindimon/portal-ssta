@@ -3,32 +3,30 @@
    Común a todas las páginas (claro y oscuro).
    ============================================================ */
 :root{
-  --ux-panel:#ffffff; --ux-text:#151b24; --ux-muted:#5c6a76; --ux-line:#e3e1da; --ux-card:#f6f5f2;
-}
-html.oscuro{
-  --ux-panel:#151a21; --ux-text:#e8ebee; --ux-muted:#9aa4ae; --ux-line:#2a313a; --ux-card:#1d232b;
+  /* nombres viejos de esta hoja, ahora apuntan a los roles de tokens.css */
+  --ux-panel:var(--ds-panel); --ux-text:var(--ds-texto); --ux-muted:var(--ds-texto-2); --ux-line:var(--ds-linea); --ux-card:var(--ds-tarjeta);
 }
 
 /* ── Íconos que reemplazan emojis ── */
 .ux-ico{display:inline-flex;vertical-align:-.18em;margin:0 .12em;}
 .ux-ic{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-.ux-alerta{color:#d4840a;}
-html.oscuro .ux-alerta{color:#f1c84b;}
-.ux-ok{color:#1d8a55;}
-html.oscuro .ux-ok{color:#5fd39b;}
+.ux-alerta{color:var(--naranja-400);}
+html.oscuro .ux-alerta{color:var(--ambar-200);}
+.ux-ok{color:var(--verde-500);}
+html.oscuro .ux-ok{color:var(--verde-250);}
 @media print{ .ux-ico{display:none !important;} }
 
 /* ── Avisos cortos: franja abajo que se va sola ── */
 .ux-toasts{position:fixed;left:0;right:0;top:calc(10px + env(safe-area-inset-top));z-index:10100;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 12px;pointer-events:none;}
 .ux-toast{pointer-events:auto;max-width:520px;width:100%;display:flex;align-items:flex-start;gap:10px;padding:12px 10px 12px 14px;border-radius:16px;
-  background:#151b24;color:#f2f4f6;font-family:var(--font-family,system-ui,sans-serif);font-size:14px;line-height:1.45;
+  background:var(--pizarra-900);color:var(--gris-70);font-family:var(--font-family,system-ui,sans-serif);font-size:14px;line-height:1.45;
   box-shadow:0 12px 32px rgba(0,0,0,.28);transform:translateY(-16px);opacity:0;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s;}
-html.oscuro .ux-toast{background:#f2f4f6;color:#151b24;}
+html.oscuro .ux-toast{background:var(--gris-70);color:var(--pizarra-900);}
 .ux-toast.on{transform:none;opacity:1;}
-.ux-toast-ic{width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:#2fbf71;
+.ux-toast-ic{width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:var(--verde-300);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
           mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
-  background:#F2C200;}
+  background:var(--amarillo-indimon);}
 .ux-toast-txt{flex:1;white-space:pre-line;}
 .ux-toast button{flex-shrink:0;width:32px;height:32px;margin:-6px 0;border:none;border-radius:10px;background:transparent;color:inherit;opacity:.6;font-size:20px;cursor:pointer;}
 .ux-toast button:hover{opacity:1;}
@@ -42,28 +40,28 @@ html.oscuro .ux-toast{background:#f2f4f6;color:#151b24;}
   transform:scale(.96);transition:transform .2s cubic-bezier(.2,.8,.2,1);}
 .ux-modal.on .ux-modal-caja{transform:none;}
 .ux-modal-ic{width:48px;height:48px;border-radius:14px;margin-bottom:12px;background:rgba(242,194,0,.18);position:relative;}
-.ux-modal-ic::after{content:"";position:absolute;inset:12px;background:#b98f00;
+.ux-modal-ic::after{content:"";position:absolute;inset:12px;background:var(--ambar-400);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;
           mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center/contain no-repeat;}
 .ux-modal.grave .ux-modal-ic{background:rgba(192,57,43,.14);}
-.ux-modal.grave .ux-modal-ic::after{background:#c0392b;
+.ux-modal.grave .ux-modal-ic::after{background:var(--rojo-550);
   -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
           mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");}
-html.oscuro .ux-modal.grave .ux-modal-ic::after{background:#ff8a7a;}
-html.oscuro .ux-modal-ic::after{background:#F2C200;}
+html.oscuro .ux-modal.grave .ux-modal-ic::after{background:var(--rojo-300);}
+html.oscuro .ux-modal-ic::after{background:var(--amarillo-indimon);}
 .ux-modal h3{font-family:var(--font-display,inherit);font-size:19px;line-height:1.25;letter-spacing:-.01em;margin:0 0 8px;}
 .ux-modal-txt{font-size:14.5px;line-height:1.55;color:var(--ux-muted);white-space:pre-line;margin-bottom:18px;}
 .ux-modal-ok{width:100%;min-height:50px;border:none;border-radius:14px;background:var(--ux-text);color:var(--ux-panel);font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
-.ux-modal.grave .ux-modal-ok{background:#c0392b;color:#fff;}
+.ux-modal.grave .ux-modal-ok{background:var(--rojo-550);color:var(--blanco);}
 @media (prefers-reduced-motion: reduce){ .ux-toast,.ux-modal,.ux-modal-caja{transition:none;} }
 @media print{ .ux-toasts,.ux-modal{display:none !important;} }
 
 /* ── Recuadro de firma: línea, X y "Firme aquí" ── */
 canvas.pad,canvas.mini-pad,canvas.sigpad{
-  border:1.5px solid var(--ux-line) !important;border-radius:16px !important;background-color:#fff !important;
+  border:1.5px solid var(--ux-line) !important;border-radius:16px !important;background-color:var(--blanco) !important;
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%239aa3ad' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
-    linear-gradient(#c3c9cf,#c3c9cf),
+    linear-gradient(var(--pizarra-210),var(--pizarra-210)),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='22'%3E%3Ctext x='100' y='15' font-family='sans-serif' font-size='13' font-weight='600' fill='%239aa3ad' text-anchor='middle' letter-spacing='1'%3EFIRME AQU%C3%8D%3C/text%3E%3C/svg%3E") !important;
   background-repeat:no-repeat !important;
   background-size:20px 20px,calc(100% - 64px) 1.5px,200px 22px !important;
@@ -72,10 +70,10 @@ canvas.pad,canvas.mini-pad,canvas.sigpad{
 }
 /* Ya firmado: se quita el texto guía y el borde pasa a verde */
 canvas.pad.con-firma,canvas.mini-pad.con-firma,canvas.sigpad.con-firma{
-  border-color:#1d8a55 !important;box-shadow:0 0 0 3px rgba(29,138,85,.14);
+  border-color:var(--verde-500) !important;box-shadow:0 0 0 3px rgba(29,138,85,.14);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23c3c9cf' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
-    linear-gradient(#dfe3e7,#dfe3e7) !important;
+    linear-gradient(var(--pizarra-100),var(--pizarra-100)) !important;
   background-size:20px 20px,calc(100% - 64px) 1.5px !important;
   background-position:20px calc(72% - 12px),40px 72% !important;
 }
@@ -85,37 +83,125 @@ canvas.pad.locked,canvas.mini-pad.locked,canvas.sigpad.locked{background-image:n
   canvas.pad:not(.con-firma):not(.locked),canvas.mini-pad:not(.con-firma):not(.locked){
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%239aa3ad' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"),
-      linear-gradient(#c3c9cf,#c3c9cf),
+      linear-gradient(var(--pizarra-210),var(--pizarra-210)),
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='22'%3E%3Ctext x='120' y='15' font-family='sans-serif' font-size='13' font-weight='600' fill='%239aa3ad' text-anchor='middle' letter-spacing='1'%3ETOCA AQU%C3%8D PARA FIRMAR%3C/text%3E%3C/svg%3E") !important;
     background-size:20px 20px,calc(100% - 64px) 1.5px,240px 22px !important;
   }
 }
 .sig-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px !important;font-weight:600;color:var(--ux-muted) !important;}
-.sig-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#c3c9cf;}
-.sig-status.signed,.sig-status.done{color:#1d7a4c !important;padding:3px 10px;border-radius:999px;background:rgba(29,122,76,.12);}
-.sig-status.signed::before,.sig-status.done::before{background:#1d8a55;}
-html.oscuro .sig-status.signed,html.oscuro .sig-status.done{color:#7fd3a8 !important;background:rgba(29,138,85,.2);}
+.sig-status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--pizarra-210);}
+.sig-status.signed,.sig-status.done{color:var(--verde-570) !important;padding:3px 10px;border-radius:999px;background:rgba(29,122,76,.12);}
+.sig-status.signed::before,.sig-status.done::before{background:var(--verde-500);}
+html.oscuro .sig-status.signed,html.oscuro .sig-status.done{color:var(--verde-210) !important;background:rgba(29,138,85,.2);}
 .sig-actions button{min-height:36px;padding:0 12px !important;border-radius:10px !important;text-decoration:none !important;
   border:1px solid var(--ux-line) !important;background:var(--ux-card) !important;color:var(--ux-text) !important;font-weight:600 !important;font-size:12.5px !important;}
 @media print{
-  canvas.pad,canvas.mini-pad,canvas.sigpad{background-image:none !important;box-shadow:none !important;border:1px solid #999 !important;}
+  canvas.pad,canvas.mini-pad,canvas.sigpad{background-image:none !important;box-shadow:none !important;border:1px solid var(--gris-350) !important;}
   .sig-status::before{display:none;}
 }
 
 /* ══ Al imprimir o guardar PDF: SIEMPRE en claro, aunque el equipo esté en modo oscuro ══
    (antes la inspección de EPP salía oscura y algunas hojas con bordes negros) */
 @media print{
-  html,html.oscuro{color-scheme:light !important;background:#fff !important;
-    --pui-page:#ffffff; --pui-text:#151b24; --pui-muted:#5c6a76;
-    --pui-hero:#ffffff; --pui-hero-fg:#151b24; --pui-hero-muted:#5c6a76; --pui-grid:transparent;
-    --pui-chip:#f3f2ee; --pui-chip-bd:#e3e1da; --pui-chip-hover:#e9e7e1;
-    --pui-panel:#ffffff; --pui-card:#f6f5f2; --pui-line:#d7dce0; --pui-field:#ffffff;
-    --ux-panel:#ffffff; --ux-text:#151b24; --ux-muted:#5c6a76; --ux-line:#d7dce0; --ux-card:#f6f5f2;
-    --page:#ffffff; --text:#151b24; --muted:#5c6a76; --hero:#ffffff; --hero-fg:#151b24; --hero-muted:#5c6a76;
-    --panel:#ffffff; --card:#f6f5f2; --line2:#e7e4dd; --chip:#f3f2ee; --chip-bd:#e3e1da;}
-  html.oscuro body,html.oscuro body.pui,html.oscuro body.pui2{background:#fff !important;color:#151b24 !important;
-    --paper:#ffffff; --paper-panel:#ffffff; --line:#d8d2c4; --line-soft:#e3e8eb; --ink:#20242a; --text:#20242a;
-    --muted:#6b6459; --bg:#ffffff; --ink-soft:#5c6a76; --ink-muted:#5c6a76; --navy-dark:#0a2842; --brand-ats-soft:#e3f0f0;}
-  html.oscuro input,html.oscuro textarea,html.oscuro select{background:#fff !important;color:#151b24 !important;border-color:#bbb !important;}
-  html.oscuro .pui2 button:not([class]),html.oscuro .pui .toggle button,html.oscuro .pui .yn-btn{background:#fff !important;color:#151b24 !important;}
+  html,html.oscuro{color-scheme:light !important;background:var(--blanco) !important;
+    --pui-page:var(--blanco); --pui-text:var(--pizarra-900); --pui-muted:var(--pizarra-550);
+    --pui-hero:var(--blanco); --pui-hero-fg:var(--pizarra-900); --pui-hero-muted:var(--pizarra-550); --pui-grid:transparent;
+    --pui-chip:var(--gris-60); --pui-chip-bd:var(--arena-110); --pui-chip-hover:var(--arena-100);
+    --pui-panel:var(--blanco); --pui-card:var(--gris-60); --pui-line:var(--pizarra-150); --pui-field:var(--blanco);
+    --ux-panel:var(--blanco); --ux-text:var(--pizarra-900); --ux-muted:var(--pizarra-550); --ux-line:var(--pizarra-150); --ux-card:var(--gris-60);
+    --page:var(--blanco); --text:var(--pizarra-900); --muted:var(--pizarra-550); --hero:var(--blanco); --hero-fg:var(--pizarra-900); --hero-muted:var(--pizarra-550);
+    --panel:var(--blanco); --card:var(--gris-60); --line2:var(--arena-110); --chip:var(--gris-60); --chip-bd:var(--arena-110);}
+  html.oscuro body,html.oscuro body.pui,html.oscuro body.pui2{background:var(--blanco) !important;color:var(--pizarra-900) !important;
+    --paper:var(--blanco); --paper-panel:var(--blanco); --line:var(--arena-150); --line-soft:var(--gris-90); --ink:var(--pizarra-880); --text:var(--pizarra-880);
+    --muted:var(--arena-550); --bg:var(--blanco); --ink-soft:var(--pizarra-550); --ink-muted:var(--pizarra-550); --navy-dark:var(--azul-850); --brand-ats-soft:var(--pizarra-70);}
+  html.oscuro input,html.oscuro textarea,html.oscuro select{background:var(--blanco) !important;color:var(--pizarra-900) !important;border-color:var(--gris-250) !important;}
+  html.oscuro .pui2 button:not([class]),html.oscuro .pui .toggle button,html.oscuro .pui .yn-btn{background:var(--blanco) !important;color:var(--pizarra-900) !important;}
 }
+
+/* Los tokens (colores, radios, alturas, movimiento, estados) viven en
+   tokens.css, que se carga antes que esta hoja. */
+
+/* ── Foco visible (teclado) igual en todo el portal ── */
+:is(a,button,summary,input,select,textarea,[tabindex],[role=button]):focus-visible{
+  outline:3px solid var(--ds-foco) !important; outline-offset:2px !important;
+}
+:is(input,select,textarea):focus-visible{outline-width:2px !important;outline-offset:0 !important;}
+
+/* ── Estados de interacción comunes ── */
+:where(button,[role=button],a.btn,a.card,.pl-card,.pl-item[data-revisar]){
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color var(--ds-t-rapido),border-color var(--ds-t-rapido),box-shadow var(--ds-t-rapido),filter var(--ds-t-rapido),opacity var(--ds-t-rapido);
+}
+:where(button,[role=button],a.btn):not(:disabled):active{filter:brightness(.93);}
+html.oscuro :where(button,[role=button],a.btn):not(:disabled):active{filter:brightness(1.15);}
+:where(button,input,select,textarea):disabled,[aria-disabled="true"]{cursor:not-allowed;}
+:where(button):disabled{opacity:.55;}
+/* Botón trabajando (Guardando…, Buscando…): ruedita y sin doble toque */
+button.ux-ocupado{position:relative;opacity:.85 !important;cursor:progress !important;}
+button.ux-ocupado::before{content:"";display:inline-block;width:1em;height:1em;margin-right:.5em;vertical-align:-.15em;
+  border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:ux-gira .7s linear infinite;}
+@keyframes ux-gira{to{transform:rotate(360deg);}}
+
+/* ── Carga: barra superior mientras se consulta un servidor ── */
+.ux-barra{position:fixed;left:0;right:0;top:0;height:3px;z-index:10300;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .2s;}
+.ux-barra.on{opacity:1;}
+.ux-barra::before{content:"";position:absolute;top:0;bottom:0;left:-40%;width:40%;border-radius:3px;background:var(--ds-marca);
+  box-shadow:0 0 8px rgba(242,194,0,.6);animation:ux-barra 1.1s var(--ds-curva) infinite;}
+@keyframes ux-barra{to{left:100%;}}
+
+/* ── Carga: esqueleto (tarjetas grises que brillan) ── */
+.ux-skel{display:flex;flex-direction:column;gap:10px;padding:2px 0;}
+.ux-skel-item{display:flex;gap:12px;align-items:center;padding:14px;border-radius:var(--ds-r-lg);
+  background:var(--ux-panel);border:1px solid var(--ux-line);}
+.ux-skel-ic{width:40px;height:40px;border-radius:var(--ds-r-md);flex-shrink:0;}
+.ux-skel-tx{flex:1;display:flex;flex-direction:column;gap:8px;}
+.ux-skel-l{height:11px;border-radius:6px;}
+.ux-skel-l.l1{width:55%;height:13px;} .ux-skel-l.l2{width:85%;} .ux-skel-l.l3{width:40%;}
+.ux-skel-ic,.ux-skel-l{background:linear-gradient(90deg,var(--ds-skel-a) 0%,var(--ds-skel-b) 50%,var(--ds-skel-a) 100%);
+  background-size:200% 100%;animation:ux-brillo 1.3s linear infinite;}
+@keyframes ux-brillo{from{background-position:200% 0;}to{background-position:-200% 0;}}
+.ux-sr{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+/* ── Estados de la interfaz: vacío / error / sin conexión ── */
+.ux-estado{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 16px;border-radius:var(--ds-r-lg);
+  background:var(--ux-card);border:1px dashed var(--ux-line);color:var(--ux-muted);font-size:14px;line-height:1.45;}
+.ux-estado-ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--ux-panel);color:var(--ux-muted);}
+.ux-estado-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.ux-estado b{color:var(--ux-text);font-size:15px;}
+.ux-estado.error{border-style:solid;border-color:var(--rojo-250);border-color:color-mix(in srgb,var(--ds-error) 35%,transparent);background:var(--ds-error-suave);}
+.ux-estado.error .ux-estado-ic{color:var(--ds-error);}
+.ux-estado.offline .ux-estado-ic{color:var(--ds-aviso);}
+.ux-reintentar{margin-top:4px;min-height:var(--ds-touch);padding:0 18px;border-radius:var(--ds-r-md);border:1.5px solid var(--ux-line);
+  background:var(--ux-panel);color:var(--ux-text);font:inherit;font-weight:700;font-size:14px;cursor:pointer;}
+
+/* ── Consistencia de controles ── */
+html body :is(.btn-main,.btn-secondary,.ent-guardar,.ent-sec,.btn.amber,.btn.ghost,#atsApp .btn,.pui-af .btn,body.pui2 .btn):not(.btn-mini){
+  border-radius:var(--ds-r-md) !important;
+}
+html body :where(.btn-secondary,.ent-sec,.btn.amber,.btn.ghost):not(.btn-mini){min-height:var(--ds-ctl-h-sm);}
+/* la acción principal de cada formulario (guardar / abrir / cerrar) */
+html body :where(.btn-main,.ent-guardar):not(.btn-mini){min-height:var(--ds-ctl-h) !important;}
+html body :is(input[type=text],input[type=date],input[type=time],input[type=number],input[type=search],input[type=tel],input[type=email],input:not([type]),select,textarea):not(table *):not(.calc-mask):not(#searchInput):not([class*=ux-]){
+  border-radius:var(--ds-r-md) !important;
+}
+html body :is(input[type=text],input[type=date],input[type=time],input[type=number],input[type=search],input[type=tel],input[type=email],input:not([type]),select):not(table *):not(.calc-mask):not(#searchInput){
+  min-height:var(--ds-ctl-h-sm);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ux-skel-ic,.ux-skel-l,.ux-barra::before,button.ux-ocupado::before{animation-duration:3s;}
+  :where(button,[role=button],a.btn,a.card){transition:none;}
+}
+@media print{ .ux-barra,.ux-skel,.ux-reintentar{display:none !important;} }
+
+/* ── Ventanas emergentes armadas con estilos sueltos: mismo aspecto ── */
+.ux-hoja-fondo{background:var(--ds-velo) !important;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+.ux-hoja{border-radius:var(--ds-r-xl) var(--ds-r-xl) 0 0 !important;box-shadow:0 -10px 40px rgba(0,0,0,.25);color:var(--ux-text);}
+.ux-hoja.centrada{border-radius:var(--ds-r-xl) !important;}
+.ux-hoja h3{font-family:var(--font-display,inherit);letter-spacing:-.01em;}
+.ux-hoja button[data-cerrar],.ux-hoja button[data-cancelar]:not(.btn){min-height:var(--ds-touch);border-radius:var(--ds-r-md) !important;}
+.ux-hoja input[type=search],.ux-hoja input[type=text]{border-radius:var(--ds-r-md) !important;min-height:var(--ds-ctl-h);}
+/* Las ventanas ya se escriben con roles (--ds-panel, --ds-texto…), que
+   cambian solos en modo oscuro; aquí solo se asegura el panel y los campos. */
+.ux-hoja{background:var(--ds-panel) !important;color:var(--ds-texto) !important;}
+html.oscuro .ux-hoja input,html.oscuro .ux-hoja select,html.oscuro .ux-hoja textarea{background:var(--ds-tarjeta) !important;color:var(--ds-texto) !important;border-color:var(--ds-linea) !important;}

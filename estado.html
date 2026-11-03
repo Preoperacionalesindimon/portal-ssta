@@ -4,44 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Estado del sistema · Portal SSTA</title>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
 <style>
-:root{ --ink:#151b24; --line:#dde3e8; --muted:#6b7884; --ok:#1d7a4c; --warn:#b26a00; --mal:#c0392b; --amber:#c9a227; }
+:root{ --ink:var(--pizarra-900); --line:var(--pizarra-100); --muted:var(--pizarra-500); --ok:var(--verde-570); --warn:var(--naranja-500); --mal:var(--rojo-550); --amber:var(--ambar-310); }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:110px;}
+body{margin:0;background:var(--bg,var(--gris-70));color:var(--ink);font-family:var(--font-family,-apple-system,sans-serif);padding-bottom:110px;}
 .wrap{max-width:680px;margin:0 auto;padding:0 14px;}
 .hdr{display:block;background:var(--ink);padding:1.3rem 1.2rem 1.05rem;margin:0 -14px 14px;border-radius:0 0 16px 16px;}
-.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8b97a3;margin-bottom:6px;}
-.hdr h1{font-family:var(--font-display);font-size:18px;color:#fff;margin:0 0 2px;}
-.hdr p{font-size:11.5px;color:#8b97a3;margin:0;}
-.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:#c9a227;text-decoration:none;font-weight:600;}
-.resumen{border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;font-weight:700;line-height:1.4;border:1px solid var(--line);background:#fff;}
-.resumen.ok{background:#eef8f2;border-color:#bfe3cd;color:#1d5c3a;}
-.resumen.mal{background:#fdf1ef;border-color:#f0c8c1;color:#8a2a1c;}
-.resumen.prob{background:#fff;color:var(--muted);}
+.hdr .eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--pizarra-400);margin-bottom:6px;}
+.hdr h1{font-family:var(--font-display);font-size:18px;color:var(--blanco);margin:0 0 2px;}
+.hdr p{font-size:11.5px;color:var(--pizarra-400);margin:0;}
+.hdr a.back{display:inline-block;margin-bottom:10px;font-size:11.5px;color:var(--ambar-310);text-decoration:none;font-weight:600;}
+.resumen{border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;font-weight:700;line-height:1.4;border:1px solid var(--line);background:var(--blanco);}
+.resumen.ok{background:var(--verde-50);border-color:var(--verde-150);color:var(--verde-670);}
+.resumen.mal{background:var(--rojo-50);border-color:var(--rojo-160);color:var(--rojo-700);}
+.resumen.prob{background:var(--blanco);color:var(--muted);}
 .resumen small{display:block;font-weight:500;font-size:12px;margin-top:3px;}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
+.card{background:var(--blanco);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
 .card h2{font-family:var(--font-display);font-size:13.5px;margin:0 0 8px;}
-.dato{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #e6eaee;}
+.dato{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--gris-90);}
 .dato:last-child{border-bottom:none;}
 .dato b{text-align:right;}
-.srv{background:#fff;border:1px solid var(--line);border-left:5px solid #c8d0d6;border-radius:12px;padding:11px 13px;margin-bottom:9px;}
+.srv{background:var(--blanco);border:1px solid var(--line);border-left:5px solid var(--pizarra-200);border-radius:12px;padding:11px 13px;margin-bottom:9px;}
 .srv.ok{border-left-color:var(--ok);}
 .srv.clave{border-left-color:var(--amber);}
 .srv.mal{border-left-color:var(--mal);}
-.srv.gris{border-left-color:#c8d0d6;}
+.srv.gris{border-left-color:var(--pizarra-200);}
 .srv .fila{display:flex;align-items:center;gap:10px;}
 .srv .nom{flex:1;min-width:0;font-weight:700;font-size:13.5px;}
-.srv .chip{font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;background:#eef1f4;color:#5c6570;}
-.srv.ok .chip{background:#e3f4ea;color:var(--ok);}
-.srv.clave .chip{background:#fbf1d6;color:#7a5800;}
-.srv.mal .chip{background:#fbe4e0;color:var(--mal);}
-.srv .det{font-size:12px;color:#4b5864;margin-top:6px;line-height:1.45;overflow-wrap:anywhere;}
+.srv .chip{font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;background:var(--gris-70);color:var(--pizarra-600);}
+.srv.ok .chip{background:var(--verde-60);color:var(--ok);}
+.srv.clave .chip{background:var(--ambar-70);color:var(--ambar-620);}
+.srv.mal .chip{background:var(--rojo-100);color:var(--mal);}
+.srv .det{font-size:12px;color:var(--pizarra-650);margin-top:6px;line-height:1.45;overflow-wrap:anywhere;}
 .srv .acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-.srv .acc a,.srv .acc button{font-size:12px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 11px;text-decoration:none;cursor:pointer;font-family:inherit;}
-.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:13px;margin-top:8px;cursor:pointer;font-family:inherit;text-decoration:none;}
-.btn.amber{background:var(--amber);color:#151b24;}
-.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+.srv .acc a,.srv .acc button{font-size:12px;font-weight:700;border:1.5px solid var(--line);background:var(--blanco);color:var(--ink);border-radius:8px;padding:7px 11px;text-decoration:none;cursor:pointer;font-family:inherit;}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:var(--blanco);font-weight:700;font-size:14px;border:none;border-radius:10px;padding:13px;margin-top:8px;cursor:pointer;font-family:inherit;text-decoration:none;}
+.btn.amber{background:var(--amber);color:var(--pizarra-900);}
+.btn.ghost{background:var(--blanco);border:1.5px solid var(--line);color:var(--ink);}
 .btn:disabled{opacity:.55;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .nota{font-size:11.5px;color:var(--muted);line-height:1.45;margin:10px 2px;}
@@ -74,7 +75,7 @@ body{margin:0;background:var(--bg,#eef1f4);color:var(--ink);font-family:var(--fo
     <div id="equipo"></div>
   </div>
   <p class="nota">Esta página solo LEE de cada servidor: no guarda ni cambia nada. Si un servidor sale en rojo, toca «Abrir enlace de prueba»: lo que muestre esa página (datos o una pantalla de Google) es exactamente lo que recibe el portal.</p>
-  <div class="nota" style="text-align:center;">Portal SSTA · versión v94</div>
+  <div class="nota" style="text-align:center;">Portal SSTA · versión v96</div>
 </div>
 
 <script src="config.js"></script>
@@ -92,7 +93,7 @@ if (typeof UpdateManager !== 'undefined') UpdateManager.init();
    asistencia quedaba "pendiente" y solo abriendo el enlace a mano se vio
    que la implementación no era pública.
    ============================================================ */
-const VERSION = 'v94';
+const VERSION = 'v96';
 const $ = (id)=>document.getElementById(id);
 // Qué se consulta en cada uno (siempre algo de solo lectura).
 const PRUEBAS = [

@@ -13,8 +13,8 @@
   raiz.classList.toggle('oscuro', guardado ? guardado === 'dark' : !!(sistema && sistema.matches));
 
   var ACENTO = {
-    'ats': '#0f5e63', 'dashboard': '#b98f00', 'asistencia': '#a8851c', 'inspeccion-epp': '#1f6f8b',
-    'personal-autorizado': '#a8851c', 'estado': '#b98f00'
+    'ats': 'var(--teal-650)', 'dashboard': 'var(--ambar-400)', 'asistencia': 'var(--ambar-450)', 'inspeccion-epp': 'var(--azul-570)',
+    'personal-autorizado': 'var(--ambar-450)', 'estado': 'var(--ambar-400)'
   };
   var I = {
     atras: '<path d="m15 18-6-6 6-6"/>',
