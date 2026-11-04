@@ -1291,6 +1291,8 @@ grupo('Autoguardado de permisos y ATS', () => {
   const epp = leer('inspeccion-epp.html');
   ok('EPP: el resumen se envía con su propio campo de fecha (no siempre hoy cuando la lista está en "Ver todas")',
      /id="fechaResumen"/.test(epp) && /const fechaTexto = fechaResumenTexto\(\);/.test(epp) && !/aTextoFecha\(fechaFiltro\) \|\| fechaDeHoyTexto\(\)/.test(epp));
+  ok('EPP: las fechas que llegan como "2026-11-03T05:00:00.000Z" se leen como 03/11/2026 (filtro, conteo y resumen)',
+     /function fechaNorm\(v\)/.test(leer('inspeccion-epp.html')) && /fechaNorm\(r\.fechaInspeccion\) === objetivo/.test(leer('inspeccion-epp.html')) && /function fechaTexto_\(v\)/.test(leer('backends/backend-epp.gs')));
   ok('ATS: empezar uno nuevo avisa también si solo había una tarea a medias', /ats\.participantes\.length \|\| editando\) && !confirm/.test(ats));
 });
 

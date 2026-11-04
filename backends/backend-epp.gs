@@ -565,7 +565,7 @@ function calcularPendientes_(cedula) {
         const items = datos.items || {};
         Object.keys(items).forEach(el => {
           if (items[el] === 'M') {
-            p.pend[el] = { elemento: el, inspeccionId: f[0], fechaInspeccion: f[4], ts: fechaOrden_(f[8]) };
+            p.pend[el] = { elemento: el, inspeccionId: f[0], fechaInspeccion: fechaTexto_(f[4]), ts: fechaOrden_(f[8]) };
           } else if (items[el] === 'B' || items[el] === 'R') {
             delete p.pend[el];
           }
@@ -797,7 +797,7 @@ function doGet(e) {
     datos = rehidratarFirmas_(datos, cargarFirmasPorId_(e.parameter.id));
     return jsonOut_({
       ok: true, inspeccionId: f[0], cedula: f[1], nombre: f[2], cargo: f[3],
-      fechaInspeccion: f[4], inspector: f[5], malos: f[6], datos: datos, updatedAt: f[8]
+      fechaInspeccion: fechaTexto_(f[4]), inspector: f[5], malos: f[6], datos: datos, updatedAt: f[8]
     });
   }
 
@@ -819,7 +819,7 @@ function doGet(e) {
       const tipoFila = datos.tipo || 'epp';
       if (tipoPedido && tipoFila !== tipoPedido) return; // no mezclar formatos en la ficha
       const reg = { inspeccionId: f[0], cedula: f[1], nombre: f[2], cargo: f[3],
-                    fechaInspeccion: f[4], inspector: f[5], malos: f[6],
+                    fechaInspeccion: fechaTexto_(f[4]), inspector: f[5], malos: f[6],
                     tipo: tipoFila, updatedAt: f[8] };
       if (completo) reg.datos = rehidratarFirmas_(datos, cargarFirmasPorId_(f[0]));
       out.push(reg);
@@ -848,7 +848,7 @@ function doGet(e) {
         try { tipoFila = (JSON.parse(a[i][7] || '{}').tipo) || 'epp'; } catch (err) {}
         if (tipoPedido && tipoFila !== tipoPedido) continue;
         rows.push({ inspeccionId: a[i][0], cedula: a[i][1], nombre: a[i][2], cargo: a[i][3],
-                    fechaInspeccion: a[i][4], inspector: a[i][5], malos: a[i][6],
+                    fechaInspeccion: fechaTexto_(a[i][4]), inspector: a[i][5], malos: a[i][6],
                     tipo: tipoFila, updatedAt: u[i][0] });
       }
     }
@@ -900,6 +900,15 @@ function instalarResumenDiario() {
     .timeBased().atHour(HORA_RESUMEN_DIARIO).everyDays(1)
     .inTimezone('America/Bogota').create();
   return 'Resumen diario programado para las ' + HORA_RESUMEN_DIARIO + ':00.';
+}
+
+/* La fecha de la inspección se guarda como texto dd/MM/yyyy, pero Google Sheets
+   a veces la convierte en fecha real y al enviarla por JSON llegaba como
+   "2026-11-03T05:00:00.000Z", que el portal no podía comparar con el día que
+   se elige. Se devuelve siempre como dd/MM/yyyy (hora de Colombia). */
+function fechaTexto_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'America/Bogota', 'dd/MM/yyyy');
+  return v;
 }
 
 /* La llama el disparador. También se puede ejecutar a mano para probar.

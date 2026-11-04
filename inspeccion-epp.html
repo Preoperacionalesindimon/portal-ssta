@@ -982,6 +982,26 @@ function attachPersonalAutocomplete(inputEl, onSelect){
   window.addEventListener('scroll', cerrar, true);
 }
 
+/* El servidor puede devolver la fecha de una inspección como texto
+   ("03/11/2026") o, cuando Google Sheets la convirtió en fecha, como
+   "2026-11-03T05:00:00.000Z". Todo el portal la compara y la muestra como
+   dd/mm/aaaa (hora de Colombia): este helper deja las dos formas iguales. */
+function fechaNorm(v){
+  if(v === null || v === undefined || v === '') return '';
+  const t = String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}T/.test(t) || Object.prototype.toString.call(v) === '[object Date]'){
+    const d = new Date(v);
+    if(!isNaN(d)){
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Bogota', year:'numeric', month:'2-digit', day:'2-digit' }).format(d); // aaaa-mm-dd
+      const [a,m,dd] = p.split('-');
+      return dd + '/' + m + '/' + a;
+    }
+  }
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);
+  if(m) return m[1].padStart(2,'0') + '/' + m[2].padStart(2,'0') + '/' + m[3];
+  return t;
+}
+
 /* ================= HISTORIAL DE LA PERSONA ================= */
 async function mostrarHistorial(cedula){
   const box = document.getElementById('histBox');
@@ -995,7 +1015,7 @@ async function mostrarHistorial(cedula){
     // está en trámite, que es la queja típica de almacén.
     box.innerHTML = '<div style="margin-bottom:5px;font-weight:600;">Inspecciones anteriores de esta persona:</div>' +
       data.rows.slice(0,3).map(r=>
-        `<div class="hist-item"><b>${esc(r.fechaInspeccion||'')}</b> — ${r.malos ? 'se solicitó: '+esc(r.malos) : 'sin elementos en mal estado'}</div>`
+        `<div class="hist-item"><b>${esc(fechaNorm(r.fechaInspeccion))}</b> — ${r.malos ? 'se solicitó: '+esc(r.malos) : 'sin elementos en mal estado'}</div>`
       ).join('');
   }catch(e){ /* sin señal: simplemente no se muestra el historial */ }
 }
@@ -1282,7 +1302,7 @@ function llenarInspectores(){
   histCache.forEach(r=>{
     const n = String(r.inspector||'').trim();
     if(!n) return;
-    if(objetivo && String(r.fechaInspeccion||'').trim() !== objetivo) return;
+    if(objetivo && fechaNorm(r.fechaInspeccion) !== objetivo) return;
     cuenta[n] = (cuenta[n]||0) + 1;
   });
   const nombres = Object.keys(cuenta).sort((a,b)=>{
@@ -1317,7 +1337,7 @@ function renderHistorial(){
   const q = document.getElementById('buscarHist').value.trim().toLowerCase();
   let items = histCache;
   const objetivo = aTextoFecha(fechaFiltro);
-  if(objetivo) items = items.filter(r => String(r.fechaInspeccion||'').trim() === objetivo);
+  if(objetivo) items = items.filter(r => fechaNorm(r.fechaInspeccion) === objetivo);
   if(q){
     items = items.filter(r =>
       String(r.nombre||'').toLowerCase().includes(q) ||
@@ -1336,7 +1356,7 @@ function renderHistorial(){
     return `<button type="button" class="hist-card ${malos.length?'con-malos':''}" data-id="${esc(r.inspeccionId)}">
       <div class="fila1">
         <span class="quien">${esc(r.nombre||'—')}</span>
-        <span class="cuando">${esc(r.fechaInspeccion||'—')}</span>
+        <span class="cuando">${esc(fechaNorm(r.fechaInspeccion)||'—')}</span>
       </div>
       <div class="meta">CC ${esc(r.cedula||'—')}${r.cargo?' · '+esc(r.cargo):''}<br>Revisó: <b>${esc(r.inspector||'—')}</b></div>
       ${malos.length
@@ -1388,7 +1408,7 @@ document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
     // Mejor decirlo antes que después.
     const tiene = histCache.some(r =>
       String(r.inspector||'').trim() === inspector &&
-      String(r.fechaInspeccion||'').trim() === fechaTexto);
+      fechaNorm(r.fechaInspeccion) === fechaTexto);
     if(!tiene && !confirm(inspector + ' no tiene inspecciones registradas el ' + fechaTexto + ', así que el resumen saldría vacío.\n\n¿Enviarlo de todas formas?')) return;
   }
   if(!confirm('¿Enviar el resumen ' + quien + ' con los elementos por reponer registrados ' + cuando + '?')) return;
@@ -1448,7 +1468,7 @@ async function abrirDetalle(id){
             <div><div class="field"><label>Trabajador</label><div style="font-size:14px;font-weight:600;">${esc(d.nombre||'—')}</div></div></div>
             <div><div class="field"><label>Cédula</label><div style="font-size:14px;">${esc(d.cedula||'—')}</div></div></div>
             <div><div class="field"><label>Cargo</label><div style="font-size:14px;">${esc(d.cargo||'—')}</div></div></div>
-            <div><div class="field"><label>Fecha de inspección</label><div style="font-size:14px;">${esc(d.fechaInspeccion||'—')}</div></div></div>
+            <div><div class="field"><label>Fecha de inspección</label><div style="font-size:14px;">${esc(fechaNorm(d.fechaInspeccion)||'—')}</div></div></div>
             <div><div class="field"><label>Quién la realizó</label><div style="font-size:14px;font-weight:600;">${esc(d.inspector||'—')}</div></div></div>
             <div><div class="field"><label>Registrada</label><div style="font-size:14px;">${formatFechaHora(d.updatedAt)}</div></div></div>
           </div>
@@ -1460,7 +1480,7 @@ async function abrirDetalle(id){
         ${malos.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
         <div class="paso-foto" style="margin-top:0;">
           <b>Foto para aprobación:</b> ${esc(WA_RESPONSABLE)} (${esc(WA_TEL_LEGIBLE)}).
-          <a class="btn-wa" href="${enlaceWhatsApp(d.nombre, d.cedula, d.fechaInspeccion, malos, d.inspeccionId, datos.observaciones)}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a>
+          <a class="btn-wa" href="${enlaceWhatsApp(d.nombre, d.cedula, fechaNorm(d.fechaInspeccion), malos, d.inspeccionId, datos.observaciones)}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a>
         </div></div></div>` : ''}
 
       <div class="section">
@@ -1548,7 +1568,7 @@ async function abrirFicha(cedula, origen){
       const malos = String(r.malos||'').split('|').map(s=>s.trim()).filter(Boolean);
       return `<div class="ficha-insp">
         <div class="cab">
-          <span class="f">${esc(r.fechaInspeccion||'—')}</span>
+          <span class="f">${esc(fechaNorm(r.fechaInspeccion)||'—')}</span>
           <span class="q">Revisó: <b>${esc(r.inspector||'—')}</b> · Registro ${esc(r.inspeccionId)}</span>
         </div>
         ${malos.length
@@ -1573,10 +1593,10 @@ async function abrirFicha(cedula, origen){
         <div class="sub">CC ${esc(p.cedula||'—')}${p.cargo?' · '+esc(p.cargo):''}</div>
         <div class="sub" style="margin-top:4px;">${rows.length} inspección(es) registrada(s) · documento generado el ${formatFechaHora(new Date())}</div>
         ${pendientes.length
-          ? `<div class="ficha-pend hay"><strong>${pendientesReales ? 'Pendiente por entregar (en mal estado y aún no entregado):' : 'Pendiente de reposición según la última inspección (' + esc(p.fechaInspeccion||'') + '):'}</strong><ul>${pendientes.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
+          ? `<div class="ficha-pend hay"><strong>${pendientesReales ? 'Pendiente por entregar (en mal estado y aún no entregado):' : 'Pendiente de reposición según la última inspección (' + esc(fechaNorm(p.fechaInspeccion)) + '):'}</strong><ul>${pendientes.map(m=>'<li>'+esc(m)+'</li>').join('')}</ul>
              <div class="no-print" style="margin-top:9px;">Foto para aprobación: ${esc(WA_RESPONSABLE)} (${esc(WA_TEL_LEGIBLE)}).
-             <a class="btn-wa" href="${enlaceWhatsApp(p.nombre, p.cedula, p.fechaInspeccion, pendientes, p.inspeccionId, (p.datos&&p.datos.observaciones)||'')}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a></div></div>`
-          : `<div class="ficha-pend no"><strong>Sin elementos pendientes de reposición.</strong>${pendientesReales ? 'Todo lo que se encontró en mal estado ya se le entregó.' : 'Según la última inspección (' + esc(p.fechaInspeccion||'') + '), su dotación está completa.'}</div>`}
+             <a class="btn-wa" href="${enlaceWhatsApp(p.nombre, p.cedula, fechaNorm(p.fechaInspeccion), pendientes, p.inspeccionId, (p.datos&&p.datos.observaciones)||'')}" target="_blank" rel="noopener">📷 Enviar foto por WhatsApp</a></div></div>`
+          : `<div class="ficha-pend no"><strong>Sin elementos pendientes de reposición.</strong>${pendientesReales ? 'Todo lo que se encontró en mal estado ya se le entregó.' : 'Según la última inspección (' + esc(fechaNorm(p.fechaInspeccion)) + '), su dotación está completa.'}</div>`}
         <button type="button" class="no-print" id="btnImprimirFicha" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--brand-epp);color:var(--blanco);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🖨 Exportar a PDF / imprimir</button>
       </div>
       ${bloques}`;

@@ -21,3 +21,8 @@ v98: EPP, resumen por inspector con "Fecha del resumen" propia.
   Reemplazar además: inspeccion-epp.html, sw.js, asistencia.html, estado.html, personal-autorizado.html
   Si el envío de otro día sigue saliendo de hoy: volver a desplegar backends/backend-epp.gs
   (Implementar > Administrar implementaciones > Editar > Nueva versión).
+
+v99: EPP, las fechas "2026-11-03T05:00:00.000Z" del historial se leen como 03/11/2026
+  (por eso decía "no tiene inspecciones" aunque sí las tenía).
+  Reemplazar: inspeccion-epp.html, backends/backend-epp.gs (volver a DESPLEGAR, nueva versión),
+  sw.js, asistencia.html, estado.html, personal-autorizado.html
