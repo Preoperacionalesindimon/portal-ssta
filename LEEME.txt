@@ -16,3 +16,8 @@ NO HAY CAMBIOS EN LOS BACKENDS (Apps Script).
 
 DESPUÉS DE SUBIR: en el celular, aceptar el banner "Hay una versión nueva".
 Probar en un celular real: abrir un permiso, escribir, salir a la mitad, volver.
+
+v98: EPP, resumen por inspector con "Fecha del resumen" propia.
+  Reemplazar además: inspeccion-epp.html, sw.js, asistencia.html, estado.html, personal-autorizado.html
+  Si el envío de otro día sigue saliendo de hoy: volver a desplegar backends/backend-epp.gs
+  (Implementar > Administrar implementaciones > Editar > Nueva versión).

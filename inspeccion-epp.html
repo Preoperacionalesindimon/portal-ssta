@@ -439,14 +439,21 @@
     <div class="resumen-dia">
       <div class="resumen-dia-txt">
         <b>Resumen del día</b><br>
-        Envía un solo correo con todos los elementos en mal estado registrados
-        hoy, sumados por elemento y con el detalle de cada trabajador.
+        Envía un solo correo con los elementos en mal estado registrados en la
+        fecha que elijas, sumados por elemento y con el detalle de cada trabajador.
+      </div>
+      <!-- La fecha del resumen es propia: sirve para mandar el de cualquier día
+           aunque la lista esté en "Ver todas". Sigue a la fecha de arriba cuando
+           esta se cambia, y por defecto es hoy. -->
+      <div class="filtro-fecha" style="margin:8px 0;">
+        <label for="fechaResumen">Fecha del resumen</label>
+        <input type="date" id="fechaResumen">
       </div>
       <!-- Cuando varios inspeccionan el mismo día, un consolidado no deja ver
            quién revisó qué. Aquí se elige de quién es el resumen; el desplegable
-           se llena con los inspectores que registraron algo hoy. -->
+           se llena con los inspectores que registraron algo. -->
       <select id="selInspectorResumen">
-        <option value="">Todos los inspectores de hoy</option>
+        <option value="">Todos los inspectores</option>
       </select>
       <button type="button" id="btnResumenDia">📧 Enviar resumen del día</button>
       <div class="resumen-dia-msg" id="resumenDiaMsg"></div>
@@ -1217,6 +1224,8 @@ async function cargarHistorial(){
       campoFecha.value = h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
       fechaFiltro = campoFecha.value;
     }
+    const campoResumen = document.getElementById('fechaResumen');
+    if(campoResumen && !campoResumen.value) campoResumen.value = fechaDeHoyInput();
     llenarInspectores();
     renderHistorial();
   }catch(e){
@@ -1242,6 +1251,17 @@ function fechaDeHoyTexto(){
    Cadena vacía = "todas las fechas". Gobierna la lista de abajo, el
    desplegable de inspectores y el resumen que se envía por correo. */
 let fechaFiltro = '';
+
+/* Fecha con la que se envía el resumen: la del campo "Fecha del resumen"; si
+   está vacío, hoy. Antes, con la lista en "Ver todas", siempre salía hoy. */
+function fechaResumenTexto(){
+  const c = document.getElementById('fechaResumen');
+  return (c && c.value) ? aTextoFecha(c.value) : fechaDeHoyTexto();
+}
+function fechaDeHoyInput(){
+  const h = new Date();
+  return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+}
 
 function aTextoFecha(valorInput){
   if(!valorInput) return '';
@@ -1337,6 +1357,7 @@ document.getElementById('buscarHist').addEventListener('input', renderHistorial)
 // de inspectores y la fecha del resumen que se envía.
 document.getElementById('filtroFechaHist').addEventListener('change', (e)=>{
   fechaFiltro = e.target.value;
+  if(e.target.value) document.getElementById('fechaResumen').value = e.target.value;
   document.getElementById('btnTodasFechas').classList.remove('on');
   llenarInspectores();
   renderHistorial();
@@ -1358,10 +1379,9 @@ document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
   const sel = document.getElementById('selInspectorResumen');
   const inspector = sel ? sel.value : '';
   const quien = inspector ? 'de ' + inspector : 'de todos los inspectores';
-  // Se envía el resumen de la FECHA que está filtrada arriba; si se está viendo
-  // "todas", el del día de hoy, que es lo que espera quien lo manda al cerrar
-  // la jornada.
-  const fechaTexto = aTextoFecha(fechaFiltro) || fechaDeHoyTexto();
+  // Se envía el resumen de la fecha del campo "Fecha del resumen" (por defecto
+  // hoy; sigue a la fecha filtrada arriba), sin depender de cómo esté la lista.
+  const fechaTexto = fechaResumenTexto();
   const cuando = 'del ' + fechaTexto;
   if(inspector){
     // Si esa persona no registró nada en esa fecha, el correo saldría vacío.

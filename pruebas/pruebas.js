@@ -1288,6 +1288,9 @@ grupo('Autoguardado de permisos y ATS', () => {
      /\(bt\.data\.ref \|\| ''\) === \(ats\.code \|\| ''\)/.test(ats) && /editando = bt\.data\.t;/.test(ats));
   ok('ATS: guardar o cancelar la tarea borra su respaldo',
      /persistirEditando\(\); \/\/ abrir una tarea la respalda/.test(ats) && /if \(!editando \|\| ats\.estado === 'CERRADO'\) \{ DraftStore\.clear\(CLAVE_BORRADOR_TAREA\)/.test(ats));
+  const epp = leer('inspeccion-epp.html');
+  ok('EPP: el resumen se envía con su propio campo de fecha (no siempre hoy cuando la lista está en "Ver todas")',
+     /id="fechaResumen"/.test(epp) && /const fechaTexto = fechaResumenTexto\(\);/.test(epp) && !/aTextoFecha\(fechaFiltro\) \|\| fechaDeHoyTexto\(\)/.test(epp));
   ok('ATS: empezar uno nuevo avisa también si solo había una tarea a medias', /ats\.participantes\.length \|\| editando\) && !confirm/.test(ats));
 });
 
