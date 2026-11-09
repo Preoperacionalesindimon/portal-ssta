@@ -2677,6 +2677,7 @@ const PermisoCore = (function () {
     // Expuestos para los hooks extraOnInitRender/extraCollectOpenData/etc. de
     // tipos con subsistemas propios (ej. gases/EPP en confinados).
     setupPad,
+    getPad: (id) => pads[id] || null, // para guardar/restaurar firmas propias de un tipo (ej. inspector de acceso en alturas)
     refreshPadsIn,
     attachPersonalAutocomplete,
     renderToggleGroup,

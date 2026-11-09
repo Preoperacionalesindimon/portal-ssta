@@ -86,6 +86,29 @@ function getSheet_() {
   return sheet;
 }
 
+/* ── Vigencia: fecha y hora que Google Sheets convierte ──
+   hastaFecha ("2026-11-04") y hastaHora ("18:00") se guardan como texto, pero
+   Sheets los vuelve fecha y hora reales al escribirlos y al leerlos devuelve un
+   Date, que por JSON llega como "2026-11-04T05:00:00.000Z". El dashboard no lo
+   entendía y el permiso aparecía sin vigencia. Todo lo que se devuelve pasa por
+   estas dos funciones. */
+function zonaLibro_() {
+  try { return SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || 'America/Bogota'; }
+  catch (e) { return 'America/Bogota'; }
+}
+function fechaISO_(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) return Utilities.formatDate(v, zonaLibro_(), 'yyyy-MM-dd');
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v == null ? '' : v).trim());
+  return m ? m[1] : String(v == null ? '' : v).trim();
+}
+function horaHM_(v) {
+  // +30 s: las horas sueltas de Sheets traen segundos de desfase de la zona
+  // horaria histórica y sin redondear podían salir un minuto antes.
+  if (v instanceof Date && !isNaN(v.getTime())) return Utilities.formatDate(new Date(v.getTime() + 30000), zonaLibro_(), 'HH:mm');
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(v == null ? '' : v).trim());
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : String(v == null ? '' : v).trim();
+}
+
 /* ── CLAVE DEL PORTAL ──────────────────────────────────────────
    Igual que en los demás backends: el API_TOKEN está en config.js, que es
    público. La clave del portal se escribe AQUÍ (o en Configuración del
@@ -648,8 +671,8 @@ function doGet(e) {
         openedAt: colDG[i][1] || colDG[i][0], // filas antiguas sin columna E: se usa updatedAt
         responsable: responsable,
         sitio: sitio,
-        hastaFecha: hastaFecha,
-        hastaHora: hastaHora
+        hastaFecha: fechaISO_(hastaFecha),
+        hastaHora: horaHM_(hastaHora)
       });
     }
     return jsonOut_({ ok: true, rows });

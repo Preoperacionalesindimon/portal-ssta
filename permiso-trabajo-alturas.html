@@ -467,7 +467,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
         <div class="yn-label">¿Se ha realizado una planeación previa a la actividad teniendo en cuenta a todas las partes involucradas e interesadas?</div>
         <div class="yn-opts" data-yn data-mode="sino"><button type="button" class="yn-btn" data-v="SI">SÍ</button><button type="button" class="yn-btn" data-v="NO">NO</button></div>
       </div>
-      <div class="field"><label>¿Por qué? (si respondió NO)</label><textarea placeholder="Justificación"></textarea></div>
+      <div class="field"><label>¿Por qué? (si respondió NO)</label><textarea id="porQueNo" placeholder="Justificación"></textarea></div>
 
       <div class="row" style="margin-top:6px;">
         <div class="field"><label>1.2 Control de energías peligrosas</label><div class="yn-opts" data-yn></div></div>
@@ -476,7 +476,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
         <div class="field"><label>Trabajo en caliente</label><div class="yn-opts" data-yn></div></div>
         <div class="field"><label>Trabajo en espacios confinados</label><div class="yn-opts" data-yn></div></div>
         <div class="field"><label>Izaje de cargas</label><div class="yn-opts" data-yn></div></div>
-        <div class="field"><label>Altura aproximada a trabajar (mts)</label><input type="number" step="0.1"></div>
+        <div class="field"><label>Altura aproximada a trabajar (mts)</label><input type="number" step="0.1" id="alturaAprox"></div>
       </div>
     </div>
   </div>
@@ -535,7 +535,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
       <div class="yn-row"><div class="yn-label">Estructura</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Acceso por cuerdas</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Sistema de descenso certificado</div><div class="yn-opts" data-yn></div></div>
-      <div class="row"><div class="field"><label>Otro, ¿cuál?</label><input type="text"></div></div>
+      <div class="row"><div class="field"><label>Otro, ¿cuál?</label><input type="text" id="otroCual"></div></div>
       <hr style="border:none;border-top:1px solid var(--line-soft);margin:4px 0;">
       <div class="yn-row"><div class="yn-label">Inspección del sistema de acceso realizada</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Compatibles entre sí: tamaño, forma, figura, material y diámetro</div><div class="yn-opts" data-yn></div></div>
@@ -596,7 +596,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
       <div class="yn-row"><div class="yn-label">Gafas de seguridad</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Protección auditiva</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">Ropa de trabajo</div><div class="yn-opts" data-yn></div></div>
-      <div class="field" style="margin-top:6px;"><label>7.1 Elementos de protección personal de acuerdo a la actividad a realizar</label><textarea placeholder="Detalle EPP adicional requerido"></textarea></div>
+      <div class="field" style="margin-top:6px;"><label>7.1 Elementos de protección personal de acuerdo a la actividad a realizar</label><textarea id="epcAdicional" placeholder="Detalle EPP adicional requerido"></textarea></div>
     </div>
   </div>
 
@@ -643,7 +643,7 @@ body{margin:0;background:var(--paper);color:var(--ink);padding:24px 16px 80px;}
       <div class="yn-row"><div class="yn-label">9.7 Distancia segura con líneas o equipos eléctricos energizados garantizada, con EPP dieléctrico y elementos necesarios</div><div class="yn-opts" data-yn></div></div>
       <div class="yn-row"><div class="yn-label">9.8 ¿Se cuentan con medidas de prevención? (procedimiento, ATS, señalización, ayudante de seguridad)</div><div class="yn-opts" data-yn></div></div>
       </div>
-      <div class="field"><label>9.9 Descripción de la identificación de peligros y control de otros riesgos asociados a la actividad</label><textarea placeholder="Detalle otros riesgos y controles"></textarea></div>
+      <div class="field"><label>9.9 Descripción de la identificación de peligros y control de otros riesgos asociados a la actividad</label><textarea id="otrosRiesgos" placeholder="Detalle otros riesgos y controles"></textarea></div>
     </div>
   </div>
 
@@ -897,7 +897,31 @@ const cfg = {
   },
   onYNChange(){ updateSectionPills(); },
   extraCollectOpenData(){
+    // Sección 2: los campos de alturas tienen otros ids (…Alt) que los demás
+    // permisos, y el formulario común solo guarda los ids estándar. Sin esto,
+    // fechas, horas, área y descripción se pedían como obligatorios pero NO
+    // llegaban al servidor (ni al borrador), y el dashboard no veía la vigencia.
+    // Se guardan con los nombres estándar para que backend y tablero los lean.
+    const v = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
     return {
+      // Textos libres y persona que inspeccionó el sistema de acceso (con su
+      // firma): estaban en pantalla pero no se guardaban.
+      porQueNo: v('porQueNo'),
+      alturaAprox: v('alturaAprox'),
+      otroCual: v('otroCual'),
+      epcAdicional: v('epcAdicional'),
+      otrosRiesgos: v('otrosRiesgos'),
+      inspectorAcceso: {
+        nombre: v('inspectorNombreInput'),
+        cc: v('inspectorCedulaInput'),
+        sig: PermisoCore.getPad('padInspector') ? PermisoCore.getPad('padInspector').getDataUrl() : null
+      },
+      desdeFecha: v('fechaInicioAlt'),
+      desdeHora: v('horaInicioAlt'),
+      hastaFecha: v('fechaCulminacionAlt'),
+      hastaHora: v('horaCulminacionAlt'),
+      sitio: v('areaAlt'),
+      descripcion: v('descripcionAlt'),
       herramientas: document.getElementById('herramientas').value,
       epcc: collectEpccAlt(),
       calcAt: document.getElementById('calc-at').value,
@@ -909,6 +933,22 @@ const cfg = {
     };
   },
   extraSetFieldValues(vals){
+    const poner = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    poner('fechaInicioAlt', vals.desdeFecha);
+    poner('horaInicioAlt', vals.desdeHora);
+    poner('fechaCulminacionAlt', vals.hastaFecha);
+    poner('horaCulminacionAlt', vals.hastaHora);
+    poner('areaAlt', vals.sitio);
+    poner('descripcionAlt', vals.descripcion);
+    poner('porQueNo', vals.porQueNo);
+    poner('alturaAprox', vals.alturaAprox);
+    poner('otroCual', vals.otroCual);
+    poner('epcAdicional', vals.epcAdicional);
+    poner('otrosRiesgos', vals.otrosRiesgos);
+    const ia = vals.inspectorAcceso || {};
+    poner('inspectorNombreInput', ia.nombre);
+    poner('inspectorCedulaInput', ia.cc);
+    if (ia.sig && PermisoCore.getPad('padInspector')) PermisoCore.getPad('padInspector').setDataUrl(ia.sig);
     initSel_herramientas();
     if (sel_herramientas) {
       sel_herramientas.set(vals.herramientas || '');

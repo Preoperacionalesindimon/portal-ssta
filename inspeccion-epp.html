@@ -1151,6 +1151,7 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
     limpiarTrabajador();
     opIdGuardado = null;
     inspeccionIdActual = genInspeccionIdCliente(); // registro nuevo para el siguiente trabajador
+    guardarBorradorEppYa_();
     histCache = []; // el historial quedó desactualizado; se recarga al abrirlo
   }catch(err){
     banner.innerHTML = '<strong>No se pudo guardar</strong>' + esc(err.message) +
@@ -1179,6 +1180,7 @@ function limpiarTrabajador(){
   pads['padTrabajador'].clear();
   document.getElementById('histBox').innerHTML='';
   document.querySelectorAll('.field-invalid').forEach(el=>el.classList.remove('field-invalid'));
+  if(typeof guardarBorradorEppYa_ === 'function') guardarBorradorEppYa_();
 }
 
 /* El aviso de aprobación lleva el nombre del trabajador dentro del mensaje de
@@ -1193,9 +1195,97 @@ document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   if(!confirm('¿Limpiar los datos del trabajador y las calificaciones? Los datos del inspector se conservan.')) return;
   limpiarTrabajador();
   inspeccionIdActual = genInspeccionIdCliente();
+  guardarBorradorEppYa_();
   document.getElementById('okBox').classList.remove('show');
   document.getElementById('validationBanner').classList.remove('show');
 });
+
+
+/* ================= AUTOGUARDADO (con firmas) =================
+   El formulario se respalda en este celular al escribir, al marcar, al firmar
+   y al salir/bloquear la pantalla. Incluye las dos firmas (inspector y
+   trabajador). Al volver se recupera solo. Se borra la parte del trabajador
+   cuando el registro se sube bien o se oprime Limpiar; los datos del
+   inspector (misma jornada) se conservan, como ya hace el formulario. */
+const CLAVE_BORRADOR_EPP = 'ssta-epp-borrador-' + TIPO;
+const CAMPOS_BORRADOR = ['inspNombre','inspFecha','inspCorreo','trabNombre','trabCedula','trabCargo','observaciones'];
+let borradorListo = false; // no se guarda hasta terminar de restaurar (evita pisar con vacío)
+function recogerBorradorEpp_(){
+  const campos = {};
+  CAMPOS_BORRADOR.forEach(id=>{ const el = document.getElementById(id); if(el) campos[id] = el.value; });
+  return {
+    v: 1, campos, estado: Object.assign({}, estado), unidades: unidadesRegistradas(),
+    inspeccionId: inspeccionIdActual,
+    sigInspector: pads['padInspector'] ? pads['padInspector'].getDataUrl() : null,
+    sigTrabajador: pads['padTrabajador'] ? pads['padTrabajador'].getDataUrl() : null
+  };
+}
+function borradorTieneAlgo_(b){
+  const c = b.campos || {};
+  return !!(c.inspNombre || c.inspCorreo || c.trabNombre || c.trabCedula || c.trabCargo || c.observaciones ||
+            b.sigInspector || b.sigTrabajador ||
+            Object.keys(b.estado || {}).some(k=>b.estado[k]) || Object.keys(b.unidades || {}).length);
+}
+function guardarBorradorEppYa_(){
+  if(!borradorListo) return;
+  try{
+    const b = recogerBorradorEpp_();
+    if(!borradorTieneAlgo_(b)){ DraftStore.clear(CLAVE_BORRADOR_EPP); return; }
+    if(DraftStore.save(CLAVE_BORRADOR_EPP, b)) marcarAutoguardadoEpp_();
+  }catch(e){ console.error('Autoguardado EPP falló:', e); }
+}
+let tBorradorEpp = null;
+function guardarBorradorEppPronto_(){ clearTimeout(tBorradorEpp); tBorradorEpp = setTimeout(guardarBorradorEppYa_, 500); }
+function marcarAutoguardadoEpp_(){
+  let el = document.getElementById('autoguardadoEstado');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'autoguardadoEstado';
+    el.className = 'no-print';
+    el.style.cssText = 'position:fixed;right:10px;bottom:76px;z-index:50;background:rgba(0,0,0,.72);color:#fff;font-size:11.5px;padding:5px 10px;border-radius:14px;opacity:0;transition:opacity .25s;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  const d = new Date();
+  el.textContent = '💾 Autoguardado ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.opacity = '0'; }, 2200);
+}
+function restaurarBorradorEpp_(){
+  const d = DraftStore.load(CLAVE_BORRADOR_EPP);
+  const b = d && d.data;
+  if(!b || b.v !== 1 || !borradorTieneAlgo_(b)) return false;
+  Object.keys(b.campos || {}).forEach(id=>{ const el = document.getElementById(id); if(el && b.campos[id] !== '') el.value = b.campos[id]; });
+  if(b.inspeccionId) inspeccionIdActual = b.inspeccionId;
+  // Calificaciones: se reaplica el mismo efecto visual que al tocar el botón.
+  ELEMENTOS.forEach(el=>{
+    const val = (b.estado || {})[el];
+    if(!val) return;
+    const btn = document.querySelector('button[data-el="'+CSS.escape(el)+'"][data-val="'+CSS.escape(val)+'"]');
+    if(btn) btn.click();
+  });
+  Object.keys(b.unidades || {}).forEach(k=>{
+    const inp = document.querySelector('[data-unidades="'+CSS.escape(k)+'"]');
+    if(inp) inp.value = b.unidades[k];
+  });
+  actualizarResumen();
+  // Las firmas se dibujan cuando los lienzos ya tienen su tamaño real.
+  sigMgr.refreshIn(document);
+  setTimeout(()=>{
+    if(b.sigInspector && pads['padInspector']) pads['padInspector'].setDataUrl(b.sigInspector);
+    if(b.sigTrabajador && pads['padTrabajador']) pads['padTrabajador'].setDataUrl(b.sigTrabajador);
+  }, 120);
+  const ok = document.getElementById('okBox');
+  const hayTrab = !!((b.campos||{}).trabNombre || (b.campos||{}).trabCedula || b.sigTrabajador || Object.keys(b.estado||{}).some(k=>b.estado[k]));
+  if(ok && hayTrab){
+    ok.innerHTML = '<h3>💾 Se recuperó lo que estabas diligenciando</h3><div>Datos, calificaciones y firmas siguen aquí (guardado ' + esc(formatSavedAt(d.savedAt)) + ').</div>';
+    ok.classList.add('show');
+  }
+  return true;
+}
+['input','change','pointerup','touchend'].forEach(ev=> document.getElementById('screenNueva').addEventListener(ev, guardarBorradorEppPronto_, true));
+window.addEventListener('pagehide', guardarBorradorEppYa_);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) guardarBorradorEppYa_(); });
 
 /* ================= NAVEGACIÓN ENTRE PANTALLAS ================= */
 function showScreen(id){
@@ -1416,16 +1506,18 @@ document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
   btn.textContent = 'Enviando…';
   msg.classList.remove('show','ok','err');
   try{
+    // Sin reintentos automáticos (retries = 0): si la respuesta se pierde pero el
+    // correo ya salió, reintentar solo lo mandaría dos veces.
     const res = await fetchWithRetry(EPP_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({ token: TOKEN, action:'resumenDiario', inspector, fecha: fechaTexto })
-    });
+    }, 0);
     const data = await res.json();
     msg.textContent = data.mensaje || (data.ok ? 'Resumen enviado.' : 'No se pudo enviar.');
     msg.classList.add('show', data.ok ? 'ok' : 'err');
   }catch(err){
-    msg.textContent = 'No se pudo enviar: ' + err.message + '. Revisa la señal e intenta de nuevo.';
+    msg.textContent = 'No se pudo confirmar el envío (' + err.message + '). Revisa si el correo llegó antes de intentarlo de nuevo, para no mandarlo dos veces.';
     msg.classList.add('show','err');
   }finally{
     btn.disabled = false;
@@ -1629,6 +1721,8 @@ document.getElementById('btnVolverDeFicha').addEventListener('click', ()=> showS
   document.getElementById('inspFecha').value =
     hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
 
+  restaurarBorradorEpp_();
+  borradorListo = true;
   await cargarPersonal();
   attachPersonalAutocomplete(document.getElementById('trabNombre'), p=>{
     document.getElementById('trabNombre').value = p.nombre;

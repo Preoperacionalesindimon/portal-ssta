@@ -218,9 +218,16 @@ function fechaVencimiento(it){
   if(!it.hastaFecha) return null;
   // Se guarda como AAAA-MM-DD y HH:MM. Se arma en hora local, no en UTC: con
   // UTC un permiso que vence a las 6pm aparecía venciendo a la 1pm.
-  const [a,m,d] = String(it.hastaFecha).split('-').map(Number);
+  // slice(0,10): si llegara como "2026-11-04T05:00:00.000Z" (fecha convertida
+  // por Google Sheets) igual se lee el día, en vez de dejar el permiso sin vigencia.
+  const [a,m,d] = String(it.hastaFecha).slice(0,10).split('-').map(Number);
   if(!a || !m || !d) return null;
-  const [hh,mm] = String(it.hastaHora || '23:59').split(':').map(Number);
+  let horaTxt = String(it.hastaHora || '23:59');
+  if(/^\d{4}-\d{2}-\d{2}T/.test(horaTxt)){            // hora que llegó como fecha ISO
+    const x = new Date(horaTxt);
+    horaTxt = isNaN(x) ? '23:59' : new Intl.DateTimeFormat('en-GB',{timeZone:'America/Bogota',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(x.getTime()+30000));
+  }
+  const [hh,mm] = horaTxt.split(':').map(Number);
   const f = new Date(a, m-1, d, isNaN(hh)?23:hh, isNaN(mm)?59:mm, 0, 0);
   return isNaN(f.getTime()) ? null : f;
 }
@@ -259,6 +266,22 @@ function formatFecha(fechaStr){
   const t = new Date(fechaStr);
   if(isNaN(t.getTime())) return '—';
   return t.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + t.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* La fecha de una inspección de EPP puede llegar como "03/11/2026" o, si Google
+   Sheets la convirtió en fecha, como "2026-11-03T05:00:00.000Z": se muestra
+   siempre como dd/mm/aaaa en hora de Colombia. */
+function fechaDMY(v){
+  if(v === null || v === undefined || v === '') return '';
+  const t = String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}T/.test(t)){
+    const x = new Date(t);
+    if(!isNaN(x)){
+      const [a,m,dd] = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(x).split('-');
+      return dd+'/'+m+'/'+a;
+    }
+  }
+  return t;
 }
 
 let abiertos = [];
@@ -395,7 +418,7 @@ async function cargarEpp(){
     eppPendientes = Object.values(ultimaPorPersona)
       .map(r=>({
         nombre: r.nombre||'—', cedula: r.cedula||'', cargo: r.cargo||'',
-        fecha: r.fechaInspeccion||'', inspector: r.inspector||'', updatedAt: r.updatedAt,
+        fecha: fechaDMY(r.fechaInspeccion), inspector: r.inspector||'', updatedAt: r.updatedAt,
         elementos: String(r.malos||'').split('|').map(x=>x.trim()).filter(Boolean)
       }))
       .filter(p=>p.elementos.length);

@@ -26,3 +26,23 @@ v99: EPP, las fechas "2026-11-03T05:00:00.000Z" del historial se leen como 03/11
   (por eso decía "no tiene inspecciones" aunque sí las tenía).
   Reemplazar: inspeccion-epp.html, backends/backend-epp.gs (volver a DESPLEGAR, nueva versión),
   sw.js, asistencia.html, estado.html, personal-autorizado.html
+
+v100: Permisos, la vigencia (hasta fecha/hora) llegaba como fecha ISO y el dashboard no calculaba el vencimiento.
+  Reemplazar: dashboard.html, backends/permisos/core.gs (volver a DESPLEGAR LOS 5 backends de permisos,
+  cada uno con su config), sw.js, asistencia.html, estado.html, personal-autorizado.html
+
+v101: revisión general.
+  Alturas: la sección 2 (fechas, horas, área, descripción), los textos libres y el inspector de acceso
+  (nombre, cédula, firma) no se guardaban. Tablero: fecha de EPP en dd/mm/aaaa.
+  Reemplazar: permiso-trabajo-alturas.html, permiso-core.js, dashboard.html, sw.js,
+  asistencia.html, estado.html, personal-autorizado.html, pruebas/pruebas.js
+
+v102: EPP, el resumen por correo ya no se reintenta solo (evita correos duplicados).
+  Reemplazar: inspeccion-epp.html, sw.js, asistencia.html, estado.html, personal-autorizado.html, pruebas/pruebas.js
+
+v103: AUTOGUARDADO con firmas en Inspección EPP y en Personal autorizado (registro del día).
+  EPP: se respaldan datos, calificaciones, unidades y las firmas del inspector y del trabajador; se recupera solo.
+  Personal autorizado: se respalda el registro por obra y fecha (personas, sus firmas, verificador y su firma, quitados); se borra al guardar.
+  Permisos, ATS y Asistencia ya guardaban las firmas: sin cambios.
+  Reemplazar: inspeccion-epp.html, personal-autorizado.html, sw.js, asistencia.html, estado.html
+  NO HAY CAMBIOS EN LOS BACKENDS.

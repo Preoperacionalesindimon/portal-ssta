@@ -131,7 +131,7 @@ canvas.mini-pad{width:100%;height:170px;border:1.5px dashed var(--arena-250);bor
   <div id="obrasList"></div>
   <button class="btn amber" id="btnNuevaObra">+ Nueva obra</button>
   <button class="btn ghost" id="btnBaseDatos">👥 Base de datos de personal</button>
-  <div class="version-portal" id="versionPortal">Portal SSTA · versión v99</div>
+  <div class="version-portal" id="versionPortal">Portal SSTA · versión v103</div>
 </div>
 
 <!-- ═══════ BASE DE DATOS DE PERSONAL ═══════ -->
@@ -605,9 +605,79 @@ document.getElementById('btnConfirmarPicker').addEventListener('click', async ()
   showScreen('screenObra');
 });
 
+
+/* ================= AUTOGUARDADO DEL REGISTRO (con firmas) =================
+   El registro del día se respalda en este celular (por obra y fecha) al
+   escribir, al firmar y al salir/bloquear la pantalla: personas, firmas de
+   cada una, verificador y su firma, y a quién se quitó. Se recupera solo al
+   volver a abrir el registro y se borra cuando el registro se guarda (o queda
+   en la cola de envíos). */
+let borradorRegListo = false;
+function claveBorradorReg_(){
+  if (!currentObra) return null;
+  return 'ssta-pa-borrador:' + currentObra.obraId + ':' + (document.getElementById('registroFecha').value || '');
+}
+function recogerBorradorReg_(){
+  const trabajadores = [];
+  document.querySelectorAll('#trabajadoresList .worker-row').forEach(row=>{
+    const n = row.dataset.n;
+    const t = { nombre: document.getElementById('trNombre'+n).value, cedula: document.getElementById('trCedula'+n).value,
+                cargo: document.getElementById('trCargo'+n).value, firma: pads['padTr'+n] ? pads['padTr'+n].getDataUrl() : null };
+    if (t.nombre.trim() || t.cedula.trim() || t.firma) trabajadores.push(t);
+  });
+  return { v:1, trabajadores,
+    verifNombre: document.getElementById('verifNombre').value, verifCedula: document.getElementById('verifCedula').value,
+    verifFirma: pads['padVerificador'] ? pads['padVerificador'].getDataUrl() : null,
+    quitar: [...quitarAnexo] };
+}
+function guardarBorradorRegYa_(){
+  try{
+    if (!borradorRegListo || !currentObra || !document.getElementById('screenRegistro').classList.contains('active')) return;
+    const k = claveBorradorReg_(); if (!k) return;
+    const b = recogerBorradorReg_();
+    if (!b.trabajadores.length && !b.verifNombre.trim() && !b.verifFirma && !b.quitar.length){ try{ localStorage.removeItem(k); }catch(e){} return; }
+    if (DraftStore.save(k, b)) marcarAutoguardadoReg_();
+  }catch(e){ console.error('Autoguardado del registro falló:', e); }
+}
+function borrarBorradorReg_(fecha){
+  try{ if (currentObra) localStorage.removeItem('ssta-pa-borrador:' + currentObra.obraId + ':' + (fecha || document.getElementById('registroFecha').value || '')); }catch(e){}
+}
+let tBorradorReg = null;
+function guardarBorradorRegPronto_(){ clearTimeout(tBorradorReg); tBorradorReg = setTimeout(guardarBorradorRegYa_, 500); }
+function marcarAutoguardadoReg_(){
+  const st = document.getElementById('registroStatus');
+  if (!st || (st.textContent && !/Autoguardado|recuperó/.test(st.textContent))) return; // no pisa otros mensajes
+  const d = new Date();
+  st.textContent = '💾 Autoguardado ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function restaurarBorradorReg_(){
+  const k = claveBorradorReg_(); if (!k) return false;
+  const d = DraftStore.load(k), b = d && d.data;
+  if (!b || b.v !== 1) return false;
+  // Solo si el usuario no empezó a escribir mientras cargaba el día.
+  const hayAlgo = [...document.querySelectorAll('#trabajadoresList .worker-row')].some(r=>document.getElementById('trNombre'+r.dataset.n).value.trim());
+  if (hayAlgo) return false;
+  if ((b.trabajadores || []).length){
+    document.getElementById('trabajadoresList').innerHTML = '';
+    Object.keys(pads).forEach(x=>{ if (/^padTr/.test(x)) delete pads[x]; });
+    b.trabajadores.forEach(t=> agregarTrabajadorRow(t));
+  }
+  (b.quitar || []).forEach(x=>quitarAnexo.add(x));
+  renderYaRegistrados();
+  if (b.verifNombre) document.getElementById('verifNombre').value = b.verifNombre;
+  if (b.verifCedula) document.getElementById('verifCedula').value = b.verifCedula;
+  if (b.verifFirma && pads['padVerificador']) setTimeout(()=>{ pads['padVerificador'].refreshSize(); pads['padVerificador'].setDataUrl(b.verifFirma); }, 150);
+  document.getElementById('registroStatus').textContent = '💾 Se recuperó lo que quedó sin guardar (' + formatSavedAt(d.savedAt) + '), con las firmas.';
+  return true;
+}
+['input','change','pointerup','touchend','click'].forEach(ev=> document.getElementById('screenRegistro').addEventListener(ev, guardarBorradorRegPronto_, true));
+window.addEventListener('pagehide', guardarBorradorRegYa_);
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) guardarBorradorRegYa_(); });
+
 /* ================= REGISTRO DEL DÍA ================= */
 document.getElementById('btnRegistrarHoy').addEventListener('click', ()=> abrirRegistroHoy());
 async function abrirRegistroHoy(){
+  borradorRegListo = false;
   if(!personalCache.length) await cargarPersonal();
   document.getElementById('registroObraNombre').textContent = currentObra.nombre;
   document.getElementById('registroPermisosChips').innerHTML = (currentObra.permisos||[])
@@ -641,6 +711,8 @@ async function abrirRegistroHoy(){
   showScreen('screenRegistro');
   setTimeout(()=>{ document.querySelectorAll('#screenRegistro canvas.mini-pad').forEach(c=>{ if(pads[c.id]) pads[c.id].refreshSize(); }); }, 50);
   await cargaDia;
+  restaurarBorradorReg_();
+  borradorRegListo = true;
 }
 document.getElementById('registroFecha').addEventListener('change', ()=>{ actualizarEtiquetaFecha(); cargarRegistroDelDia(); });
 
@@ -760,6 +832,7 @@ function agregarTrabajadorRow(prefill){
     </div>`;
   document.getElementById('trabajadoresList').appendChild(div);
   setupPad(document.getElementById('padTr'+n));
+  if (prefill && prefill.firma) setTimeout(()=>{ if (pads['padTr'+n]) { pads['padTr'+n].refreshSize(); pads['padTr'+n].setDataUrl(prefill.firma); } }, 120);
   div.querySelector('[data-remove]').addEventListener('click', ()=>{ delete pads['padTr'+n]; div.remove(); renumerarFilas(); });
   renumerarFilas();
   // Autocompletar cédula/cargo cuando se elige (o se escribe exacto) un nombre de la base de datos.
@@ -887,6 +960,7 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
     btn.disabled = false;
     if(!json.ok){ document.getElementById('registroStatus').textContent = json.error || 'No se pudo guardar.'; return; }
     document.getElementById('registroStatus').textContent = '✓ Registro guardado.';
+    borradorRegListo = false; borrarBorradorReg_(fecha);
     if (Jornada.enJornada()) Jornada.marcar('anexo', { code: currentObra.nombre, obraId: currentObra.obraId, fecha });
     const obraGuardada = Object.assign({}, currentObra);
     const total = json.cantidad != null ? json.cantidad : mezclado.trabajadores.length;
@@ -897,6 +971,7 @@ document.getElementById('btnGuardarRegistro').addEventListener('click', async ()
     if (typeof Outbox !== 'undefined') {
       try {
         await Outbox.add(FIXED_WEBAPP_URL, { action:'guardarRegistro', obraId: currentObra.obraId, fecha, data, quitar, opId, token: PORTAL_CONFIG.API_TOKEN });
+        borradorRegListo = false; borrarBorradorReg_(fecha);
         if (Jornada.enJornada()) Jornada.marcar('anexo', { code: currentObra.nombre, obraId: currentObra.obraId, fecha, pendiente: true });
         mostrarPdfPendiente(mezclado, err && err.pagina ? err.message : '');
       } catch (e) {

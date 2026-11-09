@@ -589,7 +589,7 @@ grupo('Historial y vencimiento', () => {
   ok('el backend guarda la vigencia en columnas propias',
      back.includes("'hastaFecha', 'hastaHora'"),
      'Leer el JSON de cada fila solo para saber cuándo vence sería caro.');
-  ok('el listado devuelve la vigencia', back.includes('hastaFecha: hastaFecha'));
+  ok('el listado devuelve la vigencia', back.includes('hastaFecha: fechaISO_(hastaFecha)'));
   ok('el dashboard calcula el vencimiento', dash.includes('estadoVigencia'));
   ok('distingue vencido de por vencer',
      dash.includes("'vencido'") && dash.includes("'porvencer'"));
@@ -1293,6 +1293,21 @@ grupo('Autoguardado de permisos y ATS', () => {
      /id="fechaResumen"/.test(epp) && /const fechaTexto = fechaResumenTexto\(\);/.test(epp) && !/aTextoFecha\(fechaFiltro\) \|\| fechaDeHoyTexto\(\)/.test(epp));
   ok('EPP: las fechas que llegan como "2026-11-03T05:00:00.000Z" se leen como 03/11/2026 (filtro, conteo y resumen)',
      /function fechaNorm\(v\)/.test(leer('inspeccion-epp.html')) && /fechaNorm\(r\.fechaInspeccion\) === objetivo/.test(leer('inspeccion-epp.html')) && /function fechaTexto_\(v\)/.test(leer('backends/backend-epp.gs')));
+  ok('Permisos: la vigencia (hasta fecha y hora) se devuelve como texto aunque Sheets la haya vuelto fecha',
+     /hastaFecha: fechaISO_\(hastaFecha\)/.test(leer('backends/permisos/core.gs')) && /hastaHora: horaHM_\(hastaHora\)/.test(leer('backends/permisos/core.gs')) &&
+     /String\(it\.hastaFecha\)\.slice\(0,10\)/.test(leer('dashboard.html')));
+  const alt = leer('permiso-trabajo-alturas.html');
+  ok('Alturas: la sección 2 (fechas, horas, área y descripción) se guarda y se restaura',
+     ['fechaInicioAlt','horaInicioAlt','fechaCulminacionAlt','horaCulminacionAlt','areaAlt','descripcionAlt'].every(id =>
+       new RegExp("v\\('" + id + "'\\)").test(alt) && new RegExp("poner\\('" + id + "'").test(alt)),
+     'Eran obligatorios en pantalla pero no entraban en lo que se envía: el tablero no veía la vigencia.');
+  ok('EPP: el tablero muestra la fecha de la inspección como dd/mm/aaaa aunque llegue como fecha ISO',
+     /function fechaDMY\(v\)/.test(leer('dashboard.html')) && /fecha: fechaDMY\(r\.fechaInspeccion\)/.test(leer('dashboard.html')));
+  ok('Alturas: los textos libres y el inspector de acceso (nombre, cédula y firma) se guardan y se restauran',
+     ['porQueNo','alturaAprox','otroCual','epcAdicional','otrosRiesgos'].every(id => new RegExp('id="' + id + '"').test(alt) && new RegExp("v\\('" + id + "'\\)").test(alt) && new RegExp("poner\\('" + id + "'").test(alt)) &&
+     /inspectorAcceso: \{/.test(alt) && /getPad: \(id\) => pads\[id\]/.test(leer('permiso-core.js')));
+  ok('EPP: el resumen por correo no se reintenta solo (evita mandarlo dos veces si se pierde la respuesta)',
+     /action:'resumenDiario'[\s\S]{0,60}\}\)\s*\}, 0\);/.test(epp));
   ok('ATS: empezar uno nuevo avisa también si solo había una tarea a medias', /ats\.participantes\.length \|\| editando\) && !confirm/.test(ats));
 });
 
