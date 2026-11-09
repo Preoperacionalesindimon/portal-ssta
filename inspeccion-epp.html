@@ -439,8 +439,10 @@
     <div class="resumen-dia">
       <div class="resumen-dia-txt">
         <b>Resumen del día</b><br>
-        Envía un solo correo con los elementos en mal estado registrados en la
-        fecha que elijas, sumados por elemento y con el detalle de cada trabajador.
+        Envía un solo correo con el historial de las inspecciones de la fecha que
+        elijas: los elementos en mal estado (sumados por elemento y con el detalle de
+        cada trabajador) y los trabajadores inspeccionados sin novedad. Se envía
+        aunque ningún elemento haya estado en mal estado.
       </div>
       <!-- La fecha del resumen es propia: sirve para mandar el de cualquier día
            aunque la lista esté en "Ver todas". Sigue a la fecha de arriba cuando
@@ -1501,7 +1503,7 @@ document.getElementById('btnResumenDia').addEventListener('click', async ()=>{
       fechaNorm(r.fechaInspeccion) === fechaTexto);
     if(!tiene && !confirm(inspector + ' no tiene inspecciones registradas el ' + fechaTexto + ', así que el resumen saldría vacío.\n\n¿Enviarlo de todas formas?')) return;
   }
-  if(!confirm('¿Enviar el resumen ' + quien + ' con los elementos por reponer registrados ' + cuando + '?')) return;
+  if(!confirm('¿Enviar el resumen ' + quien + ' con el historial de inspecciones ' + cuando + '?')) return;
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   msg.classList.remove('show','ok','err');

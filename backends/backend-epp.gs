@@ -933,7 +933,8 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
 
   const conteo = {};          // elemento -> cantidad
   const quienes = {};         // elemento -> [nombres]
-  const trabajadores = [];    // detalle por persona
+  const trabajadores = [];    // detalle por persona (solo con elementos malos)
+  const sinNovedad = [];      // personas inspeccionadas sin ningún elemento malo
   let totalInspecciones = 0;
 
   datos.forEach(f => {
@@ -946,7 +947,10 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
     totalInspecciones++;
 
     const malos = String(f[6] || '').split('|').map(s => s.trim()).filter(Boolean);
-    if (!malos.length) return;
+    if (!malos.length) {
+      sinNovedad.push({ nombre: f[2], cedula: f[1], cargo: f[3], id: f[0] });
+      return;
+    }
 
     trabajadores.push({ nombre: f[2], cedula: f[1], cargo: f[3], id: f[0], malos: malos });
     malos.forEach(m => {
@@ -957,10 +961,8 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
   });
 
   if (!totalInspecciones) return 'No hubo inspecciones el ' + hoy + '; no se envía resumen.';
-  if (!trabajadores.length) {
-    return 'Hubo ' + totalInspecciones + ' inspección(es) el ' + hoy +
-           ' pero ninguna con elementos en mal estado; no se envía resumen.';
-  }
+  // Aunque ninguna inspección tenga elementos en mal estado, el resumen SÍ se
+  // envía: sirve de historial del día (quién fue revisado y que no hubo novedad).
 
   // Se ordena de mayor a menor cantidad: lo que más se pidió va primero, que es
   // lo que interesa mirar cuando esto llega a compras.
@@ -974,15 +976,20 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
   cuerpo += 'Con elementos en mal estado: ' + trabajadores.length + '\n';
   cuerpo += 'Unidades a reponer:          ' + totalUnidades + '\n\n';
 
-  cuerpo += 'TOTAL POR ELEMENTO\n';
-  cuerpo += '------------------------------------------------------------\n';
+  if (!trabajadores.length) {
+    cuerpo += 'SIN ELEMENTOS EN MAL ESTADO: no hay nada por reponer este día.\n\n';
+  }
+  if (trabajadores.length) cuerpo += 'TOTAL POR ELEMENTO\n';
+  if (trabajadores.length) cuerpo += '------------------------------------------------------------\n';
   elementos.forEach(el => {
     cuerpo += '  ' + conteo[el] + ' x ' + el + '\n';
     cuerpo += '      (' + quienes[el].join(', ') + ')\n';
   });
 
-  cuerpo += '\nDETALLE POR TRABAJADOR\n';
-  cuerpo += '------------------------------------------------------------\n';
+  if (trabajadores.length) {
+    cuerpo += '\nDETALLE POR TRABAJADOR\n';
+    cuerpo += '------------------------------------------------------------\n';
+  }
   trabajadores.forEach(t => {
     cuerpo += '\n' + (t.nombre || 'Sin nombre');
     if (t.cedula) cuerpo += ' — CC ' + t.cedula;
@@ -991,11 +998,24 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
     t.malos.forEach(m => { cuerpo += '  - ' + m + '\n'; });
   });
 
-  cuerpo += '\n------------------------------------------------------------\n';
-  cuerpo += 'RECORDATORIO\n';
-  cuerpo += 'Solo se aprueba la reposición de los elementos cuya FOTO haya\n';
-  cuerpo += 'llegado por WhatsApp a ' + WHATSAPP_RESPONSABLE + ' — ' + WHATSAPP_APROBACION + '.\n';
-  cuerpo += 'Verificar contra este listado antes de tramitar la compra.\n';
+  if (sinNovedad.length) {
+    cuerpo += '\nINSPECCIONADOS SIN NOVEDAD (' + sinNovedad.length + ')\n';
+    cuerpo += '------------------------------------------------------------\n';
+    sinNovedad.forEach(t => {
+      cuerpo += '  - ' + (t.nombre || 'Sin nombre');
+      if (t.cedula) cuerpo += ' — CC ' + t.cedula;
+      if (t.cargo) cuerpo += ' — ' + t.cargo;
+      cuerpo += ' (Registro: ' + t.id + ')\n';
+    });
+  }
+
+  if (trabajadores.length) {
+    cuerpo += '\n------------------------------------------------------------\n';
+    cuerpo += 'RECORDATORIO\n';
+    cuerpo += 'Solo se aprueba la reposición de los elementos cuya FOTO haya\n';
+    cuerpo += 'llegado por WhatsApp a ' + WHATSAPP_RESPONSABLE + ' — ' + WHATSAPP_APROBACION + '.\n';
+    cuerpo += 'Verificar contra este listado antes de tramitar la compra.\n';
+  }
   cuerpo += '------------------------------------------------------------\n';
   cuerpo += 'Mensaje generado automáticamente por el Portal SSTA.\n';
   cuerpo += 'No responder a este correo.\n';
@@ -1008,11 +1028,13 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
   // hoja de cálculo. El texto plano de arriba viaja igual como alternativa,
   // para los correos que no muestran HTML.
   const html = armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
-                                       totalUnidades, elementos, conteo, quienes);
+                                       totalUnidades, elementos, conteo, quienes, sinNovedad);
 
   const asunto = 'Resumen EPP ' + hoy
     + (filtro ? ' — ' + (inspectorFiltro || '') : '')
-    + ' — ' + totalUnidades + ' elemento(s) por reponer';
+    + (totalUnidades
+        ? ' — ' + totalUnidades + ' elemento(s) por reponer'
+        : ' — sin elementos en mal estado');
   try {
     MailApp.sendEmail({
       to: destinatarios.join(','),
@@ -1035,7 +1057,8 @@ function enviarResumenDiario(fechaTexto, inspectorFiltro) {
    es lo único que Gmail y Outlook muestran igual, y este correo se abre tanto
    en el computador de la oficina como en el celular en obra. */
 function armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
-                                 totalUnidades, elementos, conteo, quienes) {
+                                 totalUnidades, elementos, conteo, quienes, sinNovedad) {
+  sinNovedad = sinNovedad || [];
   const TINTA = '#23282d', SUAVE = '#6b7379', LINEA = '#d9dde0';
   const esc = t => String(t == null ? '' : t)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1062,6 +1085,13 @@ function armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
   });
   h += '</tr></table>';
 
+  if (!trabajadores.length) {
+    h += '<div style="border:1px solid #9fd0a8;background:#eaf6ec;color:#1d5a2b;border-radius:6px;'
+       + 'padding:12px;font-size:13px;margin-bottom:20px;"><b>Sin elementos en mal estado.</b> '
+       + 'No hay nada por reponer este día.</div>';
+  }
+
+  if (trabajadores.length) {
   // Total por elemento
   h += '<div style="font-size:14px;font-weight:bold;margin-bottom:7px;">Total por elemento</div>';
   h += '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;'
@@ -1103,6 +1133,29 @@ function armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
   });
   h += '</table>';
 
+  }
+
+  // Inspeccionados sin ningún elemento malo (historial del día)
+  if (sinNovedad.length) {
+    h += '<div style="font-size:14px;font-weight:bold;margin-bottom:7px;">'
+       + 'Inspeccionados sin novedad (' + sinNovedad.length + ')</div>';
+    h += '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;'
+       + 'font-size:13px;margin-bottom:22px;">';
+    h += '<tr style="background:#f2f3f4;">'
+       + '<th align="left" style="padding:8px;border:1px solid ' + LINEA + ';">Trabajador</th>'
+       + '<th align="left" style="padding:8px;border:1px solid ' + LINEA + ';">Registro</th></tr>';
+    sinNovedad.forEach((t, i) => {
+      const extra = [t.cedula ? 'CC ' + esc(t.cedula) : '', esc(t.cargo || '')].filter(Boolean).join(' · ');
+      h += '<tr' + (i % 2 ? ' style="background:#fafbfb;"' : '') + '>'
+         + '<td valign="top" style="padding:8px;border:1px solid ' + LINEA + ';"><b>' + esc(t.nombre || 'Sin nombre') + '</b>'
+         + (extra ? '<br><span style="color:' + SUAVE + ';font-size:11.5px;">' + extra + '</span>' : '') + '</td>'
+         + '<td valign="top" style="padding:8px;border:1px solid ' + LINEA + ';font-family:monospace;font-size:11.5px;">'
+         + esc(t.id) + '</td></tr>';
+    });
+    h += '</table>';
+  }
+
+  if (trabajadores.length) {
   // Recordatorio de la foto
   h += '<div style="border:1px solid #e08a80;background:#fdecea;color:#7a1f14;'
      + 'border-radius:6px;padding:12px;font-size:12.5px;line-height:1.55;">'
@@ -1110,6 +1163,8 @@ function armarHtmlResumenDiario_(hoy, totalInspecciones, trabajadores,
      + 'Solo se aprueba la reposición de los elementos cuya <b>FOTO</b> haya llegado '
      + 'por WhatsApp a ' + esc(WHATSAPP_RESPONSABLE) + ' — ' + esc(WHATSAPP_APROBACION) + '.<br>'
      + 'Verificar contra este listado antes de tramitar la compra.</div>';
+
+  }
 
   h += '<div style="margin-top:16px;font-size:11px;color:' + SUAVE + ';line-height:1.5;">'
      + 'Mensaje generado automáticamente por el Portal SSTA. No responder a este correo.</div>';

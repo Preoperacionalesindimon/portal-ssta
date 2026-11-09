@@ -46,3 +46,9 @@ v103: AUTOGUARDADO con firmas en Inspección EPP y en Personal autorizado (regis
   Permisos, ATS y Asistencia ya guardaban las firmas: sin cambios.
   Reemplazar: inspeccion-epp.html, personal-autorizado.html, sw.js, asistencia.html, estado.html
   NO HAY CAMBIOS EN LOS BACKENDS.
+
+v104: EPP, el resumen del día ahora se envía AUNQUE ningún elemento haya estado en mal estado.
+  El correo es el historial del día: elementos malos (si hay), y la lista de inspeccionados sin novedad.
+  Si no hay malos dice "Sin elementos en mal estado" y no incluye el recordatorio de la foto.
+  Reemplazar: inspeccion-epp.html, backends/backend-epp.gs (volver a DESPLEGAR, nueva versión),
+  sw.js, asistencia.html, estado.html, personal-autorizado.html
